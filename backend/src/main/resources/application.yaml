@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: JatiStore
+  datasource:
+    # Connect to the local Docker Postgres container using the credentials from docker-compose.yml
+    url: jdbc:postgresql://localhost:5432/jatistore
+    username: developer
+    password: rahasia
+
+  jpa:
+    hibernate:
+      # Tell Hibernate to only validate the schema, leaving structural changes strictly to Flyway
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    # Enable Flyway database migrations
+    enabled: true

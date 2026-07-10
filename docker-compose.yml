@@ -1,0 +1,15 @@
+services:
+  postgres-db:
+    image: postgres:17-alpine
+    container_name: jatistore-db
+    environment:
+      POSTGRES_DB: jatistore
+      POSTGRES_USER: developer
+      POSTGRES_PASSWORD: rahasia
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
