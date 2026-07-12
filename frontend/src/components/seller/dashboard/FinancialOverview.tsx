@@ -1,36 +1,50 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { dashboardService } from '../../../service/seller/dashboard.service';
+import type { FinancialOverview as FinancialData } from '../../../service/seller/dashboard.service';
 
 export function FinancialOverview() {
+  const [financials, setFinancials] = useState<FinancialData | null>(null);
+
+  useEffect(() => {
+    dashboardService.getFinancials()
+      .then(setFinancials)
+      .catch(console.error);
+  }, []);
+
+  const formatMoney = (val: number | undefined) => {
+    if (val === undefined) return <span className="text-[21px] font-bold text-[#0c7d73]">...</span>;
+    const formatted = val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const [whole, cents] = formatted.split('.');
+    return (
+      <span className="text-[21px] font-bold text-[#0c7d73] leading-[1.1] tracking-[-0.01em] m-0">
+        ${whole}<span className="text-[13px] font-semibold text-[#6b7876]">.{cents}</span>
+      </span>
+    );
+  };
+
   return (
-    <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-gutter">
+    <>
       {/* Available Balance */}
-      <div className="bg-surface-container-lowest p-stack-md rounded-lg border border-outline-variant shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex flex-col justify-between">
-        <div className="flex justify-between items-start mb-stack-lg">
-          <div className="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center text-primary-container">
-            <span className="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
-          </div>
-          <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded-full font-label-sm text-label-sm uppercase tracking-wider font-mono-data">READY</span>
+      <div className="bg-white border border-[#e6e9eb] rounded-[10px] py-[18px] px-[20px] flex items-start gap-[12px] shadow-sm">
+        <div className="w-[34px] h-[34px] shrink-0 rounded-[8px] bg-[#e6f6f4] text-[#0c7d73] flex items-center justify-center text-[16px]">
+          💳
         </div>
-        <div>
-          <p className="font-label-md text-label-md text-on-surface-variant mb-unit">Available Balance</p>
-          <h3 className="font-display-lg text-display-lg text-on-surface">$1,240.50</h3>
+        <div className="min-w-0">
+          <p className="text-[12.5px] font-medium text-[#6b7876] m-0 mb-[6px] whitespace-nowrap">Available Balance</p>
+          {formatMoney(financials?.availableBalance)}
         </div>
       </div>
 
       {/* On Hold Balance */}
-      <div className="bg-surface-container-lowest p-stack-md rounded-lg border border-outline-variant shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex flex-col justify-between relative overflow-hidden group">
-        <div className="absolute -right-10 -top-10 w-32 h-32 bg-tertiary-fixed-dim/10 rounded-full blur-2xl group-hover:bg-tertiary-fixed-dim/20 transition-colors"></div>
-        <div className="flex justify-between items-start mb-stack-lg relative z-10">
-          <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant">
-            <span className="material-symbols-outlined" data-icon="pending">pending</span>
-          </div>
-          <span className="bg-surface-variant text-on-surface-variant border border-outline-variant px-2 py-1 rounded-full font-label-sm text-label-sm uppercase tracking-wider font-mono-data">PENDING CLEARANCE</span>
+      <div className="bg-white border border-[#e6e9eb] rounded-[10px] py-[18px] px-[20px] flex items-start gap-[12px] shadow-sm">
+        <div className="w-[34px] h-[34px] shrink-0 rounded-[8px] bg-[#e6f6f4] text-[#0c7d73] flex items-center justify-center text-[16px]">
+          ⏳
         </div>
-        <div className="relative z-10">
-          <p className="font-label-md text-label-md text-on-surface-variant mb-unit">On Hold Balance</p>
-          <h3 className="font-headline-lg text-headline-lg text-on-surface">$320.00</h3>
+        <div className="min-w-0">
+          <p className="text-[12.5px] font-medium text-[#6b7876] m-0 mb-[6px] whitespace-nowrap">On Hold Balance</p>
+          {formatMoney(financials?.onHoldBalance)}
         </div>
       </div>
-    </div>
+    </>
   );
 }

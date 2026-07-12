@@ -1,85 +1,205 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { dashboardService } from '../../../service/seller/dashboard.service';
+import type { RecentOrder, PageResponse } from '../../../service/seller/dashboard.service';
 
 export function RecentOrders() {
+  const [orderPage, setOrderPage] = useState<PageResponse<RecentOrder> | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortDir, setSortDir] = useState('desc');
+  const [page, setPage] = useState(1);
+  const limit = 5;
+
+  // Dropdown states
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+
+  const fetchOrders = () => {
+    setLoading(true);
+    dashboardService.getRecentOrders(search, status, sortBy, sortDir, page, limit)
+      .then(data => {
+        setOrderPage(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchOrders();
+    }, 400); // 400ms debounce
+    return () => clearTimeout(timeoutId);
+  }, [search, status, sortBy, sortDir, page]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+    setPage(1); // Reset to first page on new search
+  };
+
   return (
     <>
       {/* Search & Filter Bar */}
-      <div className="md:col-span-3 flex items-center gap-stack-md bg-surface-container-lowest p-stack-sm rounded-lg border border-outline-variant shadow-sm w-full mb-stack-md">
-        <div className="flex-grow flex items-center relative">
-          <span className="material-symbols-outlined absolute left-stack-sm text-on-surface-variant">search</span>
-          <input className="w-full pl-10 pr-stack-sm py-stack-sm bg-transparent border-none focus:ring-0 font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant outline-none" placeholder="Search orders by ID, item, or status..." type="text" />
+      <div className="flex items-center gap-[12px] bg-white border border-[#e6e9eb] rounded-[10px] py-[10px] px-[14px] mb-[16px]">
+        <div className="flex-1 flex items-center gap-[8px] text-[#6b7876] text-[14px]">
+          🔍
+          <input 
+            className="border-none outline-none text-[14px] w-full bg-transparent placeholder:text-[#6b7876]" 
+            placeholder="Search orders by ID or item..." 
+            type="text" 
+            value={search}
+            onChange={handleSearchChange}
+          />
         </div>
-        <div className="h-6 w-px bg-outline-variant"></div>
-        <button className="flex items-center gap-unit px-stack-sm py-stack-sm font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer">
-          <span className="material-symbols-outlined text-[18px]">filter_list</span>
-          Filters
-        </button>
-        <button className="flex items-center gap-unit px-stack-sm py-stack-sm font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer">
-          <span className="material-symbols-outlined text-[18px]">sort</span>
-          Sort
-        </button>
+        
+        {/* Filter Dropdown */}
+        <div className="relative">
+          <button 
+            className="text-[13px] font-semibold text-[#14201e] flex items-center gap-[6px] py-[6px] px-[10px] rounded-[6px] cursor-pointer border border-[#e6e9eb]"
+            onClick={() => { setFilterOpen(!filterOpen); setSortOpen(false); }}
+          >
+            ⇅ Filters {status && <span className="w-2 h-2 rounded-full bg-[#0f9b8e] ml-1"></span>}
+          </button>
+          
+          {filterOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white border border-[#e6e9eb] rounded shadow-lg z-50 py-2">
+              <div className="px-4 py-1 text-[12px] font-medium text-[#6b7876]">Filter by Status</div>
+              {['', 'PENDING', 'PAID_ON_HOLD', 'SHIPPED', 'RECEIVED', 'CANCELLED'].map((s) => (
+                <button
+                  key={s}
+                  className={`w-full text-left px-4 py-2 text-[14px] hover:bg-[#f4f6f7] transition-colors ${status === s ? 'text-[#0f9b8e] bg-[#e6f6f4] font-medium' : 'text-[#14201e]'}`}
+                  onClick={() => { setStatus(s); setPage(1); setFilterOpen(false); }}
+                >
+                  {s === '' ? 'All Status' : s.replace('_', ' ')}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Sort Dropdown */}
+        <div className="relative">
+          <button 
+            className="text-[13px] font-semibold text-[#14201e] flex items-center gap-[6px] py-[6px] px-[10px] rounded-[6px] cursor-pointer border border-[#e6e9eb]"
+            onClick={() => { setSortOpen(!sortOpen); setFilterOpen(false); }}
+          >
+            ↕ Sort
+          </button>
+          
+          {sortOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white border border-[#e6e9eb] rounded shadow-lg z-50 py-2">
+              <div className="px-4 py-1 text-[12px] font-medium text-[#6b7876]">Sort Orders</div>
+              {[
+                { label: 'Newest First', by: 'createdAt', dir: 'desc' },
+                { label: 'Oldest First', by: 'createdAt', dir: 'asc' },
+                { label: 'Highest Amount', by: 'amount', dir: 'desc' },
+                { label: 'Lowest Amount', by: 'amount', dir: 'asc' },
+                { label: 'Name (A-Z)', by: 'name', dir: 'asc' },
+                { label: 'Name (Z-A)', by: 'name', dir: 'desc' },
+              ].map((opt, i) => (
+                <button
+                  key={i}
+                  className={`w-full text-left px-4 py-2 text-[14px] hover:bg-[#f4f6f7] transition-colors ${sortBy === opt.by && sortDir === opt.dir ? 'text-[#0f9b8e] bg-[#e6f6f4] font-medium' : 'text-[#14201e]'}`}
+                  onClick={() => { setSortBy(opt.by); setSortDir(opt.dir); setPage(1); setSortOpen(false); }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Orders Table */}
-      <div className="md:col-span-3 bg-surface-container-lowest rounded-lg border border-outline-variant shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] overflow-hidden">
-        <div className="px-stack-md py-stack-sm border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
-          <h3 className="font-headline-sm text-headline-sm font-semibold text-on-surface">Recent Orders</h3>
-          <a className="font-label-sm text-label-sm text-primary hover:underline" href="#">View All</a>
+      <div className="bg-white border border-[#e6e9eb] rounded-[10px] overflow-hidden">
+        <div className="flex items-center justify-between py-[16px] px-[20px] border-b border-[#e6e9eb]">
+          <h2 className="text-[16px] font-bold m-0 text-[#14201e]">Recent Orders</h2>
+          <a className="text-[13px] font-semibold text-[#0c7d73] no-underline hover:underline" href="#">View All</a>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-surface font-label-sm text-label-sm text-on-surface-variant border-b border-outline-variant">
-                <th className="p-stack-md font-medium">Order ID</th>
-                <th className="p-stack-md font-medium">Item</th>
-                <th className="p-stack-md font-medium">Amount</th>
-                <th className="p-stack-md font-medium">Status</th>
+              <tr>
+                <th className="text-left text-[11.5px] font-bold tracking-[0.04em] uppercase text-[#6b7876] py-[10px] px-[20px] border-b border-[#e6e9eb] bg-[#fafbfb] w-[130px]">Order ID</th>
+                <th className="text-left text-[11.5px] font-bold tracking-[0.04em] uppercase text-[#6b7876] py-[10px] px-[20px] border-b border-[#e6e9eb] bg-[#fafbfb]">Item</th>
+                <th className="text-right text-[11.5px] font-bold tracking-[0.04em] uppercase text-[#6b7876] py-[10px] px-[20px] border-b border-[#e6e9eb] bg-[#fafbfb] w-[150px]">Amount</th>
+                <th className="text-left text-[11.5px] font-bold tracking-[0.04em] uppercase text-[#6b7876] py-[10px] px-[20px] border-b border-[#e6e9eb] bg-[#fafbfb] w-[120px]">Status</th>
               </tr>
             </thead>
-            <tbody className="font-body-sm text-body-sm text-on-surface">
-              <tr className="border-b border-outline-variant hover:bg-[#f0fdfa] transition-colors group cursor-pointer">
-                <td className="p-stack-md font-mono-data">#ORD-9921</td>
-                <td className="p-stack-md flex items-center gap-unit">
-                  <img alt="Product Thumbnail" className="w-8 h-8 rounded object-cover border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCw3OzMO4sGKgAeoKTyCQD7TE7-EaROV0SSFk7n3Vtvs61iFpa5jqkQBP8a54qPhnFeUe1Tf46DAH5IsDqAmnihYE8swsawHgsK_prTQiSzDsIhB8EeMw0N9j1VH4xty2tdNqMk0wRF7Lf3q0UfzWBujZ_e7fxWXVYPaTyp7stc4B9efoyFam8VXRaS3edfkWWDXalOHNva4zb-gMxdx3xrixjHR8lospd8NaFeFmLjBAoavY0_QiJjgnkb_8mw-hEHaB-5DisT-iFF" />
-                  Minimalist Ceramic Mug
-                </td>
-                <td className="p-stack-md font-medium">$24.00</td>
-                <td className="p-stack-md">
-                  <span className="inline-flex items-center gap-1 bg-surface-variant text-on-surface-variant border border-outline-variant px-2 py-0.5 rounded font-label-sm text-[11px] uppercase tracking-wider font-mono-data">
-                    <span className="w-1.5 h-1.5 rounded-full bg-outline"></span>
-                    PAID ON HOLD
-                  </span>
-                </td>
-              </tr>
-              <tr className="border-b border-outline-variant hover:bg-[#f0fdfa] transition-colors group cursor-pointer">
-                <td className="p-stack-md font-mono-data">#ORD-9920</td>
-                <td className="p-stack-md flex items-center gap-unit">
-                  <img alt="Product Thumbnail" className="w-8 h-8 rounded object-cover border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjVf_xhw_SNPY5Z2UT1HfVguFBTsWkh9ojfPOzpF_TCQBb4_ngS-r5OIzGgjWQntYDjzZIZR5e8nZpJOsw4iMKoRXf9A2YLJNiikEIMzrtoK-bQkjRaESgwhsFWLZq6iP-o3PEUOtQxH5yWIMm1WDqFQ2HRXnWiTgg-UyUjcUfd7NiOepUsVZiH7bUcCbwojzSdv7idb__eZzSNQZf16eFaTzI-Io8A32E6LIiQWd-ARBfclWzjgg3ZDM9jaYEno-Is4yiqqtfVxhf" />
-                  Artisan Desk Lamp
-                </td>
-                <td className="p-stack-md font-medium">$89.50</td>
-                <td className="p-stack-md">
-                  <span className="inline-flex items-center gap-1 bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded font-label-sm text-[11px] uppercase tracking-wider font-mono-data">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
-                    SHIPPED
-                  </span>
-                </td>
-              </tr>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={4} className="py-[12px] px-[20px] border-b border-[#e6e9eb] text-center text-[#6b7876] text-[14px]">Loading orders...</td>
+                </tr>
+              ) : !orderPage || orderPage.content.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-[12px] px-[20px] border-b border-[#e6e9eb] text-center text-[#6b7876] text-[14px]">No recent orders found.</td>
+                </tr>
+              ) : (
+                orderPage.content.map(order => {
+                  let badgeClass = "bg-[#f4f6f7] text-[#6b7876]";
+                  if (order.status.includes('RECEIVED')) badgeClass = "bg-[#e6f6f4] text-[#0c7d73]";
+                  if (order.status.includes('SHIPPED')) badgeClass = "bg-[#e8f0fe] text-[#2255c7]";
+                  if (order.status.includes('PENDING') || order.status.includes('HOLD')) badgeClass = "bg-[#fdf0e3] text-[#b4650a]";
+
+                  return (
+                    <tr key={order.orderId} className="hover:bg-[#fafbfb] transition-colors group cursor-pointer">
+                      <td className="py-[12px] px-[20px] border-b border-[#e6e9eb] align-middle text-[14px]">
+                        <span className="font-mono text-[13px] text-[#6b7876]">{order.displayId}</span>
+                      </td>
+                      <td className="py-[12px] px-[20px] border-b border-[#e6e9eb] align-middle text-[14px]">
+                        <div className="flex items-center gap-[10px]">
+                          <div className="w-[44px] h-[44px] rounded-[8px] bg-[#eef1f1] flex shrink-0 items-center justify-center overflow-hidden">
+                            <img alt={order.itemName} className="w-full h-full object-cover" src={order.itemImage} />
+                          </div>
+                          <div>
+                            <div className="font-semibold text-[14px] text-[#14201e]">{order.itemName}</div>
+                            <div className="text-[12px] text-[#6b7876] mt-[2px]">Qty {order.quantity || 1}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-[12px] px-[20px] border-b border-[#e6e9eb] align-middle text-[14px] text-right font-semibold tabular-nums text-[#14201e]">
+                        ${order.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-[12px] px-[20px] border-b border-[#e6e9eb] align-middle text-[14px]">
+                        <span className={`inline-flex items-center gap-[6px] py-[4px] px-[10px] rounded-full text-[11.5px] font-bold tracking-[0.02em] uppercase ${badgeClass}`}>
+                          <span className="w-[6px] h-[6px] rounded-full bg-current"></span>
+                          {order.status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
-        <div className="mt-auto border-t border-outline-variant p-stack-sm flex items-center justify-between bg-surface-container-low">
-          <span className="font-label-sm text-label-sm text-on-surface-variant">Showing 1-2 of 45 orders</span>
-          <div className="flex items-center gap-unit">
-            <button className="p-1 rounded text-on-surface-variant hover:bg-surface-variant disabled:opacity-50 cursor-pointer" disabled>
-              <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+        <div className="flex items-center justify-between py-[12px] px-[20px] text-[13px] text-[#6b7876]">
+          <div>
+            Showing {orderPage?.totalElements === 0 ? 0 : (page - 1) * limit + 1}-{Math.min(page * limit, orderPage?.totalElements || 0)} of {orderPage?.totalElements || 0} orders
+          </div>
+          <div className="flex items-center gap-[6px]">
+            <button 
+              className="text-[#6b7876] hover:text-[#14201e] disabled:opacity-50 cursor-pointer text-[18px] bg-transparent border-none" 
+              disabled={page <= 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+            >
+              ‹
             </button>
-            <button className="w-8 h-8 rounded bg-primary-container text-on-primary-container font-label-md text-label-md flex items-center justify-center cursor-pointer">1</button>
-            <button className="w-8 h-8 rounded text-on-surface-variant hover:bg-surface-variant font-label-md text-label-md flex items-center justify-center transition-colors cursor-pointer">2</button>
-            <button className="w-8 h-8 rounded text-on-surface-variant hover:bg-surface-variant font-label-md text-label-md flex items-center justify-center transition-colors cursor-pointer">3</button>
-            <span className="text-on-surface-variant px-1">...</span>
-            <button className="p-1 rounded text-on-surface-variant hover:bg-surface-variant transition-colors cursor-pointer">
-              <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+            <div className="w-[26px] h-[26px] rounded-[6px] bg-[#0f9b8e] text-white font-bold text-[12.5px] flex items-center justify-center">
+              {page}
+            </div>
+            <button 
+              className="text-[#6b7876] hover:text-[#14201e] disabled:opacity-50 cursor-pointer text-[18px] bg-transparent border-none" 
+              disabled={!orderPage || page >= orderPage.totalPages}
+              onClick={() => setPage(p => p + 1)}
+            >
+              ›
             </button>
           </div>
         </div>

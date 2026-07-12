@@ -10,8 +10,8 @@ export default function Dashboard() {
     <SellerLayout>
       <WelcomeSection />
       
-      {/* Bento Grid Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-stack-md">
+      {/* Summary Cards 1x4 Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-gutter mb-stack-md">
         <FinancialOverview />
         <QuickStats />
       </div>

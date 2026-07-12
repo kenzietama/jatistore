@@ -1,11 +1,21 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { dashboardService } from '../../../service/seller/dashboard.service';
+import type { DashboardStats } from '../../../service/seller/dashboard.service';
 
 export function WelcomeSection() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+
+  useEffect(() => {
+    dashboardService.getStats()
+      .then(setStats)
+      .catch(console.error);
+  }, []);
+
   return (
-    <section className="mb-stack-lg flex justify-between items-end">
-      <div>
-        <h2 className="font-headline-lg text-headline-lg text-on-surface mb-unit">Welcome back, Store Owner.</h2>
-        <p className="font-body-md text-body-md text-on-surface-variant">Here's a quick overview of your store's performance today.</p>
+    <section className="mb-[24px]">
+      <div className="mb-[28px]">
+        <h1 className="text-[26px] font-bold text-[#14201e] tracking-[-0.02em] m-0 mb-[4px]">Welcome back, {stats ? stats.sellerName : 'Store Owner'}.</h1>
+        <p className="text-[14px] text-[#6b7876] m-0">Here's a quick overview of your store's performance today.</p>
       </div>
     </section>
   );
