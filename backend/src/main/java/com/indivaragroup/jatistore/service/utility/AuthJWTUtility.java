@@ -63,7 +63,7 @@ public class AuthJWTUtility {
                 throw new CoreThrowHandler(RestApiError.AUT_0004);
             }
 
-            String email = signedJWT.getJWTClaimsSet().getStringClaim("user_email");
+            String email = signedJWT.getJWTClaimsSet().getStringClaim("email");
             if (email == null || email.isBlank()) {
                 throw new CoreThrowHandler(RestApiError.AUT_0004);
             }

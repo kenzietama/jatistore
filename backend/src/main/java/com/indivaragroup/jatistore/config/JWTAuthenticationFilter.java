@@ -38,12 +38,6 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) {
         try {
-            String requestId = request.getHeader("X-Request-ID");
-            if (requestId == null || requestId.isEmpty() || requestId.isBlank()) {
-                requestId = UUID.randomUUID().toString();
-            }
-            MDC.put("requestId", requestId);
-
             String authHeader = request.getHeader("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 filterChain.doFilter(request, response);
