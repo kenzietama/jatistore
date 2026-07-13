@@ -83,7 +83,7 @@ public class RestControllerAdviceHandler {
         if (msg != null && msg.contains("[\"")) {
             int start = msg.indexOf("[\"") + 2;
             int end = msg.indexOf("\"]");
-            if (start > 1 && end > start) {
+            if (end > start) {
                 propertyName = msg.substring(start, end);
             }
         }
@@ -134,7 +134,7 @@ public class RestControllerAdviceHandler {
         apiResponse.setRestApiResponseMessage(resolvedMessage);
         
         // Pass error details map if populated, otherwise set as null to keep payload clean
-        if (ex.getError() != null && !ex.getError().isEmpty()) {
+        if (!ex.getError().isEmpty()) {
             apiResponse.setRestApiResponseError(ex.getError());
         } else {
             apiResponse.setRestApiResponseError(null);
