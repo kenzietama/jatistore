@@ -6,11 +6,9 @@ import org.springframework.http.HttpStatus;
 
 @AllArgsConstructor
 @Getter
-public enum RestApiSuccessMessage {
+public enum RestApiSuccess {
 
-    LOGIN_SUCCESS(HttpStatus.OK.value(), "Login successful."),
-    REGISTER_SUCCESS(HttpStatus.CREATED.value(), "success.register"),
-    PROFILE_SUCCESS(HttpStatus.OK.value(), "success.profile");
+    LOGIN_SUCCESS(HttpStatus.OK.value(), "Login successful.");
 
     private final int code;
     private final String message;

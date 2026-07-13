@@ -1,11 +1,11 @@
-package com.indivaragroup.jatistore.controller.module;
+package com.indivaragroup.jatistore.controller.auth;
 
 import com.indivaragroup.jatistore.dto.request.AuthLoginRequest;
 import com.indivaragroup.jatistore.dto.response.RestApiPath;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
-import com.indivaragroup.jatistore.dto.response.module.AuthLoginResponse;
+import com.indivaragroup.jatistore.dto.response.module.auth.AuthLoginResponse;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
-import com.indivaragroup.jatistore.service.module.AuthService;
+import com.indivaragroup.jatistore.service.auth.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

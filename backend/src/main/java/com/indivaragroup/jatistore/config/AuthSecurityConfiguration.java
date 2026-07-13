@@ -1,6 +1,6 @@
 package com.indivaragroup.jatistore.config;
 
-import com.indivaragroup.jatistore.repository.UserRepository;
+import com.indivaragroup.jatistore.repository.AuthRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,23 +22,30 @@ import java.util.ArrayList;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
-public class SecurityConfiguration {
+public class AuthSecurityConfiguration {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final UserRepository userRepository;
+    private final JWTAuthenticationFilter jwtAuthenticationFilter;
+    private final AuthRepository authRepository;
 
     @Bean
     public UserDetailsService userDetailsService() {
-        return email -> userRepository.findByEmail(email)
-                .map(user -> new User(
+        return email -> authRepository.findByEmail(email)
+                .map(user ->{
+                    boolean isActive = true;
+                    String role = authRepository.findUserRole(user.getId());
+                    if (role.equals("SELLER")) {
+                        isActive = authRepository.isSellerActive(email);
+                    }
+                    return new User(
                         user.getEmail(),
                         user.getPasswordHash(),
-                        true, // enabled
+                        isActive, // enabled
                         true, // accountNonExpired
                         true, // credentialsNonExpired
-                        true, // accountNonLocked
+                        isActive, // accountNonLocked
                         new ArrayList<>() // authorities
-                ))
+                    );
+                 })
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
     }
 
@@ -50,7 +57,9 @@ public class SecurityConfiguration {
                 .formLogin(form -> form.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/products").permitAll()
+                        .requestMatchers("/api/v1/products/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

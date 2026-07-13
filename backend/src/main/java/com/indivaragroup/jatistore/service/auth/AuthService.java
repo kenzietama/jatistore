@@ -1,4 +1,4 @@
-package com.indivaragroup.jatistore.service.module;
+package com.indivaragroup.jatistore.service.auth;
 
 import com.indivaragroup.jatistore.data.entity.Token;
 import com.indivaragroup.jatistore.data.entity.User;
@@ -33,8 +33,11 @@ public class AuthService {
     private final TokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Value("${jwt.expiration-seconds:600}")
-    private int jwtExpirationSeconds;
+    @Value("${jwt.expiration-seconds.user:600}")
+    private int jwtUserExpirationSeconds;
+
+    @Value("${jwt.expiration-seconds.seller:600}")
+    private int jwtSellerExpirationSeconds;
 
     @Value("${jwt.expiration-seconds.admin:3600}")
     private int jwtAdminExpirationSeconds;
@@ -55,13 +58,15 @@ public class AuthService {
 
         String role = authRepository.findUserRole(user.get().getId());
 
-        if (role.equals("ROLE_SELLER")) {
+        if (role.equals("SELLER")) {
             if (!authRepository.isSellerActive(user.get().getEmail())) {
                 throw new CoreThrowHandler(RestApiError.AUT_0006);
             }
         }
 
-        int TTL = role.equals("ROLE_ADMIN") ? jwtAdminExpirationSeconds : jwtExpirationSeconds;
+        int TTL = role.equals("ADMIN") ? jwtAdminExpirationSeconds
+                : role.equals("SELLER") ? jwtSellerExpirationSeconds
+                : jwtUserExpirationSeconds;
 
         String jwt = authJWTUtility.generateToken(user.get().getId(), user.get().getEmail(), role, TTL);
 

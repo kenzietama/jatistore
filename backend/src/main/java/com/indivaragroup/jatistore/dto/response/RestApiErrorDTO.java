@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class RestApiError {
+public class RestApiErrorDTO {
     private int code;
     private String message;
 }

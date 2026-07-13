@@ -1,16 +1,20 @@
 package com.indivaragroup.jatistore.dto.request;
 
-import jakarta.validation.constraints.Email;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
-public class LoginRequest {
+@Getter
+@Setter
+public class AuthLoginRequest {
+    @JsonProperty("email")
+    @NotBlank
+    private String authLoginRequestEmail;
 
-    @NotBlank(message = "Email must not be blank")
-    @Email(message = "Invalid email format")
-    private String email;
-
-    @NotBlank(message = "Password must not be blank")
-    private String password;
+    @JsonProperty("password")
+    @NotBlank
+    @Size(min = 4, message = "Minimum 4 characters in password")
+    private String authLoginRequestPassword;
 }

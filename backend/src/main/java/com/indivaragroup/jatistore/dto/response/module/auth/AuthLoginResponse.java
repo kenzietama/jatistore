@@ -1,4 +1,4 @@
-package com.indivaragroup.jatistore.dto.response.module;
+package com.indivaragroup.jatistore.dto.response.module.auth;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
