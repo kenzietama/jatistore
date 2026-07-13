@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { SellerLayout } from '../../../components/layout/seller/SellerLayout';
 import { WelcomeSection } from '../../../components/seller/dashboard/WelcomeSection';
 import { FinancialOverview } from '../../../components/seller/dashboard/FinancialOverview';

@@ -164,7 +164,7 @@ export function RecentOrders() {
                         </div>
                       </td>
                       <td className="py-[12px] px-[20px] border-b border-[#e6e9eb] align-middle text-[14px] text-right font-semibold tabular-nums text-[#14201e]">
-                        ${order.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        Rp {order.amount.toLocaleString('id-ID')}
                       </td>
                       <td className="py-[12px] px-[20px] border-b border-[#e6e9eb] align-middle text-[14px]">
                         <span className={`inline-flex items-center gap-[6px] py-[4px] px-[10px] rounded-full text-[11.5px] font-bold tracking-[0.02em] uppercase ${badgeClass}`}>
