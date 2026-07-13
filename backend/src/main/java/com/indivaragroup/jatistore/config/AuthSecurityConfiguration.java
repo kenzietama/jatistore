@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -18,6 +19,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.util.ArrayList;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -36,6 +38,7 @@ public class AuthSecurityConfiguration {
                     if (role.equals("SELLER")) {
                         isActive = authRepository.isSellerActive(email);
                     }
+                    SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
                     return new User(
                         user.getEmail(),
                         user.getPasswordHash(),
@@ -43,7 +46,7 @@ public class AuthSecurityConfiguration {
                         true, // accountNonExpired
                         true, // credentialsNonExpired
                         isActive, // accountNonLocked
-                        new ArrayList<>() // authorities
+                        List.of(authority) // authorities
                     );
                  })
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
