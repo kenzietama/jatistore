@@ -116,15 +116,15 @@ export function RecentOrders() {
       </div>
 
       {/* Orders Table */}
-      <div className="bg-white border border-[#e6e9eb] rounded-[10px] overflow-hidden">
+      <div className="bg-white border border-[#e6e9eb] rounded-[10px] shadow-sm flex flex-col h-[calc(100vh-380px)]">
         <div className="flex items-center justify-between py-[16px] px-[20px] border-b border-[#e6e9eb]">
           <h2 className="text-[16px] font-bold m-0 text-[#14201e]">Recent Orders</h2>
           <a className="text-[13px] font-semibold text-[#0c7d73] no-underline hover:underline" href="#">View All</a>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
+        <div className="flex-1 overflow-auto rounded-t-[10px]">
+          <table className="w-full border-collapse text-left">
+            <thead className="sticky top-0 z-10 bg-surface-container">
+              <tr className="text-on-surface-variant border-b border-[#e6e9eb]">
                 <th className="text-left text-[11.5px] font-bold tracking-[0.04em] uppercase text-[#6b7876] py-[10px] px-[20px] border-b border-[#e6e9eb] bg-[#fafbfb] w-[130px]">Order ID</th>
                 <th className="text-left text-[11.5px] font-bold tracking-[0.04em] uppercase text-[#6b7876] py-[10px] px-[20px] border-b border-[#e6e9eb] bg-[#fafbfb]">Item</th>
                 <th className="text-right text-[11.5px] font-bold tracking-[0.04em] uppercase text-[#6b7876] py-[10px] px-[20px] border-b border-[#e6e9eb] bg-[#fafbfb] w-[150px]">Amount</th>
@@ -179,7 +179,7 @@ export function RecentOrders() {
             </tbody>
           </table>
         </div>
-        <div className="flex items-center justify-between py-[12px] px-[20px] text-[13px] text-[#6b7876]">
+        <div className="mt-auto flex items-center justify-between py-[12px] px-[20px] text-[13px] text-[#6b7876] bg-surface-container-low border-t border-[#e6e9eb]">
           <div>
             Showing {orderPage?.totalElements === 0 ? 0 : (page - 1) * limit + 1}-{Math.min(page * limit, orderPage?.totalElements || 0)} of {orderPage?.totalElements || 0} orders
           </div>

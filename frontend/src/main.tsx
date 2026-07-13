@@ -14,6 +14,7 @@ import Login from "./container/auth/Login";
 import Dashboard from "./container/seller/Dashboard";
 import ProductManagement from "./container/seller/Product";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import OrderFulfillment from "./container/seller/OrderFulfillment";
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState<"catalog" | "detail" | "login" |"cart"| "checkout" | "history">("catalog");
@@ -288,6 +289,7 @@ createRoot(document.getElementById("root")!).render(
         <Route element={<ProtectedRoute allowedRoles={["SELLER"]} />}>
           <Route path="/seller/dashboard" element={<Dashboard />} />
           <Route path="/seller/products" element={<ProductManagement />} />
+          <Route path="/seller/orders" element={<OrderFulfillment />} />
         </Route>
       </Routes>
     </BrowserRouter>

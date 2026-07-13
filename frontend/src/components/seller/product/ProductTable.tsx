@@ -126,7 +126,7 @@ export function ProductTable({ refreshTrigger, onEdit }: { refreshTrigger?: numb
       <div className="overflow-x-auto w-full flex-grow">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-surface-container-low border-b border-outline-variant font-label-sm text-label-sm text-on-surface-variant uppercase">
+            <tr className="bg-surface-container border-b border-outline-variant font-label-sm text-label-sm text-on-surface-variant uppercase">
               <th className="p-stack-md font-medium whitespace-nowrap">Product</th>
               <th className="p-stack-md font-medium whitespace-nowrap">Price</th>
               <th className="p-stack-md font-medium whitespace-nowrap">Stock</th>

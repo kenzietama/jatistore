@@ -98,14 +98,19 @@ export function SellerSidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIs
           </NavLink>
         </li>
         <li>
-          <a 
-            className={`flex items-center gap-stack-sm p-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-variant rounded-lg hover:bg-surface-container-highest dark:hover:bg-surface-dim transition-all ${isCollapsed ? 'justify-center' : ''}`} 
-            href="#"
+          <NavLink
+            to="/seller/orders"
+            onClick={() => setIsMobileOpen(false)}
+            className={({ isActive }) =>
+              isActive
+                ? `flex items-center gap-stack-sm p-2 bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-lg scale-[0.98] transition-all ${isCollapsed ? 'justify-center' : ''}`
+                : `flex items-center gap-stack-sm p-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-variant rounded-lg hover:bg-surface-container-highest dark:hover:bg-surface-dim transition-all ${isCollapsed ? 'justify-center' : ''}`
+            }
             title={isCollapsed ? "Orders" : undefined}
           >
             <span className="material-symbols-outlined shrink-0" data-icon="shopping_bag">shopping_bag</span>
             <span className={`font-label-md text-label-md whitespace-nowrap ${isCollapsed ? 'hidden' : 'block'}`}>Orders</span>
-          </a>
+          </NavLink>
         </li>
         <li>
           <a 
