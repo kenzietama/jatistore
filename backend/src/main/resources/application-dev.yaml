@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/jatistore
+    username: developer
+    password: rahasia
+  flyway:
+    locations: classpath:db/migration,classpath:db/seed  # Include seed
+    baseline-on-migrate: true
+    clean-disabled: false  # Allow clean for dev
