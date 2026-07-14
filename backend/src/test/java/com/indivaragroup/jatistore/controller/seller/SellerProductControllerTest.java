@@ -1,5 +1,8 @@
 package com.indivaragroup.jatistore.controller.seller;
 
+import com.indivaragroup.jatistore.data.entity.Seller;
+import com.indivaragroup.jatistore.data.entity.User;
+import com.indivaragroup.jatistore.repository.SellerRepository;
 import tools.jackson.databind.ObjectMapper;
 import com.indivaragroup.jatistore.dto.request.seller.ProductCreateRequest;
 import com.indivaragroup.jatistore.dto.request.seller.ProductUpdateRequest;
@@ -21,7 +24,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.security.Principal;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -52,14 +57,29 @@ public class SellerProductControllerTest {
     @MockitoBean
     private AuthRepository authRepository;
 
+    @MockitoBean
+    private SellerRepository sellerRepository;
+
     private UUID mockSellerId;
     private UUID mockProductId;
     private ProductResponse mockProduct;
+    private Principal mockPrincipal;
 
     @BeforeEach
     void setUp() {
         mockSellerId = UUID.fromString("bb000000-0000-0000-0000-000000000001");
         mockProductId = UUID.randomUUID();
+        mockPrincipal = () -> "seller@test.com";
+
+        User mockUser = new User();
+        mockUser.setId(UUID.randomUUID());
+        mockUser.setEmail("seller@test.com");
+
+        Seller mockSeller = new Seller();
+        mockSeller.setId(mockSellerId);
+
+        when(authRepository.findByEmail("seller@test.com")).thenReturn(Optional.of(mockUser));
+        when(sellerRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockSeller));
 
         mockProduct = new ProductResponse();
         mockProduct.setId(mockProductId);
@@ -83,6 +103,7 @@ public class SellerProductControllerTest {
         mockMvc.perform(get("/api/v1/seller/products")
                 .param("page", "0")
                 .param("size", "20")
+                .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content[0].name").value("Test Product"));
@@ -95,6 +116,7 @@ public class SellerProductControllerTest {
         // Act & Assert
         mockMvc.perform(get("/api/v1/seller/products")
                 .param("size", "invalid-size")
+                .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError());
     }
@@ -111,6 +133,7 @@ public class SellerProductControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/v1/seller/products/{id}", mockProductId)
+                .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.name").value("Test Product"));
@@ -124,6 +147,7 @@ public class SellerProductControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/v1/seller/products/{id}", mockProductId)
+                .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError());
     }
@@ -149,6 +173,7 @@ public class SellerProductControllerTest {
 
         // Act & Assert
         mockMvc.perform(post("/api/v1/seller/products")
+                .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -164,6 +189,7 @@ public class SellerProductControllerTest {
 
         // Act & Assert
         mockMvc.perform(post("/api/v1/seller/products")
+                .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
@@ -184,6 +210,7 @@ public class SellerProductControllerTest {
 
         // Act & Assert
         mockMvc.perform(patch("/api/v1/seller/products/{id}", mockProductId)
+                .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -198,6 +225,7 @@ public class SellerProductControllerTest {
 
         // Act & Assert
         mockMvc.perform(patch("/api/v1/seller/products/{id}", mockProductId)
+                .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
@@ -214,6 +242,7 @@ public class SellerProductControllerTest {
 
         // Act & Assert
         mockMvc.perform(delete("/api/v1/seller/products/{id}", mockProductId)
+                .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
     }
@@ -226,6 +255,7 @@ public class SellerProductControllerTest {
 
         // Act & Assert
         mockMvc.perform(delete("/api/v1/seller/products/{id}", mockProductId)
+                .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError());
     }

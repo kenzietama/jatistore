@@ -13,6 +13,7 @@ import "./App.css";
 import Login from "./container/auth/Login";
 import Dashboard from "./container/seller/Dashboard";
 import ProductManagement from "./container/seller/Product";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState<"catalog" | "detail" | "login" |"cart"| "checkout" | "history">("catalog");
@@ -282,8 +283,12 @@ createRoot(document.getElementById("root")!).render(
       <Routes>
         <Route path="/*" element={<App />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/seller/dashboard" element={<Dashboard />} />
-        <Route path="/seller/products" element={<ProductManagement />} />
+        
+        {/* Seller Routes */}
+        <Route element={<ProtectedRoute allowedRoles={["SELLER"]} />}>
+          <Route path="/seller/dashboard" element={<Dashboard />} />
+          <Route path="/seller/products" element={<ProductManagement />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   </StrictMode>,

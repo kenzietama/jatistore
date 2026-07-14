@@ -64,11 +64,11 @@ TRUNCATE TABLE mst_stores CASCADE;
 TRUNCATE TABLE mst_product_categories CASCADE;
 
 INSERT INTO mst_stores (id, store_name, image, seller_id) VALUES
-('cc000000-0000-0000-0000-000000000001', 'TechStore Indonesia', 'https://res.cloudinary.com/jatistore/image/upload/v1/stores/techstore.jpg', 'bb000000-0000-0000-0000-000000000001'),
-('cc000000-0000-0000-0000-000000000002', 'Fashion Paradise', 'https://res.cloudinary.com/jatistore/image/upload/v1/stores/fashionparadise.jpg', 'bb000000-0000-0000-0000-000000000002'),
-('cc000000-0000-0000-0000-000000000003', 'Home & Living', 'https://res.cloudinary.com/jatistore/image/upload/v1/stores/homeliving.jpg', 'bb000000-0000-0000-0000-000000000003'),
-('cc000000-0000-0000-0000-000000000004', 'BookHaven', 'https://res.cloudinary.com/jatistore/image/upload/v1/stores/bookhaven.jpg', 'bb000000-0000-0000-0000-000000000004'),
-('cc000000-0000-0000-0000-000000000005', 'Sports Galaxy', 'https://res.cloudinary.com/jatistore/image/upload/v1/stores/sportsgalaxy.jpg', 'bb000000-0000-0000-0000-000000000005');
+('cc000000-0000-0000-0000-000000000001', 'TechStore Indonesia', 'https://res.cloudinary.com/dqoqfiucw/image/upload/v1783989728/jatistore/products/jatistore_cf0faa4e-8f65-4c1d-86a6-201364ce4c5f.jpg', 'bb000000-0000-0000-0000-000000000001'),
+('cc000000-0000-0000-0000-000000000002', 'Fashion Paradise', 'https://res.cloudinary.com/dqoqfiucw/image/upload/v1783989728/jatistore/products/jatistore_cf0faa4e-8f65-4c1d-86a6-201364ce4c5f.jpg', 'bb000000-0000-0000-0000-000000000002'),
+('cc000000-0000-0000-0000-000000000003', 'Home & Living', 'https://res.cloudinary.com/dqoqfiucw/image/upload/v1783989728/jatistore/products/jatistore_cf0faa4e-8f65-4c1d-86a6-201364ce4c5f.jpg', 'bb000000-0000-0000-0000-000000000003'),
+('cc000000-0000-0000-0000-000000000004', 'BookHaven', 'https://res.cloudinary.com/dqoqfiucw/image/upload/v1783989728/jatistore/products/jatistore_cf0faa4e-8f65-4c1d-86a6-201364ce4c5f.jpg', 'bb000000-0000-0000-0000-000000000004'),
+('cc000000-0000-0000-0000-000000000005', 'Sports Galaxy', 'https://res.cloudinary.com/dqoqfiucw/image/upload/v1783989728/jatistore/products/jatistore_cf0faa4e-8f65-4c1d-86a6-201364ce4c5f.jpg', 'bb000000-0000-0000-0000-000000000005');
 
 INSERT INTO mst_product_categories (id, name) VALUES
 ('dd000000-0000-0000-0000-000000000001', 'Electronics'),

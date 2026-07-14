@@ -58,7 +58,7 @@ export function ProductTable({ refreshTrigger, onEdit }: { refreshTrigger?: numb
             placeholder="Search products by name, ID, or category..." 
             type="text"
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
           />
         </div>
         <div className="h-6 w-px bg-outline-variant"></div>
@@ -80,7 +80,7 @@ export function ProductTable({ refreshTrigger, onEdit }: { refreshTrigger?: numb
                 <button
                   key={s}
                   className={`w-full text-left px-4 py-2 font-body-sm text-body-sm hover:bg-surface-container transition-colors ${status === s ? 'text-primary bg-primary-container/10 font-medium' : 'text-on-surface'}`}
-                  onClick={() => { setStatus(s); setPage(1); setFilterOpen(false); }}
+                  onClick={() => { setStatus(s); setPage(0); setFilterOpen(false); }}
                 >
                   {s === '' ? 'All Status' : s}
                 </button>
@@ -112,7 +112,7 @@ export function ProductTable({ refreshTrigger, onEdit }: { refreshTrigger?: numb
                 <button
                   key={i}
                   className={`w-full text-left px-4 py-2 font-body-sm text-body-sm hover:bg-surface-container transition-colors ${sortBy === opt.by && sortDir === opt.dir ? 'text-primary bg-primary-container/10 font-medium' : 'text-on-surface'}`}
-                  onClick={() => { setSortBy(opt.by); setSortDir(opt.dir); setPage(1); setSortOpen(false); }}
+                  onClick={() => { setSortBy(opt.by); setSortDir(opt.dir); setPage(0); setSortOpen(false); }}
                 >
                   {opt.label}
                 </button>

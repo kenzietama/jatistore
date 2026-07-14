@@ -1,4 +1,7 @@
 import { NavLink } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { dashboardService } from '../../../service/seller/dashboard.service';
+import type { SellerProfile } from '../../../service/seller/dashboard.service';
 
 interface SellerSidebarProps {
   isCollapsed: boolean;
@@ -10,6 +13,12 @@ interface SellerSidebarProps {
 export function SellerSidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }: SellerSidebarProps) {
   const widthClass = isCollapsed ? 'md:w-[88px]' : 'md:w-[240px]';
   const transformClass = isMobileOpen ? 'translate-x-0' : '-translate-x-full';
+
+  const [profile, setProfile] = useState<SellerProfile | null>(null);
+
+  useEffect(() => {
+    dashboardService.getProfile().then(setProfile).catch(console.error);
+  }, []);
 
   return (
     <nav className={`fixed left-0 top-0 flex-col p-stack-md z-40 h-full bg-surface-container dark:bg-inverse-surface border-r border-outline-variant dark:border-outline flex w-[240px] ${widthClass} transform ${transformClass} md:translate-x-0 transition-all duration-300`}>
@@ -123,11 +132,23 @@ export function SellerSidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIs
       {/* Bottom Profile */}
       <div className={`mt-auto pt-stack-md border-t border-outline-variant ${isCollapsed ? 'flex justify-center' : ''}`}>
         <div className={`flex items-center gap-stack-sm ${isCollapsed ? 'justify-center' : ''}`}>
-          <img alt="Seller Profile" className="w-10 h-10 rounded-full object-cover border border-outline-variant shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkIs4AXIbS0ZETMjiEGEQ9nUPCyWmF3KB0zxowwVVxiVOyxu85qfo7ws7eo9Hsy8OL5FqO1z2AgGHrYnpiZdHE8kEpZUd33g4PKkvSE-5NhMSHnGPeyrGSDU7-SmWtdiItMyQlEAicDATJWbIel1PjpsMJzYLrG0daUsFgO5Rn4zq2ihS2SsYmDoHPiZl3gAIKdpHM8QTRE74f-C9-2zkL3mWb6QLfchLiqhpa8PS7-Bmv0YKhKArhlLyqSyvc7rBjfE83xhQaHfxf" />
-          <div className={`flex flex-col overflow-hidden ${isCollapsed ? 'hidden' : 'flex'}`}>
-            <span className="font-label-md text-label-md text-on-surface whitespace-nowrap truncate">Alex Mercer</span>
-            <span className="font-label-sm text-label-sm text-on-surface-variant cursor-pointer hover:underline whitespace-nowrap">View Profile</span>
-          </div>
+          {profile ? (
+            <>
+              <img alt="Seller Profile" className="w-10 h-10 rounded-full object-cover border border-outline-variant shrink-0 bg-surface-variant" src={profile.storeImage || 'https://ui-avatars.com/api/?name=Store'} />
+              <div className={`flex flex-col overflow-hidden ${isCollapsed ? 'hidden' : 'flex'}`}>
+                <span className="font-label-md text-label-md text-on-surface whitespace-nowrap truncate">{profile.storeName}</span>
+                <span className="font-label-sm text-label-sm text-on-surface-variant truncate whitespace-nowrap">{profile.email}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-10 h-10 rounded-full bg-surface-variant border border-outline-variant shrink-0 animate-pulse"></div>
+              <div className={`flex flex-col overflow-hidden ${isCollapsed ? 'hidden' : 'flex'} gap-1`}>
+                <div className="h-4 bg-surface-variant rounded w-24 animate-pulse"></div>
+                <div className="h-3 bg-surface-variant rounded w-32 animate-pulse"></div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </nav>

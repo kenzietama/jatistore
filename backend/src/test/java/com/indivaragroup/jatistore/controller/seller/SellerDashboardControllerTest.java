@@ -1,5 +1,8 @@
 package com.indivaragroup.jatistore.controller.seller;
 
+import com.indivaragroup.jatistore.data.entity.Seller;
+import com.indivaragroup.jatistore.data.entity.User;
+import com.indivaragroup.jatistore.repository.SellerRepository;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.DashboardStatsResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.FinancialOverviewResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.RecentOrderResponse;
@@ -19,7 +22,9 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
+import java.security.Principal;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.PageImpl;
 
@@ -47,13 +52,28 @@ public class SellerDashboardControllerTest {
     private AuthRepository authRepository;
 
     @MockitoBean
+    private SellerRepository sellerRepository;
+
+    @MockitoBean
     private UserDetailsService userDetailsService;
 
     private UUID mockSellerId;
+    private Principal mockPrincipal;
 
     @BeforeEach
     void setUp() {
         mockSellerId = UUID.fromString("bb000000-0000-0000-0000-000000000001");
+        mockPrincipal = () -> "seller@test.com";
+
+        User mockUser = new User();
+        mockUser.setId(UUID.randomUUID());
+        mockUser.setEmail("seller@test.com");
+
+        Seller mockSeller = new Seller();
+        mockSeller.setId(mockSellerId);
+
+        when(authRepository.findByEmail("seller@test.com")).thenReturn(Optional.of(mockUser));
+        when(sellerRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockSeller));
     }
 
     // ==========================================
@@ -68,6 +88,7 @@ public class SellerDashboardControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/seller/dashboard/stats")
+                .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sellerName").value("Alex Mercer"))
@@ -83,6 +104,7 @@ public class SellerDashboardControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/seller/dashboard/stats")
+                .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError());
     }
@@ -99,6 +121,7 @@ public class SellerDashboardControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/seller/dashboard/financial")
+                .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.availableBalance").value(1500.00))
@@ -113,6 +136,7 @@ public class SellerDashboardControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/seller/dashboard/financial")
+                .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError());
     }
@@ -138,6 +162,7 @@ public class SellerDashboardControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/seller/dashboard/orders/recent")
+                .principal(mockPrincipal)
                 .param("limit", "5")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -155,6 +180,7 @@ public class SellerDashboardControllerTest {
 
         // Act & Assert
         mockMvc.perform(get("/api/seller/dashboard/orders/recent")
+                .principal(mockPrincipal)
                 .param("limit", "5")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError());

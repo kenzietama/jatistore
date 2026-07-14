@@ -27,20 +27,16 @@ export interface ApiResponse<T> {
     requestId: string;
 }
 
-const API_BASE = 'http://localhost:8080/api/v1/seller/products';
-const UTILITY_API = 'http://localhost:8080/api/v1/utility';
+import api from '../../lib/api';
 
 export const productService = {
     async uploadImage(file: File): Promise<string> {
         const formData = new FormData();
         formData.append('file', file);
-        const response = await fetch(`${UTILITY_API}/upload-image`, {
-            method: 'POST',
-            body: formData,
+        const response = await api.post<ApiResponse<{url: string}>>('/api/v1/utility/upload-image', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
         });
-        if (!response.ok) throw new Error('Failed to upload image');
-        const json: ApiResponse<{url: string}> = await response.json();
-        return json.data.url;
+        return response.data.data.url;
     },
 
     async getProducts(search?: string, category?: string, status?: string, sortBy?: string, sortDir?: string, page: number = 0, size: number = 20): Promise<PageData<Product>> {
@@ -53,36 +49,20 @@ export const productService = {
         params.append('page', page.toString());
         params.append('size', size.toString());
 
-        const response = await fetch(`${API_BASE}?${params.toString()}`);
-        if (!response.ok) throw new Error('Failed to fetch products');
-        const json: ApiResponse<PageData<Product>> = await response.json();
-        return json.data;
+        const response = await api.get<ApiResponse<PageData<Product>>>(`/api/v1/seller/products?${params.toString()}`);
+        return response.data.data;
     },
 
     async createProduct(data: Partial<Product> & { productCategoryId: string }): Promise<Product> {
-        const response = await fetch(API_BASE, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error('Failed to create product');
-        const json: ApiResponse<Product> = await response.json();
-        return json.data;
+        const response = await api.post<ApiResponse<Product>>(`/api/v1/seller/products`, data);
+        return response.data.data;
     },
 
     async updateProduct(id: string, data: Partial<Product> & { productCategoryId?: string }): Promise<void> {
-        const response = await fetch(`${API_BASE}/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        });
-        if (!response.ok) throw new Error('Failed to update product');
+        await api.patch(`/api/v1/seller/products/${id}`, data);
     },
 
     async deleteProduct(id: string): Promise<void> {
-        const response = await fetch(`${API_BASE}/${id}`, {
-            method: 'DELETE'
-        });
-        if (!response.ok) throw new Error('Failed to delete product');
+        await api.delete(`/api/v1/seller/products/${id}`);
     }
 };

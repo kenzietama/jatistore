@@ -13,4 +13,5 @@ public interface SellerDashboardService {
     DashboardStatsResponse getDashboardStats(UUID sellerId);
     FinancialOverviewResponse getFinancialOverview(UUID sellerId);
     Page<RecentOrderResponse> getRecentOrders(UUID sellerId, String search, String status, String sortBy, String sortDir, int page, int limit);
+    com.indivaragroup.jatistore.dto.response.module.seller.dashboard.SellerProfileResponse getProfile(UUID sellerId);
 }
