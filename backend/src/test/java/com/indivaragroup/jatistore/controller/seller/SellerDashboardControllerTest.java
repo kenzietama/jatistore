@@ -4,6 +4,9 @@ import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.Dashboar
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.FinancialOverviewResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.RecentOrderResponse;
 import com.indivaragroup.jatistore.service.seller.SellerDashboardService;
+import com.indivaragroup.jatistore.service.utility.AuthJWTUtility;
+import com.indivaragroup.jatistore.repository.AuthRepository;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +37,15 @@ public class SellerDashboardControllerTest {
 
     @MockitoBean
     private SellerDashboardService dashboardService;
+
+    @MockitoBean
+    private AuthJWTUtility authJWTUtility;
+
+    @MockitoBean
+    private AuthRepository authRepository;
+
+    @MockitoBean
+    private UserDetailsService userDetailsService;
 
     private UUID mockSellerId;
 
