@@ -11,8 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
@@ -57,15 +55,9 @@ public class AuthJWTUtility {
     public String resolveSubjectFromEncryptedToken(String serializedJwt) {
         try {
             SignedJWT signedJWT = SignedJWT.parse(serializedJwt);
-            JWSVerifier verifier = new MACVerifier(jwtSecret.getBytes());
-
-            if (!signedJWT.verify(verifier)) {
-                throw new CoreThrowHandler(RestApiError.AUT_0004);
-            }
-
             String email = signedJWT.getJWTClaimsSet().getStringClaim("email");
             if (email == null || email.isBlank()) {
-                throw new CoreThrowHandler(RestApiError.AUT_0004);
+                throw new IllegalArgumentException("Email is missing or empty");
             }
             return email;
         } catch (Exception e) {
@@ -74,19 +66,23 @@ public class AuthJWTUtility {
         }
     }
 
-    public boolean validateToken(String serializedJwt) {
+    public void verifyToken(String serializedJwt) {
         try {
             SignedJWT signedJWT = SignedJWT.parse(serializedJwt);
             JWSVerifier verifier = new MACVerifier(jwtSecret.getBytes());
 
             if (!signedJWT.verify(verifier)) {
-                return false;
+                throw new CoreThrowHandler(RestApiError.AUT_0008);
             }
 
             Date expirationTime = signedJWT.getJWTClaimsSet().getExpirationTime();
-            return expirationTime != null && expirationTime.after(new Date());
+            if (expirationTime == null || expirationTime.before(Date.from(Instant.now()))) {
+                throw new CoreThrowHandler(RestApiError.AUT_0007);
+            }
+        } catch (CoreThrowHandler e) {
+            throw e;
         } catch (Exception e) {
-            return false;
+            throw new CoreThrowHandler(RestApiError.AUT_0008);
         }
     }
 }

@@ -9,5 +9,6 @@ public class RestApiPath {
     public static final String AUTH_BASE_PATH = "/auth";
 
     public static final String AUTH_LOGIN_PATH = "/login";
+    public static final String AUTH_LOGOUT_PATH = "/logout";
 
 }

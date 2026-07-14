@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.slf4j.MDC;
@@ -60,7 +61,7 @@ public class AuthService {
 
         if (role.equals("SELLER")) {
             if (!authRepository.isSellerActive(user.get().getEmail())) {
-                throw new CoreThrowHandler(RestApiError.AUT_0006);
+                throw new CoreThrowHandler(RestApiError.AUT_0010);
             }
         }
 
@@ -90,6 +91,30 @@ public class AuthService {
                 .restApiResponseHttpStatus("SUCCESS")
                 .restApiResponseMessage(RestApiSuccess.LOGIN_SUCCESS.getMessage())
                 .restApiResponseData(authLoginResponse)
+                .restApiResponseTimestamp(Instant.now())
+                .restApiResponseRequestId(MDC.get("requestId"))
+                .build();
+    }
+
+    @Transactional
+    public RestApiResponse<Void> logout(String authorizationHeader) throws CoreThrowHandler {
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            throw new CoreThrowHandler(RestApiError.AUT_0006);
+        }
+
+        String jwt = authorizationHeader.substring(7);
+        Optional<Token> token = tokenRepository.findByToken(jwt);
+        if (token.isEmpty()) {
+            throw new CoreThrowHandler(RestApiError.AUT_0009);
+        }
+
+        token.ifPresent(tokenRepository::delete);
+        SecurityContextHolder.clearContext();
+        return RestApiResponse.<Void>builder()
+                .restApiResponseHttpCode(HttpStatus.OK.value())
+                .restApiResponseHttpStatus("SUCCESS")
+                .restApiResponseMessage(RestApiSuccess.LOGOUT_SUCCESS.getMessage())
+                .restApiResponseData(null)
                 .restApiResponseTimestamp(Instant.now())
                 .restApiResponseRequestId(MDC.get("requestId"))
                 .build();

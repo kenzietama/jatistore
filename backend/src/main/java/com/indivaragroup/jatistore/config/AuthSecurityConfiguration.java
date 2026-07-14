@@ -28,6 +28,7 @@ public class AuthSecurityConfiguration {
 
     private final JWTAuthenticationFilter jwtAuthenticationFilter;
     private final AuthRepository authRepository;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     @Bean
     public UserDetailsService userDetailsService() {
@@ -61,7 +62,7 @@ public class AuthSecurityConfiguration {
                 .formLogin(form -> form.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/v1/products").permitAll()
                         .requestMatchers("/api/v1/products/**").permitAll()
                         .requestMatchers("/api/seller/dashboard/**").hasRole("SELLER")
@@ -69,6 +70,7 @@ public class AuthSecurityConfiguration {
                         .requestMatchers("/api/v1/utility/**").permitAll()
                         .anyRequest().authenticated()
                 )
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(customAuthenticationEntryPoint))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
