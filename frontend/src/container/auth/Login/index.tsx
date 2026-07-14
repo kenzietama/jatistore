@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { authService } from "../../../service/auth/authService";
 import { useAuthStore } from "../../../store/auth/useAuthStore";
 
@@ -9,6 +10,7 @@ const Login: React.FC = () => {
 	const [validationError, setValidationError] = useState<string | null>(null);
 	const [authError, setAuthError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
+	const navigate = useNavigate();
 
 	const setToken = useAuthStore((state) => state.setToken);
 
@@ -38,9 +40,16 @@ const Login: React.FC = () => {
 				setToken(response.data.accessToken);
 				// Success path: Redirect or load role-specific views
 				const role = response.data.role;
-				alert(`Login Successful! Logged in as ${role}`)
-
-				// e.g., window.location.reload() or route redirection
+				
+				if (role === "SELLER") {
+					navigate("/seller/dashboard");
+				} else if (role === "BUYER") {
+					navigate("/buyer/home");
+				} else if (role === "ADMIN") {
+					navigate("/admin/dashboard");
+				} else {
+					navigate("/");
+				}
 			} else {
 				console.error("Access token missing in response:", response);
 				setAuthError("Failed to retrieve access token from response.");

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { dashboardService } from '../../../service/seller/dashboard.service';
 import type { DashboardStats } from '../../../service/seller/dashboard.service';
 

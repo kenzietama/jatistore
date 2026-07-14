@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { dashboardService } from '../../../service/seller/dashboard.service';
 import type { FinancialOverview as FinancialData } from '../../../service/seller/dashboard.service';
 
@@ -13,11 +13,10 @@ export function FinancialOverview() {
 
   const formatMoney = (val: number | undefined) => {
     if (val === undefined) return <span className="text-[21px] font-bold text-[#0c7d73]">...</span>;
-    const formatted = val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const [whole, cents] = formatted.split('.');
+    const formatted = val.toLocaleString('id-ID');
     return (
       <span className="text-[21px] font-bold text-[#0c7d73] leading-[1.1] tracking-[-0.01em] m-0">
-        ${whole}<span className="text-[13px] font-semibold text-[#6b7876]">.{cents}</span>
+        Rp {formatted}
       </span>
     );
   };

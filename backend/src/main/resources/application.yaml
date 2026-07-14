@@ -25,3 +25,6 @@ jwt:
     admin: 3600
     seller: 600
     user: 600
+
+cloudinary:
+  url: ${CLOUDINARY_URL:cloudinary://653729848272621:_oe0o7FhXU_9-GDZi_Q2En2zJDA@dqoqfiucw}

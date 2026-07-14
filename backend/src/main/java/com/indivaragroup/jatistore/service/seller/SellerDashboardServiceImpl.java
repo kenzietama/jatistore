@@ -5,9 +5,12 @@ import com.indivaragroup.jatistore.data.entity.Seller;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.DashboardStatsResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.FinancialOverviewResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.RecentOrderResponse;
+import com.indivaragroup.jatistore.data.entity.Store;
+import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.SellerProfileResponse;
 import com.indivaragroup.jatistore.repository.OrderDetailRepository;
 import com.indivaragroup.jatistore.repository.ProductRepository;
 import com.indivaragroup.jatistore.repository.SellerRepository;
+import com.indivaragroup.jatistore.repository.StoreRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,6 +28,20 @@ public class SellerDashboardServiceImpl implements SellerDashboardService {
     private final SellerRepository sellerRepository;
     private final ProductRepository productRepository;
     private final OrderDetailRepository orderDetailRepository;
+    private final StoreRepository storeRepository;
+
+    @Override
+    public SellerProfileResponse getProfile(UUID sellerId) {
+        Seller seller = sellerRepository.findById(sellerId)
+                .orElseThrow(() -> new IllegalArgumentException("Seller not found"));
+        Store store = storeRepository.findBySellerId(sellerId)
+                .orElseThrow(() -> new IllegalArgumentException("Store not found"));
+        return SellerProfileResponse.builder()
+                .storeName(store.getStoreName())
+                .storeImage(store.getImage())
+                .email(seller.getUser().getEmail())
+                .build();
+    }
 
     @Override
     public DashboardStatsResponse getDashboardStats(UUID sellerId) {

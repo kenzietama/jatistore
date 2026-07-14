@@ -1,5 +1,6 @@
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import CatalogPage from "./pages/CatalogPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import LoginPage from "./pages/LoginPage";
@@ -7,6 +8,12 @@ import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 import { MOCK_PRODUCTS, type Product, type CartItem } from "./data/productsMock";
+
+import "./App.css";
+import Login from "./container/auth/Login";
+import Dashboard from "./container/seller/Dashboard";
+import ProductManagement from "./container/seller/Product";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState<"catalog" | "detail" | "login" |"cart"| "checkout" | "history">("catalog");
@@ -272,6 +279,17 @@ const handleLoginSuccess = () => {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/*" element={<App />} />
+        <Route path="/login" element={<Login />} />
+        
+        {/* Seller Routes */}
+        <Route element={<ProtectedRoute allowedRoles={["SELLER"]} />}>
+          <Route path="/seller/dashboard" element={<Dashboard />} />
+          <Route path="/seller/products" element={<ProductManagement />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   </StrictMode>,
 );

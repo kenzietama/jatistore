@@ -64,7 +64,9 @@ public class AuthSecurityConfiguration {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/products").permitAll()
                         .requestMatchers("/api/v1/products/**").permitAll()
-                        .requestMatchers("/api/seller/dashboard/**").permitAll()
+                        .requestMatchers("/api/seller/dashboard/**").hasRole("SELLER")
+                        .requestMatchers("/api/v1/seller/products/**").hasRole("SELLER")
+                        .requestMatchers("/api/v1/utility/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
