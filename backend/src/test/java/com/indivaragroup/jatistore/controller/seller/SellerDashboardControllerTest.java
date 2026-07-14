@@ -10,22 +10,24 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.UUID;
+import org.springframework.data.domain.PageImpl;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import org.springframework.data.domain.PageImpl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(SellerDashboardController.class)
@@ -54,11 +56,17 @@ public class SellerDashboardControllerTest {
         mockSellerId = UUID.fromString("bb000000-0000-0000-0000-000000000001");
     }
 
+    // ==========================================
+    // GET DASHBOARD STATS
+    // ==========================================
+
     @Test
     void getStats_shouldReturnOk() throws Exception {
+        // Arrange
         DashboardStatsResponse mockResponse = new DashboardStatsResponse("Alex Mercer", 25L, 15L);
         when(dashboardService.getDashboardStats(mockSellerId)).thenReturn(mockResponse);
 
+        // Act & Assert
         mockMvc.perform(get("/api/seller/dashboard/stats")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -68,10 +76,28 @@ public class SellerDashboardControllerTest {
     }
 
     @Test
+    void getStats_shouldReturnNotFound_whenSellerInvalid() throws Exception {
+        // Arrange
+        when(dashboardService.getDashboardStats(mockSellerId))
+            .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Seller not found"));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/seller/dashboard/stats")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isInternalServerError());
+    }
+
+    // ==========================================
+    // GET FINANCIAL OVERVIEW
+    // ==========================================
+
+    @Test
     void getFinancials_shouldReturnOk() throws Exception {
+        // Arrange
         FinancialOverviewResponse mockResponse = new FinancialOverviewResponse(new BigDecimal("1500.00"), new BigDecimal("300.00"));
         when(dashboardService.getFinancialOverview(mockSellerId)).thenReturn(mockResponse);
 
+        // Act & Assert
         mockMvc.perform(get("/api/seller/dashboard/financial")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -80,7 +106,24 @@ public class SellerDashboardControllerTest {
     }
 
     @Test
+    void getFinancials_shouldReturnNotFound_whenSellerInvalid() throws Exception {
+        // Arrange
+        when(dashboardService.getFinancialOverview(mockSellerId))
+            .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Seller not found"));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/seller/dashboard/financial")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isInternalServerError());
+    }
+
+    // ==========================================
+    // GET RECENT ORDERS
+    // ==========================================
+
+    @Test
     void getRecentOrders_shouldReturnOk() throws Exception {
+        // Arrange
         RecentOrderResponse recentOrder = new RecentOrderResponse(
                 UUID.randomUUID(),
                 "#ORD-1234",
@@ -93,6 +136,7 @@ public class SellerDashboardControllerTest {
         when(dashboardService.getRecentOrders(eq(mockSellerId), any(), any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new PageImpl<>(Arrays.asList(recentOrder)));
 
+        // Act & Assert
         mockMvc.perform(get("/api/seller/dashboard/orders/recent")
                 .param("limit", "5")
                 .contentType(MediaType.APPLICATION_JSON))
@@ -101,5 +145,18 @@ public class SellerDashboardControllerTest {
                 .andExpect(jsonPath("$.content[0].itemName").value("Product"))
                 .andExpect(jsonPath("$.content[0].amount").value(100.0))
                 .andExpect(jsonPath("$.content[0].status").value("RECEIVED"));
+    }
+
+    @Test
+    void getRecentOrders_shouldReturnNotFound_whenSellerInvalid() throws Exception {
+        // Arrange
+        when(dashboardService.getRecentOrders(eq(mockSellerId), any(), any(), any(), any(), anyInt(), anyInt()))
+            .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Seller not found"));
+
+        // Act & Assert
+        mockMvc.perform(get("/api/seller/dashboard/orders/recent")
+                .param("limit", "5")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isInternalServerError());
     }
 }

@@ -2,9 +2,22 @@ import { useState } from 'react';
 import { SellerLayout } from '../../../components/layout/seller/SellerLayout';
 import { ProductTable } from '../../../components/seller/product/ProductTable';
 import { AddProductModal } from '../../../components/seller/product/AddProductModal';
+import type { Product } from '../../../service/seller/product.service';
 
 export default function ProductManagement() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+    setIsAddModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsAddModalOpen(false);
+    setTimeout(() => setEditingProduct(null), 300); // clear after animation
+  };
 
   return (
     <SellerLayout>
@@ -25,12 +38,14 @@ export default function ProductManagement() {
         </header>
 
         {/* Main Content */}
-        <ProductTable />
+        <ProductTable refreshTrigger={refreshTrigger} onEdit={handleEdit} />
 
         {/* Modal */}
         <AddProductModal 
           isOpen={isAddModalOpen} 
-          onClose={() => setIsAddModalOpen(false)} 
+          onClose={handleCloseModal} 
+          onSuccess={() => setRefreshTrigger(prev => prev + 1)}
+          initialData={editingProduct}
         />
       </div>
     </SellerLayout>

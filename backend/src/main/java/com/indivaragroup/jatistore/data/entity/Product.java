@@ -19,6 +19,10 @@ public class Product {
     @JoinColumn(name = "store_id", nullable = false)
     private Store store;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_category_id", nullable = false)
+    private ProductCategory category;
+
     @Column(nullable = false)
     private String name;
 
