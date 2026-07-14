@@ -169,7 +169,7 @@ class AuthServiceTest {
 
         // Act & Assert
         CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> authService.login(request));
-        assertEquals(RestApiError.AUT_0006.getCode(), exception.getCode());
+        assertEquals(RestApiError.AUT_0010.getCode(), exception.getCode());
         verify(tokenRepository, never()).save(any());
     }
 
