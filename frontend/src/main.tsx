@@ -1,10 +1,10 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./App.css";
-import Dashboard from "./container/seller/Dashboard";
+import Login from "./container/auth/Login";
 
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>
-		<Dashboard />
+		<Login />
 	</StrictMode>,
 );
