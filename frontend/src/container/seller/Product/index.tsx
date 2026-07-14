@@ -25,8 +25,8 @@ export default function ProductManagement() {
         {/* Header Section */}
         <header className="flex justify-between items-center w-full mt-stack-md">
           <div>
-            <h2 className="font-headline-lg text-headline-lg text-on-surface">Product Management</h2>
-            <p className="font-body-sm text-body-sm text-on-surface-variant mt-unit">Manage your inventory, pricing, and product visibility.</p>
+            <h2 className="text-[26px] font-bold text-[#14201e] tracking-[-0.02em] m-0 mb-[4px]">Product Management</h2>
+            <p className="text-[14px] text-[#6b7876] m-0">Manage your inventory, pricing, and product visibility.</p>
           </div>
           <button 
             onClick={() => setIsAddModalOpen(true)}
