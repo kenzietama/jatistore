@@ -116,7 +116,6 @@ public class SellerOrderServiceImpl implements SellerOrderService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid order status transition");
         }
         
-        order.setStatus("SHIPPED");
-        orderRepository.save(order);
+        orderRepository.updateOrderStatus(orderId, "SHIPPED");
     }
 }

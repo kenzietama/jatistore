@@ -31,6 +31,11 @@ api.interceptors.response.use(
 		if (error.response && error.response.status === 401) {
 			// Clear credentials if token expires or is rejected by backend
 			useAuthStore.getState().logout();
+			
+			// Redirect to login page if we are not already on an auth page
+			if (!window.location.pathname.startsWith('/auth/')) {
+				window.location.href = '/auth/login';
+			}
 		}
 		return Promise.reject(error);
 	}

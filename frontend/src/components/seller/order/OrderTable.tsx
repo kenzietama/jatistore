@@ -8,6 +8,24 @@ export function OrderTable() {
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<SellerOrder | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  const handleViewDetail = async (orderId: string) => {
+    try {
+      setLoadingDetail(true);
+      setIsDetailModalOpen(true);
+      const res = await orderService.getOrderDetail(orderId);
+      setSelectedOrder(res);
+    } catch (error) {
+      console.error(error);
+      alert('Failed to load order detail');
+      setIsDetailModalOpen(false);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -187,18 +205,13 @@ export function OrderTable() {
                               Mark as Shipped
                             </button>
                           )}
-                          <button className="text-on-surface-variant hover:text-primary transition-colors p-1" title="View Details">
+                          <button 
+                            onClick={() => handleViewDetail(order.orderId)}
+                            className="text-on-surface-variant hover:text-primary transition-colors p-1" 
+                            title="View Details"
+                          >
                             <span className="material-symbols-outlined text-[20px]">visibility</span>
                           </button>
-                          {order.status === 'SHIPPED' ? (
-                            <button className="border border-primary text-primary hover:bg-primary/10 px-3 py-1 rounded text-xs font-label-md transition-colors">
-                              Received
-                            </button>
-                          ) : (
-                            <button disabled className="border border-outline-variant text-on-surface-variant px-3 py-1 rounded text-xs font-label-md opacity-50 cursor-not-allowed">
-                              Received
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -249,6 +262,142 @@ export function OrderTable() {
           </div>
         )}
       </div>
+
+      {/* Order Detail Modal */}
+      {isDetailModalOpen && (
+        <div className="fixed inset-0 bg-on-background/30 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-lg w-full max-w-3xl shadow-lg flex flex-col max-h-[90vh]">
+            
+            {/* Modal Header */}
+            <div className="p-stack-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low shrink-0 rounded-t-lg">
+              <div className="flex items-center gap-stack-sm">
+                <h3 className="text-headline-sm font-headline-sm text-on-surface">Order Details</h3>
+                {selectedOrder && (
+                  <span className="font-mono-data text-label-md text-on-surface-variant bg-surface-variant px-2 py-1 rounded">
+                    #ORD-{selectedOrder.orderId.substring(0,8).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <button 
+                onClick={() => setIsDetailModalOpen(false)}
+                className="text-on-surface-variant hover:text-on-surface hover:bg-surface-variant p-1 rounded-full transition-colors flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-stack-md overflow-y-auto flex-1">
+              {loadingDetail ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : selectedOrder ? (
+                <div className="space-y-stack-lg">
+                  {/* Info Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-stack-md bg-surface-container-lowest p-stack-sm rounded-lg border border-outline-variant">
+                    <div>
+                      <p className="text-label-sm font-label-sm text-on-surface-variant uppercase mb-1">Status</p>
+                      <div>{getStatusBadge(selectedOrder.status)}</div>
+                    </div>
+                    <div>
+                      <p className="text-label-sm font-label-sm text-on-surface-variant uppercase mb-1">Date</p>
+                      <p className="font-body-sm text-body-sm text-on-surface">
+                        {new Date(selectedOrder.orderDate).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-label-sm font-label-sm text-on-surface-variant uppercase mb-1">Customer</p>
+                      <p className="font-body-sm text-body-sm text-on-surface flex items-center gap-2">
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${getAvatarColor(selectedOrder.customerName)}`}>
+                          {getInitials(selectedOrder.customerName)}
+                        </span>
+                        {selectedOrder.customerName}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-label-sm font-label-sm text-on-surface-variant uppercase mb-1">Total Amount</p>
+                      <p className="font-label-md text-label-md text-primary font-bold">
+                        Rp {selectedOrder.totalAmount.toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Items List */}
+                  <div>
+                    <h4 className="font-title-md text-title-md text-on-surface mb-stack-sm flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[20px] text-on-surface-variant">inventory_2</span>
+                      Order Items
+                    </h4>
+                    <div className="border border-outline-variant rounded-lg overflow-hidden">
+                      <table className="w-full text-left border-collapse">
+                        <thead className="bg-surface-container-low text-on-surface-variant border-b border-outline-variant text-label-sm font-label-sm uppercase">
+                          <tr>
+                            <th className="p-stack-sm">Product</th>
+                            <th className="p-stack-sm text-center">Qty</th>
+                            <th className="p-stack-sm text-right">Price</th>
+                            <th className="p-stack-sm text-right">Subtotal</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-surface-container-lowest">
+                          {selectedOrder.items.map((item, idx) => (
+                            <tr key={idx} className="border-b border-outline-variant last:border-0 hover:bg-[#f8fafc]">
+                              <td className="p-stack-sm">
+                                <div className="flex items-center gap-stack-sm">
+                                  <img 
+                                    src={item.productImage || 'https://via.placeholder.com/40'} 
+                                    alt={item.productName}
+                                    className="w-10 h-10 object-cover rounded border border-outline-variant bg-surface-variant shrink-0"
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className="font-label-md text-label-md text-on-surface line-clamp-1">{item.productName}</span>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <span className="text-[10px] text-on-surface-variant font-mono-data">SKU: {item.productId.substring(0,8).toUpperCase()}</span>
+                                      {item.flashSale && (
+                                        <span className="inline-flex items-center text-[10px] bg-tertiary/10 text-tertiary px-1.5 py-0.5 rounded uppercase font-bold">
+                                          <span className="material-symbols-outlined text-[10px] mr-0.5">bolt</span> Flash
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-stack-sm text-center font-body-sm text-body-sm text-on-surface">
+                                {item.quantity}
+                              </td>
+                              <td className="p-stack-sm text-right font-mono-data text-body-sm text-on-surface-variant">
+                                Rp {item.pricePerItem.toLocaleString('id-ID')}
+                              </td>
+                              <td className="p-stack-sm text-right font-mono-data text-label-md text-on-surface font-medium">
+                                Rp {item.subtotal.toLocaleString('id-ID')}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  
+                </div>
+              ) : (
+                <div className="text-center py-8 text-on-surface-variant">
+                  No data available.
+                </div>
+              )}
+            </div>
+            
+            {/* Modal Footer */}
+            <div className="p-stack-md border-t border-outline-variant bg-surface-container-lowest flex justify-end shrink-0 rounded-b-lg">
+              <button 
+                onClick={() => setIsDetailModalOpen(false)}
+                className="px-6 py-2 rounded bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

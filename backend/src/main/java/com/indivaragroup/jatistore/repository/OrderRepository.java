@@ -20,4 +20,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             @Param("sellerId") UUID sellerId,
             @Param("status") String status,
             Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query(value = "UPDATE trx_orders SET status = CAST(:status AS order_status) WHERE id = :orderId", nativeQuery = true)
+    void updateOrderStatus(@Param("orderId") UUID orderId, @Param("status") String status);
 }

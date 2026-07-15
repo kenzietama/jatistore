@@ -1,6 +1,6 @@
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import CatalogPage from "./pages/CatalogPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import LoginPage from "./pages/LoginPage";
@@ -17,6 +17,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import OrderFulfillment from "./container/seller/OrderFulfillment";
 
 const App = () => {
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState<"catalog" | "detail" | "login" |"cart"| "checkout" | "history">("catalog");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
@@ -186,7 +187,7 @@ const handleLoginSuccess = () => {
     // Oper fungsi asli ke properti onAddToCart di sini
     onAddToCart={handleAddToCart} // 🌟 PASTIKAN BARIS INI ADA
     isLoggedIn={isLoggedIn}
-    onLoginClick={() => setCurrentPage("login")}
+    onLoginClick={() => navigate("/auth/login")}
     onLogoutClick={() => {
       setIsLoggedIn(false);
       setCartItems([]);
@@ -283,7 +284,7 @@ createRoot(document.getElementById("root")!).render(
     <BrowserRouter>
       <Routes>
         <Route path="/*" element={<App />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/auth/login" element={<Login />} />
         
         {/* Seller Routes */}
         <Route element={<ProtectedRoute allowedRoles={["SELLER"]} />}>

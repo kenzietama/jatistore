@@ -141,14 +141,14 @@ export function RecentOrders() {
                   <td colSpan={4} className="py-[12px] px-[20px] border-b border-[#e6e9eb] text-center text-[#6b7876] text-[14px]">No recent orders found.</td>
                 </tr>
               ) : (
-                orderPage.content.map(order => {
+                orderPage.content.map((order, idx) => {
                   let badgeClass = "bg-[#f4f6f7] text-[#6b7876]";
                   if (order.status.includes('RECEIVED')) badgeClass = "bg-[#e6f6f4] text-[#0c7d73]";
                   if (order.status.includes('SHIPPED')) badgeClass = "bg-[#e8f0fe] text-[#2255c7]";
                   if (order.status.includes('PENDING') || order.status.includes('HOLD')) badgeClass = "bg-[#fdf0e3] text-[#b4650a]";
 
                   return (
-                    <tr key={order.orderId} className="hover:bg-[#fafbfb] transition-colors group cursor-pointer">
+                    <tr key={`${order.orderId}-${idx}`} className="hover:bg-[#fafbfb] transition-colors group cursor-pointer">
                       <td className="py-[12px] px-[20px] border-b border-[#e6e9eb] align-middle text-[14px]">
                         <span className="font-mono text-[13px] text-[#6b7876]">{order.displayId}</span>
                       </td>
