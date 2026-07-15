@@ -17,7 +17,10 @@ public enum RestApiError {
     AUT_0007(HttpStatus.UNAUTHORIZED.value(), "Token has expired"),
     AUT_0008(HttpStatus.UNAUTHORIZED.value(), "Invalid Token"),
     AUT_0009(HttpStatus.NOT_FOUND.value(), "Session not found"),
-    AUT_0010(HttpStatus.FORBIDDEN.value(), "Account has been suspended or deactivated."),;
+    AUT_0010(HttpStatus.FORBIDDEN.value(), "Account has been suspended or deactivated."),
+    SLR_0002(HttpStatus.FORBIDDEN.value(), "User is not a registered seller"),
+    SLR_0020(HttpStatus.BAD_REQUEST.value(), "Invalid order status transition"),
+    SLR_0021(HttpStatus.FORBIDDEN.value(), "Order does not contain your products");
 
     private final int code;
     private final String message;

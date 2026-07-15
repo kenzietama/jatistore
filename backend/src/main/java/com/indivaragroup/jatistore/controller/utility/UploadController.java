@@ -1,6 +1,5 @@
 package com.indivaragroup.jatistore.controller.utility;
 
-import com.indivaragroup.jatistore.dto.response.utility.ApiResponse;
 import com.indivaragroup.jatistore.service.utility.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,8 +19,12 @@ public class UploadController {
     private final CloudinaryService cloudinaryService;
 
     @PostMapping("/upload-image")
-    public ResponseEntity<ApiResponse<Map<String, String>>> uploadImage(@RequestParam("file") MultipartFile file) throws Exception {
-        String url = cloudinaryService.uploadImage(file);
-        return ResponseEntity.ok(ApiResponse.success("Image uploaded successfully", Map.of("url", url)));
+    public com.indivaragroup.jatistore.dto.response.RestApiResponse<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file) throws com.indivaragroup.jatistore.exception.CoreThrowHandler {
+        try {
+            String url = cloudinaryService.uploadImage(file);
+            return com.indivaragroup.jatistore.dto.response.RestApiResponse.success(Map.of("url", url));
+        } catch (Exception e) {
+            throw new com.indivaragroup.jatistore.exception.CoreThrowHandler(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage(), null);
+        }
     }
 }

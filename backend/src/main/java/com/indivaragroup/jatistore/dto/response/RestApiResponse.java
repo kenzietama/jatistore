@@ -37,4 +37,15 @@ public class RestApiResponse<T> {
 
     @JsonProperty("requestId")
     private String restApiResponseRequestId;
+
+    public static <T> RestApiResponse<T> success(T data) {
+        return RestApiResponse.<T>builder()
+                .restApiResponseHttpCode(org.springframework.http.HttpStatus.OK.value())
+                .restApiResponseHttpStatus("SUCCESS")
+                .restApiResponseMessage("Success")
+                .restApiResponseData(data)
+                .restApiResponseTimestamp(Instant.now())
+                .restApiResponseRequestId(org.slf4j.MDC.get("requestId"))
+                .build();
+    }
 }

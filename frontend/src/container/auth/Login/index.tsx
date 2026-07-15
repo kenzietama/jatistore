@@ -44,7 +44,11 @@ const Login: React.FC = () => {
 				if (role === "SELLER") {
 					navigate("/seller/dashboard");
 				} else if (role === "BUYER") {
-					navigate("/buyer/home");
+					if (window.history.length > 1) {
+						navigate(-1);
+					} else {
+						navigate("/");
+					}
 				} else if (role === "ADMIN") {
 					navigate("/admin/dashboard");
 				} else {
@@ -56,16 +60,16 @@ const Login: React.FC = () => {
 			}
 		} catch (error: any) {
 			// Extract structured backend validation error or generic auth error
-			if (error.response?.error) {
-				const responseError = error.response.error;
+			if (error.response?.data) {
+				const responseData = error.response.data;
 				// Check for validation field errors (e.g. from RestControllerAdviceHandler)
-				if (responseError) {
-					const fieldErrors = Object.entries(responseError)
+				if (responseData.error && Object.keys(responseData.error).length > 0) {
+					const fieldErrors = Object.entries(responseData.error)
 						.map(([field, msg]) => `${field}: ${msg}`)
 						.join(" | ");
 					setValidationError(fieldErrors || "Validation error occurred.");
 				} else {
-					setAuthError(responseError.message || "Authentication failed.");
+					setAuthError(responseData.message || "Authentication failed.");
 				}
 			} else {
 				console.error("Network error:", error);
