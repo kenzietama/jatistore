@@ -18,4 +18,10 @@ public class RestApiPath {
     public static final String SELLER_ORDERS_PATH = SELLER_BASE_PATH + "/orders";
     public static final String SELLER_FLASH_SALES_PATH = SELLER_BASE_PATH + "/flash-sales";
     public static final String SELLER_FINANCIALS_PATH = SELLER_BASE_PATH + "/financials";
+
+    // Admin Paths
+    public static final String ADMIN_BASE_PATH = "/admin";
+    public static final String ADMIN_DASHBOARD_PATH = ADMIN_BASE_PATH + "/dashboard";
+    public static final String ADMIN_SELLERS_PATH = ADMIN_BASE_PATH + "/sellers";
+    public static final String ADMIN_CATEGORIES_PATH = ADMIN_BASE_PATH + "/categories";
 }

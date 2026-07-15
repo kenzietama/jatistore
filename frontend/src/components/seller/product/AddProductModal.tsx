@@ -18,10 +18,15 @@ export function AddProductModal({ isOpen, onClose, onSuccess, initialData }: Add
   const [description, setDescription] = useState('');
   const [image, setImage] = useState<File | null>(null);
   
+  const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const isEdit = !!initialData;
+
+  useEffect(() => {
+    productService.getCategories().then(setCategories).catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -179,10 +184,9 @@ export function AddProductModal({ isOpen, onClose, onSuccess, initialData }: Add
                     onChange={(e) => setCategory(e.target.value)}
                   >
                     <option disabled value="">Select a category...</option>
-                    <option value="dd000000-0000-0000-0000-000000000001">Electronics</option>
-                    <option value="dd000000-0000-0000-0000-000000000003">Home &amp; Garden</option>
-                    <option value="dd000000-0000-0000-0000-000000000002">Fashion</option>
-                    <option value="dd000000-0000-0000-0000-000000000008">Automotive &amp; Tools</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
                   </select>
                 </div>
 

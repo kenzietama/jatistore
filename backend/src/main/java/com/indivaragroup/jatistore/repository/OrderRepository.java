@@ -24,4 +24,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     @org.springframework.data.jpa.repository.Modifying
     @Query(value = "UPDATE trx_orders SET status = CAST(:status AS order_status) WHERE id = :orderId", nativeQuery = true)
     void updateOrderStatus(@Param("orderId") UUID orderId, @Param("status") String status);
+
+    @Query(value = "SELECT COUNT(*) FROM trx_orders WHERE status IN ('PAID_ON_HOLD', 'SHIPPED', 'RECEIVED')", nativeQuery = true)
+    long countSuccessfulTransactions();
 }
