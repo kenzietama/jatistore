@@ -11,16 +11,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
 
 	if (!isAuthenticated) {
 		// Not logged in, redirect to login page
-		return <Navigate to="/login" replace />;
+		return <Navigate to="/auth/login" replace />;
 	}
 
 	if (allowedRoles && user && !allowedRoles.includes(user.role)) {
 		// Logged in but does not have the required role
 		// Redirect based on their role
 		if (user.role === "SELLER") return <Navigate to="/seller/dashboard" replace />;
-		if (user.role === "BUYER") return <Navigate to="/buyer/home" replace />;
+		if (user.role === "BUYER") return <Navigate to="/" replace />;
 		if (user.role === "ADMIN") return <Navigate to="/admin/dashboard" replace />;
-		return <Navigate to="/login" replace />; // Fallback
+		return <Navigate to="/auth/login" replace />; // Fallback
 	}
 
 	// Authorized, render children routes

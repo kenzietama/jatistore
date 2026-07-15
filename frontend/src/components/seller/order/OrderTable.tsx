@@ -11,6 +11,9 @@ export function OrderTable() {
   const [selectedOrder, setSelectedOrder] = useState<SellerOrder | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [orderToShip, setOrderToShip] = useState<string | null>(null);
+  const [isShippingModalOpen, setIsShippingModalOpen] = useState(false);
+  const [isShipping, setIsShipping] = useState(false);
 
   const handleViewDetail = async (orderId: string) => {
     try {
@@ -75,16 +78,31 @@ export function OrderTable() {
     return colors[index];
   };
 
-  const handleMarkShipped = async (orderId: string) => {
-    if (confirm('Mark this order as shipped?')) {
-      try {
-        await orderService.markAsShipped(orderId);
-        fetchOrders(); // Refresh table
-      } catch (error) {
-        console.error('Failed to update status', error);
-        alert('Failed to mark as shipped. Status must be PAID_ON_HOLD.');
-      }
+  const handleMarkShipped = (orderId: string) => {
+    setOrderToShip(orderId);
+    setIsShippingModalOpen(true);
+  };
+
+  const confirmShipOrder = async () => {
+    if (!orderToShip) return;
+    
+    setIsShipping(true);
+    try {
+      await orderService.markAsShipped(orderToShip);
+      fetchOrders(); // Refresh table
+      setIsShippingModalOpen(false);
+      setOrderToShip(null);
+    } catch (error) {
+      console.error('Failed to update status', error);
+      alert('Failed to mark as shipped. Status must be PAID_ON_HOLD.');
+    } finally {
+      setIsShipping(false);
     }
+  };
+
+  const cancelShipOrder = () => {
+    setIsShippingModalOpen(false);
+    setOrderToShip(null);
   };
 
   return (
@@ -393,6 +411,48 @@ export function OrderTable() {
                 className="px-6 py-2 rounded bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shipping Confirmation Modal */}
+      {isShippingModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant overflow-hidden w-full max-w-sm flex flex-col">
+            <div className="p-stack-md border-b border-outline-variant flex items-center gap-2">
+              <span className="material-symbols-outlined text-secondary">local_shipping</span>
+              <h3 className="font-title-md text-title-md text-on-surface m-0">Confirm Shipment</h3>
+            </div>
+            
+            <div className="p-stack-md">
+              <p className="text-body-md text-on-surface-variant m-0">
+                Are you sure you want to mark order <strong>{orderToShip?.substring(0,8).toUpperCase()}</strong> as shipped? This action cannot be undone.
+              </p>
+            </div>
+            
+            <div className="p-stack-md border-t border-outline-variant bg-surface flex justify-end gap-stack-sm rounded-b-xl">
+              <button 
+                onClick={cancelShipOrder}
+                disabled={isShipping}
+                className="px-4 py-2 rounded font-label-md text-label-md text-on-surface-variant hover:bg-surface-variant transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmShipOrder}
+                disabled={isShipping}
+                className="px-4 py-2 rounded bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
+              >
+                {isShipping ? (
+                  <>
+                    <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+                    Processing...
+                  </>
+                ) : (
+                  'Confirm Shipped'
+                )}
               </button>
             </div>
           </div>

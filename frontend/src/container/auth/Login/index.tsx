@@ -44,7 +44,11 @@ const Login: React.FC = () => {
 				if (role === "SELLER") {
 					navigate("/seller/dashboard");
 				} else if (role === "BUYER") {
-					navigate("/buyer/home");
+					if (window.history.length > 1) {
+						navigate(-1);
+					} else {
+						navigate("/");
+					}
 				} else if (role === "ADMIN") {
 					navigate("/admin/dashboard");
 				} else {

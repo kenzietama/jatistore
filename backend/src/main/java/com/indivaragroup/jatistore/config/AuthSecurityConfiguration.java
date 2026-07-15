@@ -21,8 +21,14 @@ import org.springframework.web.cors.CorsConfigurationSource;
 
 import java.util.List;
 
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class AuthSecurityConfiguration {
 
@@ -65,9 +71,6 @@ public class AuthSecurityConfiguration {
                         .requestMatchers("/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/v1/products").permitAll()
                         .requestMatchers("/api/v1/products/**").permitAll()
-                        .requestMatchers("/api/seller/dashboard/**").hasRole("SELLER")
-                        .requestMatchers("/api/v1/seller/products/**").hasRole("SELLER")
-                        .requestMatchers("/api/v1/seller/orders/**").hasRole("SELLER")
                         .requestMatchers("/api/v1/utility/**").permitAll()
                         .anyRequest().authenticated()
                 )

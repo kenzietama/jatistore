@@ -12,10 +12,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
+import com.indivaragroup.jatistore.dto.utility.RestApiError;
+import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -29,9 +29,9 @@ public class SellerOrderServiceImpl implements SellerOrderService {
     private final OrderRepository orderRepository;
     private final SellerRepository sellerRepository;
 
-    private Seller getSellerById(UUID sellerId) {
+    private Seller getSellerById(UUID sellerId) throws CoreThrowHandler {
         return sellerRepository.findById(sellerId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Seller store not found"));
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0002));
     }
 
     private List<SellerOrderItemDTO> mapToOrderItems(Order order, UUID sellerId) {
@@ -56,7 +56,7 @@ public class SellerOrderServiceImpl implements SellerOrderService {
     }
 
     @Override
-    public Page<SellerOrderListResponse> getSellerOrders(UUID sellerId, String status, int page, int size) {
+    public Page<SellerOrderListResponse> getSellerOrders(UUID sellerId, String status, int page, int size) throws CoreThrowHandler {
         Seller seller = getSellerById(sellerId);
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         
@@ -76,14 +76,14 @@ public class SellerOrderServiceImpl implements SellerOrderService {
     }
 
     @Override
-    public SellerOrderDetailResponse getSellerOrderDetail(UUID sellerId, UUID orderId) {
+    public SellerOrderDetailResponse getSellerOrderDetail(UUID sellerId, UUID orderId) throws CoreThrowHandler {
         Seller seller = getSellerById(sellerId);
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+                .orElseThrow(() -> new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Order not found", null));
                 
         List<SellerOrderItemDTO> items = mapToOrderItems(order, seller.getId());
         if (items.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden: Order does not contain your products");
+            throw new CoreThrowHandler(RestApiError.SLR_0021);
         }
         
         return SellerOrderDetailResponse.builder()
@@ -100,20 +100,20 @@ public class SellerOrderServiceImpl implements SellerOrderService {
 
     @Override
     @Transactional
-    public void markOrderAsShipped(UUID sellerId, UUID orderId) {
+    public void markOrderAsShipped(UUID sellerId, UUID orderId) throws CoreThrowHandler {
         Seller seller = getSellerById(sellerId);
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+                .orElseThrow(() -> new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Order not found", null));
                 
         boolean hasSellerProducts = order.getOrderDetails().stream()
                 .anyMatch(od -> od.getProduct().getStore().getSeller().getId().equals(seller.getId()));
                 
         if (!hasSellerProducts) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden: Order does not contain your products");
+            throw new CoreThrowHandler(RestApiError.SLR_0021);
         }
         
         if (!"PAID_ON_HOLD".equals(order.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid order status transition");
+            throw new CoreThrowHandler(RestApiError.SLR_0020);
         }
         
         orderRepository.updateOrderStatus(orderId, "SHIPPED");
