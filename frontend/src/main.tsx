@@ -279,6 +279,9 @@ const handleLoginSuccess = () => {
   );
 };
 
+import { AdminLayout } from "./components/layout/admin/AdminLayout.tsx";
+import { Dashboard as AdminDashboard } from "./container/admin/Dashboard.tsx";
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
@@ -291,6 +294,14 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/seller/dashboard" element={<Dashboard />} />
           <Route path="/seller/products" element={<ProductManagement />} />
           <Route path="/seller/orders" element={<OrderFulfillment />} />
+        </Route>
+
+        {/* Admin Routes */}
+        <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
+          <Route element={<AdminLayout />}>
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            {/* Flash Sale and Audit Trails will go here in the future */}
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>

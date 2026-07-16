@@ -9,6 +9,7 @@ import com.indivaragroup.jatistore.dto.response.module.seller.order.SellerOrderL
 import com.indivaragroup.jatistore.repository.OrderRepository;
 import com.indivaragroup.jatistore.repository.SellerRepository;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -29,7 +30,7 @@ public class SellerOrderServiceImpl implements SellerOrderService {
     private final OrderRepository orderRepository;
     private final SellerRepository sellerRepository;
 
-    private Seller getSellerById(UUID sellerId) throws CoreThrowHandler {
+    private @NonNull Seller getSellerById(UUID sellerId) throws CoreThrowHandler {
         return sellerRepository.findById(sellerId)
                 .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0002));
     }

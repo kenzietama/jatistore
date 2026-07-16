@@ -20,7 +20,11 @@ public enum RestApiError {
     AUT_0010(HttpStatus.FORBIDDEN.value(), "Account has been suspended or deactivated."),
     SLR_0002(HttpStatus.FORBIDDEN.value(), "User is not a registered seller"),
     SLR_0020(HttpStatus.BAD_REQUEST.value(), "Invalid order status transition"),
-    SLR_0021(HttpStatus.FORBIDDEN.value(), "Order does not contain your products");
+    SLR_0021(HttpStatus.FORBIDDEN.value(), "Order does not contain your products"),
+    ADM_0006(HttpStatus.NOT_FOUND.value(), "Seller not found"),
+    ADM_0010(HttpStatus.CONFLICT.value(), "Category name already exists"),
+    ADM_0011(HttpStatus.NOT_FOUND.value(), "Category not found"),
+    ADM_0012(HttpStatus.CONFLICT.value(), "Cannot delete category with active products");
 
     private final int code;
     private final String message;

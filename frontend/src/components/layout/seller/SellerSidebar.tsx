@@ -154,34 +154,45 @@ export function SellerSidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIs
       </ul>
 
       {/* Bottom Profile */}
-      <div className={`mt-auto pt-stack-md border-t border-outline-variant flex flex-col gap-2 ${isCollapsed ? 'items-center' : ''}`}>
-        <div className={`flex items-center gap-stack-sm w-full ${isCollapsed ? 'justify-center' : ''}`}>
-          {profile ? (
-            <>
-              <img alt="Seller Profile" className="w-10 h-10 rounded-full object-cover border border-outline-variant shrink-0 bg-surface-variant" src={profile.storeImage || 'https://ui-avatars.com/api/?name=Store'} />
-              <div className={`flex flex-col overflow-hidden ${isCollapsed ? 'hidden' : 'flex'}`}>
-                <span className="font-label-md text-label-md text-on-surface whitespace-nowrap truncate">{profile.storeName}</span>
-                <span className="font-label-sm text-label-sm text-on-surface-variant truncate whitespace-nowrap">{profile.email}</span>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="w-10 h-10 rounded-full bg-surface-variant border border-outline-variant shrink-0 animate-pulse"></div>
-              <div className={`flex flex-col overflow-hidden ${isCollapsed ? 'hidden' : 'flex'} gap-1`}>
-                <div className="h-4 bg-surface-variant rounded w-24 animate-pulse"></div>
-                <div className="h-3 bg-surface-variant rounded w-32 animate-pulse"></div>
-              </div>
-            </>
-          )}
-        </div>
-        <button 
-          onClick={() => setIsLogoutModalOpen(true)}
-          className={`flex items-center gap-stack-sm p-2 bg-error text-on-error hover:opacity-90 rounded-lg transition-all ${isCollapsed ? 'justify-center' : 'w-full'}`}
-          title={isCollapsed ? "Logout" : undefined}
-        >
-          <span className="material-symbols-outlined shrink-0" data-icon="logout">logout</span>
-          <span className={`font-label-md text-label-md whitespace-nowrap ${isCollapsed ? 'hidden' : 'block'}`}>Logout</span>
-        </button>
+      <div className="mt-auto pt-stack-md border-t border-outline-variant">
+        {!isCollapsed ? (
+          <div className="flex items-center justify-between p-stack-sm bg-surface-variant rounded">
+            <div className="flex items-center gap-stack-sm w-full overflow-hidden">
+              {profile ? (
+                <>
+                  <img alt="Seller Profile" className="w-8 h-8 rounded-full object-cover border border-outline-variant shrink-0 bg-surface-variant" src={profile.storeImage || 'https://ui-avatars.com/api/?name=Store'} />
+                  <div className="flex flex-col overflow-hidden w-full">
+                    <span className="font-label-md text-label-md text-on-surface whitespace-nowrap truncate">{profile.storeName}</span>
+                    <span className="text-[10px] text-on-surface-variant truncate whitespace-nowrap">{profile.email}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-8 h-8 rounded-full bg-surface-variant border border-outline-variant shrink-0 animate-pulse"></div>
+                  <div className="flex flex-col overflow-hidden w-full gap-1">
+                    <div className="h-3 bg-surface-variant rounded w-20 animate-pulse"></div>
+                    <div className="h-2 bg-surface-variant rounded w-24 animate-pulse"></div>
+                  </div>
+                </>
+              )}
+            </div>
+            <button 
+              onClick={() => setIsLogoutModalOpen(true)}
+              className="p-1.5 text-error hover:bg-error/10 rounded-full transition-colors flex shrink-0 ml-1"
+              title="Logout"
+            >
+              <span className="material-symbols-outlined text-[18px]">logout</span>
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {profile ? (
+              <img alt="Seller Profile" className="w-10 h-10 mx-auto rounded-full object-cover border border-outline-variant shrink-0 bg-surface-variant shadow-sm" src={profile.storeImage || 'https://ui-avatars.com/api/?name=Store'} title={profile.storeName} />
+            ) : (
+              <div className="w-10 h-10 mx-auto rounded-full bg-surface-variant border border-outline-variant shrink-0 animate-pulse shadow-sm"></div>
+            )}
+          </div>
+        )}
       </div>
     </nav>
 
