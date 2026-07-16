@@ -6,6 +6,7 @@ import com.indivaragroup.jatistore.dto.response.module.seller.order.SellerOrderD
 import com.indivaragroup.jatistore.dto.response.module.seller.order.SellerOrderListResponse;
 import com.indivaragroup.jatistore.dto.response.utility.PageData;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
+import com.indivaragroup.jatistore.audit.Audit;
 import com.indivaragroup.jatistore.service.seller.SellerOrderService;
 import com.indivaragroup.jatistore.service.seller.SellerSecurityHelper;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,7 @@ public class SellerOrderController {
     }
 
     @PatchMapping("/{orderId}/ship")
+    @Audit(action = "ORDER_SHIPPED", affectedModule = "ORDERS", description = "Seller shipped an order")
     public RestApiResponse<Void> markAsShipped(Principal principal, @PathVariable UUID orderId) throws CoreThrowHandler {
         sellerOrderService.markOrderAsShipped(securityHelper.getSellerIdFromPrincipal(principal), orderId);
         return RestApiResponse.success(null);
