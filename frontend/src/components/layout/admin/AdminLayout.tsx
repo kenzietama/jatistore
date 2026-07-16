@@ -7,7 +7,7 @@ export function AdminLayout() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-surface">
+    <div className="flex min-h-screen bg-background text-on-background font-body-md">
       <AdminSidebar 
         isCollapsed={isSidebarCollapsed}
         setIsCollapsed={setIsSidebarCollapsed}
@@ -42,7 +42,7 @@ export function AdminLayout() {
           </button>
         </header>
 
-        <main className="flex-1">
+        <main className="flex-1 p-gutter">
           <Outlet />
         </main>
       </div>

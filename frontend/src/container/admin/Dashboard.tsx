@@ -39,7 +39,7 @@ export function Dashboard() {
   ];
 
   return (
-    <div className="p-stack-lg w-full max-w-[1440px] space-y-10 bg-surface min-h-screen">
+    <div className="space-y-10 h-full">
       <header className="flex justify-between items-center w-full mt-stack-md mb-stack-md">
         <h1 className="font-headline-lg text-[32px] font-bold text-on-surface m-0 mb-stack-md">Dashboard</h1>
       </header>

@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,6 +19,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 
 import java.nio.charset.StandardCharsets;
+
+import org.springframework.web.util.WebUtils;
 
 @Aspect
 @Component
@@ -40,15 +43,19 @@ public class AuditAspect {
         auditTrail.setAffectedModule(auditAnnotation.affectedModule());
         auditTrail.setDescription(auditAnnotation.description());
 
-        // 2. IP Address
+        // 2. IP Address (Bypass IPv6 for Localhost)
         String ipAddress = request.getHeader("X-Forwarded-For");
         if (ipAddress == null || ipAddress.isEmpty()) {
             ipAddress = request.getRemoteAddr();
         }
+        if ("0:0:0:0:0:0:0:1".equals(ipAddress)) {
+            ipAddress = "127.0.0.1";
+        }
         auditTrail.setIpAddress(ipAddress);
 
         // 3. Request Payload
-        if (request instanceof ContentCachingRequestWrapper wrapper) {
+        ContentCachingRequestWrapper wrapper = WebUtils.getNativeRequest(request, ContentCachingRequestWrapper.class);
+        if (wrapper != null) {
             byte[] buf = wrapper.getContentAsByteArray();
             if (buf.length > 0) {
                 String payload = new String(buf, 0, buf.length, StandardCharsets.UTF_8);
@@ -56,25 +63,127 @@ public class AuditAspect {
             }
         }
 
-        // 4. User Context dari Spring Security
+        // 3.5. Extract Entity ID
+        // Coba dari parameter (misal @PathVariable UUID id)
+        if (joinPoint.getSignature() instanceof org.aspectj.lang.reflect.MethodSignature signature) {
+            String[] parameterNames = signature.getParameterNames();
+            Object[] args = joinPoint.getArgs();
+            if (parameterNames != null) {
+                for (int i = 0; i < parameterNames.length; i++) {
+                    if (parameterNames[i].toLowerCase().endsWith("id") && args[i] instanceof java.util.UUID uuid) {
+                        auditTrail.setEntityId(uuid);
+                        break;
+                    }
+                }
+            }
+        }
+        // Jika belum dapat, coba dari result (misal return response body)
+        if (auditTrail.getEntityId() == null && result instanceof com.indivaragroup.jatistore.dto.response.RestApiResponse<?> apiResponse) {
+            Object data = apiResponse.getRestApiResponseData();
+            if (data != null) {
+                try {
+                    java.lang.reflect.Method getIdMethod = data.getClass().getMethod("getId");
+                    Object idValue = getIdMethod.invoke(data);
+                    if (idValue instanceof java.util.UUID uuid) {
+                        auditTrail.setEntityId(uuid);
+                    }
+                } catch (Exception ignored) {
+                    if (data instanceof java.util.Map map) {
+                        for (Object key : map.keySet()) {
+                            if (key.toString().toLowerCase().endsWith("id")) {
+                                try {
+                                    auditTrail.setEntityId(java.util.UUID.fromString(map.get(key).toString()));
+                                } catch (Exception ignored2) {}
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. User Context
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof UserDetails userDetails) {
             String email = userDetails.getUsername();
-            // Ambil ID asli dari database berdasarkan email JWT
             authRepository.findByEmail(email).ifPresent(user -> {
                 auditTrail.setUserId(user.getId());
-                // Ambil Role pertama (misal: ROLE_SELLER -> hilangkan "ROLE_")
                 String role = userDetails.getAuthorities().iterator().next().getAuthority();
                 auditTrail.setUserRole(role.replace("ROLE_", ""));
             });
+        } else if ("LOGIN".equals(auditAnnotation.action())) {
+            // Fallback untuk membaca email dari request body karena SecurityContext belum ada di endpoint public
+            try {
+                if (auditTrail.getPayload() != null) {
+                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"authLoginRequestEmail\"\\s*:\\s*\"([^\"]+)\"").matcher((String)auditTrail.getPayload());
+                    if (m.find()) {
+                        String email = m.group(1);
+                        authRepository.findByEmail(email).ifPresent(user -> {
+                            auditTrail.setUserId(user.getId());
+                            auditTrail.setUserRole(authRepository.findUserRole(user.getId()));
+                        });
+                    }
+                }
+            } catch (Exception ignored) {}
         }
 
         // 5. Simpan
         auditTrailRepository.save(auditTrail);
     }
 
+    @AfterThrowing(pointcut = "@annotation(auditAnnotation)", throwing = "exception")
+    public void logAuditFailure(JoinPoint joinPoint, Audit auditAnnotation, Throwable exception) {
+        if ("LOGIN".equals(auditAnnotation.action())) {
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attributes == null) return;
+
+            HttpServletRequest request = attributes.getRequest();
+            AuditTrail auditTrail = new AuditTrail();
+            
+            auditTrail.setAction("LOGIN_FAILED");
+            auditTrail.setAffectedModule("AUTH");
+            
+            String errorMsg = exception.getMessage();
+            if (exception instanceof com.indivaragroup.jatistore.exception.CoreThrowHandler coreThrow) {
+                errorMsg = coreThrow.getRestApiError().getMessage();
+            }
+            auditTrail.setDescription("Failed login attempt: " + errorMsg);
+
+            String ipAddress = request.getHeader("X-Forwarded-For");
+            if (ipAddress == null || ipAddress.isEmpty()) {
+                ipAddress = request.getRemoteAddr();
+            }
+            if ("0:0:0:0:0:0:0:1".equals(ipAddress)) {
+                ipAddress = "127.0.0.1";
+            }
+            auditTrail.setIpAddress(ipAddress);
+
+            ContentCachingRequestWrapper wrapper = WebUtils.getNativeRequest(request, ContentCachingRequestWrapper.class);
+            if (wrapper != null) {
+                byte[] buf = wrapper.getContentAsByteArray();
+                if (buf.length > 0) {
+                    String payload = new String(buf, 0, buf.length, StandardCharsets.UTF_8);
+                    auditTrail.setPayload(sanitizePayload(payload));
+                    
+                    try {
+                        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"authLoginRequestEmail\"\\s*:\\s*\"([^\"]+)\"").matcher(payload);
+                        if (m.find()) {
+                            String email = m.group(1);
+                            authRepository.findByEmail(email).ifPresent(user -> {
+                                auditTrail.setUserId(user.getId());
+                                auditTrail.setUserRole(authRepository.findUserRole(user.getId()));
+                            });
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            auditTrailRepository.save(auditTrail);
+        }
+    }
+
     private String sanitizePayload(String payload) {
-        // Sensor password jika ada di dalam request
-        return payload.replaceAll("\"password\"\\s*:\\s*\"[^\"]+\"", "\"password\":\"*****\"");
+        // Sensor segala jenis key yang mengandung kata 'password' (case insensitive)
+        return payload.replaceAll("(?i)\"([^\"]*password[^\"]*)\"\\s*:\\s*\"[^\"]+\"", "\"$1\":\"*****\"");
     }
 }
