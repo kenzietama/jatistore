@@ -1,5 +1,6 @@
 package com.indivaragroup.jatistore.controller.seller;
 
+import com.indivaragroup.jatistore.data.utility.constant.OrderStatus;
 import com.indivaragroup.jatistore.dto.response.RestApiPath;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.SellerProfileResponse;
@@ -45,7 +46,7 @@ public class SellerDashboardController {
     public RestApiResponse<Page<RecentOrderResponse>> getRecentOrders(
             Principal principal,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String status,
+            @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
             @RequestParam(required = false, defaultValue = "desc") String sortDir,
             @RequestParam(defaultValue = "1") int page,

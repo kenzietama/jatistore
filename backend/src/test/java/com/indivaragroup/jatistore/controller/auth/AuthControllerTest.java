@@ -43,6 +43,9 @@ class AuthControllerTest {
     private AuthRepository authRepository;
 
     @MockitoBean
+    private com.indivaragroup.jatistore.repository.TokenRepository tokenRepository;
+
+    @MockitoBean
     private UserDetailsService userDetailsService;
 
     @Test

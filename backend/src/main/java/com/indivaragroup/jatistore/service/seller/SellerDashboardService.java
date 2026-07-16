@@ -1,5 +1,6 @@
 package com.indivaragroup.jatistore.service.seller;
 
+import com.indivaragroup.jatistore.data.utility.constant.OrderStatus;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.DashboardStatsResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.FinancialOverviewResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.RecentOrderResponse;
@@ -13,6 +14,6 @@ import org.springframework.data.domain.Page;
 public interface SellerDashboardService {
     DashboardStatsResponse getDashboardStats(UUID sellerId) throws CoreThrowHandler;
     FinancialOverviewResponse getFinancialOverview(UUID sellerId) throws CoreThrowHandler;
-    Page<RecentOrderResponse> getRecentOrders(UUID sellerId, String search, String status, String sortBy, String sortDir, int page, int limit) throws CoreThrowHandler;
+    Page<RecentOrderResponse> getRecentOrders(UUID sellerId, String search, OrderStatus status, String sortBy, String sortDir, int page, int limit) throws CoreThrowHandler;
     SellerProfileResponse getProfile(UUID sellerId) throws CoreThrowHandler;
 }

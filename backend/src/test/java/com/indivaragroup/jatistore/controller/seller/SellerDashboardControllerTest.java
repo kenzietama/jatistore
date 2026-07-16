@@ -55,6 +55,12 @@ public class SellerDashboardControllerTest {
     private SellerRepository sellerRepository;
 
     @MockitoBean
+    private com.indivaragroup.jatistore.repository.TokenRepository tokenRepository;
+
+    @MockitoBean
+    private com.indivaragroup.jatistore.service.seller.SellerSecurityHelper sellerSecurityHelper;
+
+    @MockitoBean
     private UserDetailsService userDetailsService;
 
     private UUID mockSellerId;
@@ -74,6 +80,7 @@ public class SellerDashboardControllerTest {
 
         when(authRepository.findByEmail("seller@test.com")).thenReturn(Optional.of(mockUser));
         when(sellerRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockSeller));
+        when(sellerSecurityHelper.getSellerIdFromPrincipal(any())).thenReturn(mockSellerId);
     }
 
     // ==========================================
@@ -87,13 +94,13 @@ public class SellerDashboardControllerTest {
         when(dashboardService.getDashboardStats(mockSellerId)).thenReturn(mockResponse);
 
         // Act & Assert
-        mockMvc.perform(get("/api/seller/dashboard/stats")
+        mockMvc.perform(get("/api/v1/seller/dashboard/stats")
                 .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.sellerName").value("Alex Mercer"))
-                .andExpect(jsonPath("$.totalOrders").value(25))
-                .andExpect(jsonPath("$.totalProducts").value(15));
+                .andExpect(jsonPath("$.data.sellerName").value("Alex Mercer"))
+                .andExpect(jsonPath("$.data.totalOrders").value(25))
+                .andExpect(jsonPath("$.data.totalProducts").value(15));
     }
 
     @Test
@@ -103,7 +110,7 @@ public class SellerDashboardControllerTest {
             .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Seller not found"));
 
         // Act & Assert
-        mockMvc.perform(get("/api/seller/dashboard/stats")
+        mockMvc.perform(get("/api/v1/seller/dashboard/stats")
                 .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError());
@@ -120,12 +127,12 @@ public class SellerDashboardControllerTest {
         when(dashboardService.getFinancialOverview(mockSellerId)).thenReturn(mockResponse);
 
         // Act & Assert
-        mockMvc.perform(get("/api/seller/dashboard/financial")
+        mockMvc.perform(get("/api/v1/seller/dashboard/financial")
                 .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.availableBalance").value(1500.00))
-                .andExpect(jsonPath("$.onHoldBalance").value(300.00));
+                .andExpect(jsonPath("$.data.availableBalance").value(1500.00))
+                .andExpect(jsonPath("$.data.onHoldBalance").value(300.00));
     }
 
     @Test
@@ -135,7 +142,7 @@ public class SellerDashboardControllerTest {
             .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Seller not found"));
 
         // Act & Assert
-        mockMvc.perform(get("/api/seller/dashboard/financial")
+        mockMvc.perform(get("/api/v1/seller/dashboard/financial")
                 .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError());
@@ -161,15 +168,15 @@ public class SellerDashboardControllerTest {
                 .thenReturn(new PageImpl<>(Arrays.asList(recentOrder)));
 
         // Act & Assert
-        mockMvc.perform(get("/api/seller/dashboard/orders/recent")
+        mockMvc.perform(get("/api/v1/seller/dashboard/orders/recent")
                 .principal(mockPrincipal)
                 .param("limit", "5")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].displayId").value("#ORD-1234"))
-                .andExpect(jsonPath("$.content[0].itemName").value("Product"))
-                .andExpect(jsonPath("$.content[0].amount").value(100.0))
-                .andExpect(jsonPath("$.content[0].status").value("RECEIVED"));
+                .andExpect(jsonPath("$.data.content[0].displayId").value("#ORD-1234"))
+                .andExpect(jsonPath("$.data.content[0].itemName").value("Product"))
+                .andExpect(jsonPath("$.data.content[0].amount").value(100.0))
+                .andExpect(jsonPath("$.data.content[0].status").value("RECEIVED"));
     }
 
     @Test
@@ -179,7 +186,7 @@ public class SellerDashboardControllerTest {
             .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Seller not found"));
 
         // Act & Assert
-        mockMvc.perform(get("/api/seller/dashboard/orders/recent")
+        mockMvc.perform(get("/api/v1/seller/dashboard/orders/recent")
                 .principal(mockPrincipal)
                 .param("limit", "5")
                 .contentType(MediaType.APPLICATION_JSON))

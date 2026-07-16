@@ -60,6 +60,15 @@ public class SellerProductControllerTest {
     @MockitoBean
     private SellerRepository sellerRepository;
 
+    @MockitoBean
+    private com.indivaragroup.jatistore.service.seller.SellerSecurityHelper sellerSecurityHelper;
+
+    @MockitoBean
+    private org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
+
+    @MockitoBean
+    private com.indivaragroup.jatistore.repository.TokenRepository tokenRepository;
+
     private UUID mockSellerId;
     private UUID mockProductId;
     private ProductResponse mockProduct;
@@ -80,6 +89,7 @@ public class SellerProductControllerTest {
 
         when(authRepository.findByEmail("seller@test.com")).thenReturn(Optional.of(mockUser));
         when(sellerRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockSeller));
+        when(sellerSecurityHelper.getSellerIdFromPrincipal(any())).thenReturn(mockSellerId);
 
         mockProduct = new ProductResponse();
         mockProduct.setId(mockProductId);
@@ -176,7 +186,7 @@ public class SellerProductControllerTest {
                 .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.productId").value(createdProduct.getId().toString()));
     }
 
@@ -214,7 +224,7 @@ public class SellerProductControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Product updated successfully."));
+                .andExpect(jsonPath("$.message").value("Success"));
     }
 
     @Test

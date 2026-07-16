@@ -1,5 +1,6 @@
 package com.indivaragroup.jatistore.controller.seller;
 
+import com.indivaragroup.jatistore.data.utility.constant.OrderStatus;
 import com.indivaragroup.jatistore.dto.response.RestApiPath;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.order.SellerOrderDetailResponse;
@@ -29,7 +30,7 @@ public class SellerOrderController {
     @GetMapping
     public RestApiResponse<PageData<SellerOrderListResponse>> getOrders(
             Principal principal,
-            @RequestParam(required = false) String status,
+            @RequestParam(required = false) OrderStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) throws CoreThrowHandler {
             

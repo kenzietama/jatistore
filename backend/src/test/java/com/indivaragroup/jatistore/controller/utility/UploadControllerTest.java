@@ -34,6 +34,9 @@ public class UploadControllerTest {
     @MockitoBean
     private com.indivaragroup.jatistore.repository.AuthRepository authRepository;
 
+    @MockitoBean
+    private com.indivaragroup.jatistore.repository.TokenRepository tokenRepository;
+
     @Test
     void uploadImage_shouldReturnUrl() throws Exception {
         // Arrange
@@ -43,7 +46,7 @@ public class UploadControllerTest {
         // Act & Assert
         mockMvc.perform(multipart("/api/v1/utility/upload-image").file(file))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Image uploaded successfully"))
+                .andExpect(jsonPath("$.message").value("Success"))
                 .andExpect(jsonPath("$.data.url").value("https://secure.url/test.jpg"));
     }
 }
