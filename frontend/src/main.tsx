@@ -321,6 +321,7 @@ const App = () => {
 
 import { AdminLayout } from "./components/layout/admin/AdminLayout.tsx";
 import { Dashboard as AdminDashboard } from "./container/admin/Dashboard.tsx";
+import { AuditTrails } from "./container/admin/AuditTrails.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -340,7 +341,8 @@ createRoot(document.getElementById("root")!).render(
         <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
           <Route element={<AdminLayout />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            {/* Flash Sale and Audit Trails will go here in the future */}
+            <Route path="/admin/audit-trails" element={<AuditTrails />} />
+            {/* Flash Sale will go here in the future */}
           </Route>
         </Route>
       </Routes>
