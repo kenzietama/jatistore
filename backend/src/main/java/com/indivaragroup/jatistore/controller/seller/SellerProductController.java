@@ -7,6 +7,7 @@ import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.ProductResponse;
 import com.indivaragroup.jatistore.dto.response.utility.PageData;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
+import com.indivaragroup.jatistore.audit.Audit;
 import com.indivaragroup.jatistore.service.seller.SellerProductService;
 import com.indivaragroup.jatistore.service.seller.SellerSecurityHelper;
 import jakarta.validation.Valid;
@@ -50,18 +51,21 @@ public class SellerProductController {
     }
 
     @PostMapping
+    @Audit(action = "PRODUCT_CREATE", affectedModule = "PRODUCT", description = "Seller created a new product")
     public RestApiResponse<Map<String, String>> createProduct(Principal principal, @Valid @RequestBody ProductCreateRequest request) throws CoreThrowHandler {
         ProductResponse product = sellerProductService.createProduct(securityHelper.getSellerIdFromPrincipal(principal), request);
         return RestApiResponse.success(Map.of("productId", product.getId().toString()));
     }
 
     @PatchMapping("/{id}")
+    @Audit(action = "PRODUCT_UPDATE", affectedModule = "PRODUCT", description = "Seller updated product data")
     public RestApiResponse<Void> updateProduct(Principal principal, @PathVariable UUID id, @Valid @RequestBody ProductUpdateRequest request) throws CoreThrowHandler {
         sellerProductService.updateProduct(securityHelper.getSellerIdFromPrincipal(principal), id, request);
         return RestApiResponse.success(null);
     }
 
     @DeleteMapping("/{id}")
+    @Audit(action = "PRODUCT_DELETE", affectedModule = "PRODUCT", description = "Seller deleted a product")
     public RestApiResponse<Void> deleteProduct(Principal principal, @PathVariable UUID id) throws CoreThrowHandler {
         sellerProductService.deleteProduct(securityHelper.getSellerIdFromPrincipal(principal), id);
         return RestApiResponse.success(null);
