@@ -1,4 +1,4 @@
-import { StrictMode, useState } from "react";
+import { StrictMode, useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import CatalogPage from "./pages/CatalogPage";
@@ -8,6 +8,7 @@ import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 import { MOCK_PRODUCTS, type Product, type CartItem } from "./data/productsMock";
+import api from "./lib/api";
 
 import "./App.css";
 import Login from "./container/auth/Login";
@@ -22,8 +23,16 @@ const App = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-
+  const [cartCount, setCartCount] = useState<number>(0);
   const [pendingProductId, setPendingProductId] = useState<string | null>(null);
+  const [selectedCheckoutItems, setSelectedCheckoutItems] = useState<any[]>([]);
+
+  // STATE PENCARIAN GLOBAL
+  const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>("");
+
+  useEffect(() => {
+    fetchCartCount();
+  }, []);
 
   const handleNavigateToCart = () => {
     if (!isLoggedIn) {
@@ -33,105 +42,50 @@ const App = () => {
     }
   };
 
-//   const handleAddToCart = (productId: string) => {
-//     if (!isLoggedIn) {
-//       setPendingProductId(productId); 
-//       setCurrentPage("login");
-//       return;
-//     }
+  const handleAddToCart = async (productId: string, quantity: number = 1) => {
+    const token = localStorage.getItem("token");
 
-//     const productData = MOCK_PRODUCTS.find((p) => p.id === productId);
-//     if (!productData) return;
-
-//     setCartItems((prevItems) => {
-//       const isExist = prevItems.find((item) => item.id === productId);
-
-//       if (isExist) {
-//         if (isExist.quantity < 5) {
-//           return prevItems.map((item) =>
-//             item.id === productId ? { ...item, quantity: item.quantity + 1 } : item
-//           );
-//         }
-//         alert("Stok maksimal untuk produk ini sudah tercapai di keranjang!");
-//         return prevItems;
-//       }
-
-//       const newItem: CartItem = {
-//         id: productData.id,
-//         name: productData.name,
-//         store: "JatiStore Official",
-//         price: productData.price,
-//         image: productData.image,
-//         variant: "Standard Version",
-//         quantity: 1,
-//         maxStock: 5,
-//       };
-      
-//       return [...prevItems, newItem];
-//     });
-//   };
-
-  const handleAddToCart = (productId: string) => {
-  const productData = MOCK_PRODUCTS.find((p) => p.id === productId);
-  if (!productData) return;
-
-  setCartItems((prevItems) => {
-    const isExist = prevItems.find((item) => item.id === productId);
-
-    if (isExist) {
-      if (isExist.quantity < 5) {
-        alert(`${productData.name} ditambahkan lagi ke keranjang!`);
-        return prevItems.map((item) =>
-          item.id === productId ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      }
-      alert("Stok maksimal untuk produk ini sudah tercapai di keranjang!");
-      return prevItems;
+    if (!token) {
+      setCurrentPage("login"); 
+      return;
     }
 
-    const newItem: CartItem = {
-      id: productData.id,
-      name: productData.name,
-      store: "JatiStore Official",
-      price: productData.price,
-      image: productData.image,
-      variant: "Standard Version",
-      quantity: 1,
-      maxStock: 5,
-    };
-    setCurrentPage("cart");
-    
-    // alert(`${productData.name} berhasil dimasukkan ke keranjang!`);
-    return [...prevItems, newItem];
-  });
-};
+    try {
+      const response = await api.post("/api/v1/carts/items", {
+        productId: productId,
+        quantity: quantity
+      });
 
-//   const handleLoginSuccess = () => {
-//     setIsLoggedIn(true);
+      if (response.data && response.data.code === 200) {
+        fetchCartCount();
+      }
+    } catch (error: any) {
+      console.error("Gagal menambahkan ke keranjang:", error);
+      const errorMessage = error.response?.data?.message || "Terjadi kesalahan pada server.";
+      alert(`Gagal: ${errorMessage}`);
+    }
+  };
 
-//     if (pendingProductId) {
-//       const productData = MOCK_PRODUCTS.find((p) => p.id === pendingProductId);
-      
-//       if (productData) {
-//         const newItem: CartItem = {
-//           id: productData.id,
-//           name: productData.name,
-//           store: "JatiStore Official",
-//           price: productData.price,
-//           image: productData.image,
-//           variant: "Standard Version",
-//           quantity: 1,
-//           maxStock: 5,
-//         };
-        
-//         setCartItems([newItem]);
-//       }
-//       setPendingProductId(null); 
-//     }
-//     setCurrentPage("cart");
-//   };
+  const fetchCartCount = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setCartCount(0);
+      return;
+    }
 
-const handleLoginSuccess = () => {
+    try {
+      const response = await api.get("/api/v1/carts");
+      if (response.data && response.data.code === 200) {
+        const items = response.data.data || [];
+        const totalQuantity = items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+        setCartCount(totalQuantity);
+      }
+    } catch (error) {
+      console.error("Gagal mengambil jumlah keranjang:", error);
+    }
+  };
+
+  const handleLoginSuccess = () => {
     setIsLoggedIn(true);
 
     if (pendingProductId) {
@@ -160,19 +114,24 @@ const handleLoginSuccess = () => {
 
   return (
     <div className="text-on-background bg-background min-h-screen flex flex-col font-sans antialiased">
-      {/* {currentPage === "catalog" && (
-        <CatalogPage 
-          onProductClick={(productId) => {
-            const product = MOCK_PRODUCTS.find((p) => p.id === productId);
-            if (product) {
-              setSelectedProduct(product);
-              setCurrentPage("detail");
-            }
-          }}
-          onCartClick={handleNavigateToCart}
-          onAddToCart={handleAddToCart} 
-        />
-      )} */}
+      
+      {/* 👑 GLOBAL HEADER UTAMA */}
+      {currentPage !== "login" && (
+        <nav className="bg-surface border-b border-outline-variant shadow-sm w-full sticky top-0 z-50">
+          <div className="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto h-16 gap-4">
+            
+            {/* Sebelah Kiri: Logo */}
+            <div className="flex items-center flex-shrink-0">
+              <button 
+                onClick={() => {
+                  setCatalogSearchQuery(""); 
+                  setCurrentPage("catalog");
+                }} 
+                className="text-headline-md font-headline-lg font-bold text-primary hover:opacity-80 transition-opacity"
+              >
+                JatiStore
+              </button>
+            </div>
 
       {currentPage === "catalog" && (
   <CatalogPage 
@@ -195,23 +154,17 @@ const handleLoginSuccess = () => {
     />
     )}
 
-    {currentPage === "detail" && selectedProduct && (
-    <ProductDetailPage 
-        product={selectedProduct} 
-        onBackToCatalog={() => setCurrentPage("catalog")} 
-        // Oper fungsi asli ke properti onAddToCart di sini
-        onAddToCart={handleAddToCart} // 🌟 PASTIKAN BARIS INI ADA
-    />
-    )}
+            </div>
+          </div>
+        </nav>
+      )}
 
-      {/* {currentPage === "catalog" && (
+      {/* RENDER KONTEN HALAMAN */}
+      {currentPage === "catalog" && (
         <CatalogPage 
           onProductClick={(productId) => {
-            const product = MOCK_PRODUCTS.find((p) => p.id === productId);
-            if (product) {
-              setSelectedProduct(product);
-              setCurrentPage("detail");
-            }
+            setSelectedProduct(productId);
+            setCurrentPage("detail");
           }}
           onCartClick={handleNavigateToCart}
           onAddToCart={handleAddToCart} 
@@ -221,17 +174,18 @@ const handleLoginSuccess = () => {
             setIsLoggedIn(false);
             setCartItems([]);
           }}
+          searchQuery={catalogSearchQuery}
         />
       )}
 
-
       {currentPage === "detail" && selectedProduct && (
         <ProductDetailPage 
-          product={selectedProduct} 
+          productId={selectedProduct} 
           onBackToCatalog={() => setCurrentPage("catalog")} 
           onAddToCart={handleAddToCart}
+          onCartClick={handleNavigateToCart} 
         />
-      )} */}
+      )}
 
       {currentPage === "login" && (
         <LoginPage 
@@ -245,35 +199,34 @@ const handleLoginSuccess = () => {
 
       {currentPage === "cart" && (
         <CartPage 
-          cartItems={cartItems}
-          setCartItems={setCartItems}
           onBackToCatalog={() => setCurrentPage("catalog")}
-          onCheckout={() => setCurrentPage("checkout")}
-          onLogout={() => {
-            setIsLoggedIn(false);
-            setCartItems([]);
-            setCurrentPage("catalog");
+          onCheckout={(itemsToCheckout) => {
+            setSelectedCheckoutItems(itemsToCheckout);
+            setCurrentPage("checkout");
           }}
+          onRefreshCartCount={fetchCartCount}
         />
       )}
 
       {currentPage === "checkout" && (
         <CheckoutPage 
-          cartItems={cartItems}
+          cartItems={selectedCheckoutItems}
           onBackToCart={() => setCurrentPage("cart")}
           onPaymentSuccess={() => {
-            setCartItems([]);
+            setSelectedCheckoutItems([]);
+            fetchCartCount();
             setCurrentPage("history");
           }}
         />
       )}
-        {currentPage === "history" && (
+
+      {currentPage === "history" && (
         <OrderHistoryPage 
-            onNavigateHome={() => setCurrentPage("catalog")}
-            onNavigateCart={() => setCurrentPage("cart")}
-            cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
+          onNavigateHome={() => setCurrentPage("catalog")}
+          onNavigateCart={() => setCurrentPage("cart")}
+          cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
         />
-        )}
+      )}
 
     </div>
   );
