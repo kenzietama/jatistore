@@ -67,7 +67,7 @@ export const sellerFlashSaleService = {
         await api.delete(`/api/v1/seller/flash-sales/${flashSaleId}/items/${productId}`);
     },
 
-    async updateFlashSaleItem(flashSaleId: string, productId: string, data: { flashPrice: number; remainingQuota: number }): Promise<void> {
+    async updateFlashSaleItem(flashSaleId: string, productId: string, data: { productId: string; flashPrice: number; remainingQuota: number }): Promise<void> {
         await api.patch(`/api/v1/seller/flash-sales/${flashSaleId}/items/${productId}`, data);
     }
 };

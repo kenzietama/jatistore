@@ -99,6 +99,7 @@ export default function FlashSaleManager() {
             
             if (itemToEdit) {
                 await sellerFlashSaleService.updateFlashSaleItem(selectedEventId, itemToEdit.productId, {
+                    productId: itemToEdit.productId,
                     flashPrice: parseFloat(flashPrice),
                     remainingQuota: parseInt(promoStock)
                 });
