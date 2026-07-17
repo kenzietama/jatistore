@@ -98,7 +98,7 @@ public class SellerFlashSaleService {
         FlashSale flashSale = flashSaleRepository.findById(flashSaleId)
                 .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0044));
 
-        if (Instant.now().isAfter(flashSale.getEndTime())) {
+        if (Instant.now().isAfter(flashSale.getStartTime())) {
             throw new CoreThrowHandler(RestApiError.SLR_0045);
         }
 
@@ -150,7 +150,7 @@ public class SellerFlashSaleService {
         FlashSale flashSale = flashSaleRepository.findById(flashSaleId)
                 .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0044));
         
-        if (Instant.now().isAfter(flashSale.getEndTime())) {
+        if (Instant.now().isAfter(flashSale.getStartTime())) {
             throw new CoreThrowHandler(RestApiError.SLR_0045);
         }
 
@@ -168,6 +168,48 @@ public class SellerFlashSaleService {
                 .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0016));
 
         flashSaleItemRepository.delete(item);
+    }
+
+    @Transactional
+    public void updateFlashSaleItem(String userEmail, UUID flashSaleId, UUID productId, FlashSaleItemRequest request) throws CoreThrowHandler {
+        User user = getAuthenticatedUser(userEmail);
+        Seller seller = getSellerStore(user);
+
+        FlashSale flashSale = flashSaleRepository.findById(flashSaleId)
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0044));
+        
+        if (Instant.now().isAfter(flashSale.getStartTime())) {
+            throw new CoreThrowHandler(RestApiError.SLR_0045);
+        }
+
+        Product product = productRepository.findByIdAndDeletedAtIsNull(productId)
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0016));
+
+        if (!product.getStore().getSeller().getId().equals(seller.getId())) {
+            throw new CoreThrowHandler(RestApiError.SLR_0017);
+        }
+
+        if (request.getFlashPrice().compareTo(product.getPrice()) >= 0) {
+            throw new CoreThrowHandler(RestApiError.SLR_0030);
+        }
+
+        if (request.getRemainingQuota() <= 0) {
+            throw new CoreThrowHandler(RestApiError.SLR_0034);
+        }
+
+        if (request.getRemainingQuota() > product.getStock()) {
+            throw new CoreThrowHandler(RestApiError.SLR_0033);
+        }
+
+        FlashSaleItem item = flashSaleItemRepository.findByFlashSaleIdAndSellerId(flashSaleId, seller.getId(), PageRequest.of(0, 100))
+                .stream()
+                .filter(i -> i.getProduct().getId().equals(productId))
+                .findFirst()
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0016)); // Or item not found
+
+        item.setFlashPrice(request.getFlashPrice());
+        item.setRemainingQuota(request.getRemainingQuota());
+        flashSaleItemRepository.save(item);
     }
 
     private SellerFlashSaleResponse.Item mapToItemResponse(FlashSaleItem item) {

@@ -16,7 +16,7 @@ public enum RestApiError {
     AUT_0006(HttpStatus.UNAUTHORIZED.value(), "Unauthorized access"),
     AUT_0007(HttpStatus.UNAUTHORIZED.value(), "Token has expired"),
     AUT_0008(HttpStatus.UNAUTHORIZED.value(), "Invalid Token"),
-    AUT_0009(HttpStatus.NOT_FOUND.value(), "Session not found"),
+    AUT_0009(HttpStatus.UNAUTHORIZED.value(), "Session not found"),
     AUT_0010(HttpStatus.FORBIDDEN.value(), "Account has been suspended or deactivated."),
 
     USR_0001(HttpStatus.NOT_FOUND.value(), "Product not found"),

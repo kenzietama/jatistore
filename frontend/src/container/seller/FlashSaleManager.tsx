@@ -18,6 +18,11 @@ export default function FlashSaleManager() {
     const [isSaving, setIsSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<SellerFlashSaleItemResponse | null>(null);
+
+    const [itemToEdit, setItemToEdit] = useState<SellerFlashSaleItemResponse | null>(null);
+
     useEffect(() => {
         fetchInitialData();
     }, []);
@@ -63,11 +68,19 @@ export default function FlashSaleManager() {
         setSelectedProductId(pId);
         
         const prod = products.find(p => p.id === pId);
-        if (prod) {
+        if (prod && !itemToEdit) {
             // reset form defaults when product changes
             setFlashPrice('');
             setPromoStock('');
         }
+    };
+
+    const cancelEdit = () => {
+        setSelectedProductId('');
+        setFlashPrice('');
+        setPromoStock('');
+        setItemToEdit(null);
+        setErrorMsg('');
     };
 
     const handleSaveItem = async () => {
@@ -83,36 +96,57 @@ export default function FlashSaleManager() {
         try {
             setIsSaving(true);
             setErrorMsg('');
-            await sellerFlashSaleService.addFlashSaleItem(selectedEventId, {
-                productId: selectedProductId,
-                flashPrice: parseFloat(flashPrice),
-                remainingQuota: parseInt(promoStock)
-            });
+            
+            if (itemToEdit) {
+                await sellerFlashSaleService.updateFlashSaleItem(selectedEventId, itemToEdit.productId, {
+                    flashPrice: parseFloat(flashPrice),
+                    remainingQuota: parseInt(promoStock)
+                });
+            } else {
+                await sellerFlashSaleService.addFlashSaleItem(selectedEventId, {
+                    productId: selectedProductId,
+                    flashPrice: parseFloat(flashPrice),
+                    remainingQuota: parseInt(promoStock)
+                });
+            }
             
             // Refresh table
             await fetchConfiguredItems(selectedEventId);
             
             // Reset form
-            setSelectedProductId('');
-            setFlashPrice('');
-            setPromoStock('');
+            cancelEdit();
         } catch (error: any) {
-            setErrorMsg(error.response?.data?.message || 'Failed to add item to flash sale.');
+            setErrorMsg(error.response?.data?.message || (itemToEdit ? 'Failed to update item.' : 'Failed to add item to flash sale.'));
         } finally {
             setIsSaving(false);
         }
     };
 
-    const handleRemoveItem = async (productId: string) => {
-        if (!selectedEventId) return;
-        if (!window.confirm('Are you sure you want to remove this item from the flash sale?')) return;
+    const openDeleteModal = (item: SellerFlashSaleItemResponse) => {
+        setItemToDelete(item);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!selectedEventId || !itemToDelete) return;
         
         try {
-            await sellerFlashSaleService.removeFlashSaleItem(selectedEventId, productId);
+            await sellerFlashSaleService.removeFlashSaleItem(selectedEventId, itemToDelete.productId);
             await fetchConfiguredItems(selectedEventId);
+            setIsDeleteModalOpen(false);
+            setItemToDelete(null);
         } catch (error: any) {
             alert(error.response?.data?.message || 'Failed to remove item.');
         }
+    };
+
+    const handleEditInline = (item: SellerFlashSaleItemResponse) => {
+        setItemToEdit(item);
+        setSelectedProductId(item.productId);
+        setFlashPrice(item.flashPrice.toString());
+        setPromoStock(item.remainingQuota.toString());
+        setErrorMsg('');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const selectedProductDetail = products.find(p => p.id === selectedProductId);
@@ -128,8 +162,7 @@ export default function FlashSaleManager() {
                 {/* Page Header & Banner */}
                 <div className="mb-gutter flex flex-col gap-stack-md">
                     <div>
-                        <h1 className="text-headline-lg font-headline-lg font-bold text-on-surface mb-unit">Flash Sale Configuration</h1>
-                        <p className="text-body-md font-body-md text-on-surface-variant">Set up your promotional inventory and pricing for upcoming events.</p>
+                        <h2 className="font-headline-lg text-[32px] font-bold text-on-surface m-0">Flash Sale Configuration</h2>
                     </div>
 
                     {/* Active Window Banner */}
@@ -166,7 +199,9 @@ export default function FlashSaleManager() {
                     {/* Left Column: Configuration Form */}
                     <div className="lg:col-span-4 flex flex-col gap-gutter">
                         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md shadow-sm">
-                            <h2 className="text-headline-md font-headline-md font-semibold text-on-surface mb-stack-md border-b border-outline-variant pb-stack-sm">Add Item to Flash Sale</h2>
+                            <h2 className="text-headline-md font-headline-md font-semibold text-on-surface mb-stack-md border-b border-outline-variant pb-stack-sm">
+                                {itemToEdit ? 'Edit Flash Sale Item' : 'Add Item to Flash Sale'}
+                            </h2>
                             
                             {errorMsg && (
                                 <div className="mb-4 p-3 bg-error-container text-on-error-container rounded-md text-body-sm font-medium">
@@ -184,7 +219,7 @@ export default function FlashSaleManager() {
                                             className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-md text-body-md font-body-md focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all appearance-none outline-none"
                                             value={selectedProductId}
                                             onChange={handleProductChange}
-                                            disabled={!selectedEventId}
+                                            disabled={!selectedEventId || !!itemToEdit}
                                         >
                                             <option value="" disabled>Choose a product from inventory...</option>
                                             {products.map(p => (
@@ -232,15 +267,29 @@ export default function FlashSaleManager() {
                                     </span>
                                 </div>
 
-                                <button 
-                                    type="button"
-                                    onClick={handleSaveItem}
-                                    disabled={!selectedEventId || !selectedProductId || isSaving}
-                                    className="w-full h-10 bg-primary text-on-primary rounded-md font-label-md text-label-md hover:bg-surface-tint transition-colors flex items-center justify-center gap-2 mt-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <span className="material-symbols-outlined text-[18px]">save</span>
-                                    {isSaving ? 'Saving...' : 'Save Flash Sale Item'}
-                                </button>
+                                <div className="flex flex-col gap-2 mt-2">
+                                    <button 
+                                        type="button"
+                                        onClick={handleSaveItem}
+                                        disabled={!selectedEventId || !selectedProductId || isSaving}
+                                        className="w-full h-10 bg-primary text-on-primary rounded-md font-label-md text-label-md hover:bg-surface-tint transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">save</span>
+                                        {isSaving ? 'Saving...' : (itemToEdit ? 'Update Flash Sale Item' : 'Save Flash Sale Item')}
+                                    </button>
+                                    
+                                    {itemToEdit && (
+                                        <button 
+                                            type="button"
+                                            onClick={cancelEdit}
+                                            disabled={isSaving}
+                                            className="w-full h-10 bg-surface-variant text-on-surface-variant rounded-md font-label-md text-label-md hover:bg-outline-variant/30 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">close</span>
+                                            Cancel Edit
+                                        </button>
+                                    )}
+                                </div>
                             </form>
                         </div>
 
@@ -323,9 +372,16 @@ export default function FlashSaleManager() {
                                                             Ready
                                                         </span>
                                                     </td>
-                                                    <td className="p-3 text-center">
+                                                    <td className="p-3 text-center flex items-center justify-center gap-2">
                                                         <button 
-                                                            onClick={() => handleRemoveItem(item.productId)}
+                                                            onClick={() => handleEditInline(item)}
+                                                            className="text-outline hover:text-primary transition-colors p-1" 
+                                                            title="Edit"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => openDeleteModal(item)}
                                                             className="text-outline hover:text-error transition-colors p-1" 
                                                             title="Remove"
                                                         >
@@ -342,6 +398,32 @@ export default function FlashSaleManager() {
                     </div>
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {isDeleteModalOpen && (
+                <div className="fixed inset-0 bg-on-background/30 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
+                    <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-6 max-w-sm w-full shadow-lg">
+                        <h3 className="text-headline-md font-headline-md text-on-surface mb-2">Confirm Delete</h3>
+                        <p className="text-body-md font-body-md text-on-surface-variant mb-6">Are you sure you want to remove this product from the flash sale?</p>
+                        <div className="flex justify-end gap-3">
+                            <button 
+                                onClick={() => setIsDeleteModalOpen(false)}
+                                className="px-4 py-2 rounded text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-md text-label-md"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={confirmDelete}
+                                className="px-4 py-2 rounded bg-error text-on-error hover:opacity-90 transition-opacity font-label-md text-label-md flex items-center gap-2"
+                            >
+                                <span className="material-symbols-outlined text-[18px]">delete</span>
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </SellerLayout>
     );
 }
