@@ -1,10 +1,9 @@
 package com.indivaragroup.jatistore.controller.auth;
 
 import tools.jackson.databind.ObjectMapper;
-import com.indivaragroup.jatistore.dto.request.AuthLoginRequest;
+import com.indivaragroup.jatistore.dto.request.auth.AuthLoginRequest;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.auth.AuthLoginResponse;
-import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.service.auth.AuthService;
 import com.indivaragroup.jatistore.service.utility.AuthJWTUtility;
 import com.indivaragroup.jatistore.repository.AuthRepository;

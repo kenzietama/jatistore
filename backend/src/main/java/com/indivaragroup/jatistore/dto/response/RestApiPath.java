@@ -11,6 +11,8 @@ public class RestApiPath {
     public static final String AUTH_LOGIN_PATH = "/login";
     public static final String AUTH_LOGOUT_PATH = "/logout";
 
+    public static final String USER_CHECKOUT_BASE_PATH = "/orders";
+    public static final String USER_CHECKOUT_PATH = "/checkout";
     // Seller Paths
     public static final String SELLER_BASE_PATH = "/seller";
     public static final String SELLER_DASHBOARD_PATH = SELLER_BASE_PATH + "/dashboard";

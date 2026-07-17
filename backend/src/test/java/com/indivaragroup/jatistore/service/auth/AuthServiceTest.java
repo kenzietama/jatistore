@@ -2,7 +2,7 @@ package com.indivaragroup.jatistore.service.auth;
 
 import com.indivaragroup.jatistore.data.entity.Token;
 import com.indivaragroup.jatistore.data.entity.User;
-import com.indivaragroup.jatistore.dto.request.AuthLoginRequest;
+import com.indivaragroup.jatistore.dto.request.auth.AuthLoginRequest;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.auth.AuthLoginResponse;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;

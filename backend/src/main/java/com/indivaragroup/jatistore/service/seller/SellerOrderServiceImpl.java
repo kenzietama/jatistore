@@ -118,6 +118,6 @@ public class SellerOrderServiceImpl implements SellerOrderService {
             throw new CoreThrowHandler(RestApiError.SLR_0020);
         }
         
-        orderRepository.updateOrderStatus(orderId, OrderStatus.SHIPPED);
+        orderRepository.updateOrderStatus(orderId, OrderStatus.SHIPPED.name());
     }
 }
