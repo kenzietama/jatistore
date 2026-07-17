@@ -49,37 +49,34 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
 
   return (
     <div className="bg-background text-on-background font-body-md min-h-screen flex flex-col relative">
-      {/* Minimal Header[cite: 7] */}
-      <header className="w-full bg-surface-container-lowest border-b border-outline-variant py-stack-md px-margin-desktop sticky top-0 z-50">
-        <div className="max-w-container-max mx-auto flex items-center justify-between">
-          <button 
-            onClick={onBackToCart}
-            className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity font-label-md text-label-md"
-          >
-            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 0" }}>arrow_back</span>
-            Return to Cart
-          </button>
-          <div className="font-headline-md text-headline-md font-bold text-primary">JatiStore</div>
-          <div className="w-24"></div>
-        </div>
-      </header>
 
+      {/* 🚀 MAIN CONTENT AREA WITH TOP RETURN BUTTON */}
       <main className="flex-grow w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-stack-lg">
+        
+        {/* Return to Cart button instead of the heavy inner header[cite: 4] */}
+        <button 
+          onClick={onBackToCart}
+          className="flex items-center gap-2 text-primary hover:underline transition-all font-label-md text-label-md mb-6 self-start"
+        >
+          <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 0" }}>arrow_back</span>
+          Return to Cart
+        </button>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
           
-          {/* Sisi Kiri: Form Pembayaran[cite: 7] */}
+          {/* Left Side: Payment Form */}
           <section className="lg:col-span-7 space-y-stack-lg">
             <div>
-              <h1 className="font-headline-lg text-headline-lg text-on-background mb-unit">Secure Checkout</h1>
+              <h1 className="font-headline-lg text-headline-lg text-on-background mb-unit font-bold">Secure Checkout</h1>
               <p className="font-body-md text-body-md text-on-surface-variant">Complete your purchase safely and securely.</p>
             </div>
 
-            {/* Selector Metode Pembayaran[cite: 7] */}
+            {/* Payment Method Selector */}
             <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-stack-lg shadow-sm mb-stack-lg">
-              <h2 className="font-headline-md text-headline-md text-on-surface mb-stack-md">Choose Payment Method</h2>
+              <h2 className="font-headline-md text-headline-md text-on-surface mb-stack-md font-bold">Choose Payment Method</h2>
               <div className="grid grid-cols-2 gap-stack-md">
                 
-                {/* Tombol Card[cite: 7] */}
+                {/* Card Button */}
                 <button 
                   type="button"
                   onClick={() => setPaymentMethod("card")}
@@ -96,7 +93,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
                   )}
                 </button>
 
-                {/* Tombol Wallet[cite: 7] */}
+                {/* Wallet Button */}
                 <button 
                   type="button"
                   onClick={() => setPaymentMethod("wallet")}
@@ -107,7 +104,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
                   }`}
                 >
                   <span className={`text-headline-lg material-symbols-outlined ${paymentMethod === "wallet" ? "text-primary" : "text-outline"}`}>account_balance_wallet</span>
-                  <span className="font-label-md text-on-surface">Wallet</span>
+                  <span className="font-label-md text-on-surface">Jati Wallet</span>
                   {paymentMethod === "wallet" && (
                     <span className="material-symbols-outlined text-primary" id="check-wallet">check_circle</span>
                   )}
@@ -115,18 +112,17 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
               </div>
             </div>
 
-            {/* Container Detail Form Dinamis[cite: 7] */}
+            {/* Dynamic Form Content Container */}
             <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-stack-lg shadow-sm">
               
-              {/* TAMPILAN CARD[cite: 7] */}
+              {/* CARD VIEW */}
               {paymentMethod === "card" && (
                 <div className="transition-opacity duration-300">
-                  <h2 className="font-headline-md text-headline-md text-on-surface mb-stack-md flex items-center gap-2">
+                  <h2 className="font-headline-md text-headline-md text-on-surface mb-stack-md flex items-center gap-2 font-bold">
                     <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>credit_card</span>
                     Payment Details
                   </h2>
                   <form className="space-y-stack-md" onSubmit={handlePayNow}>
-                    {/* Input Nama Pemilik Kartu[cite: 7] */}
                     <div>
                       <label className="block font-label-md text-label-md text-on-surface-variant mb-unit" htmlFor="cardName">Cardholder Name</label>
                       <div className="relative rounded-lg border border-outline-variant bg-surface-bright transition-all input-focus-ring">
@@ -139,7 +135,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
                         />
                       </div>
                     </div>
-                    {/* Input Nomor Kartu[cite: 7] */}
                     <div>
                       <label className="block font-label-md text-label-md text-on-surface-variant mb-unit" htmlFor="cardNumber">Card Number</label>
                       <div className="relative rounded-lg border border-outline-variant bg-surface-bright transition-all input-focus-ring flex items-center pr-3">
@@ -191,16 +186,15 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
                 </div>
               )}
 
-              {/* TAMPILAN WALLET[cite: 7] */}
+              {/* WALLET VIEW */}
               {paymentMethod === "wallet" && (
                 <div className="transition-opacity duration-300" id="payment-wallet-view">
-                  <h2 className="font-headline-md text-headline-md text-on-surface mb-stack-md flex items-center gap-2">
+                  <h2 className="font-headline-md text-headline-md text-on-surface mb-stack-md flex items-center gap-2 font-bold">
                     <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>
                     Wallet Payment
                   </h2>
                   <div className="space-y-stack-md">
                     
-                    {/* Status kecukupan saldo yang dinamis[cite: 7] */}
                     {isBalanceEnough ? (
                       <div className="mb-stack-md p-stack-sm bg-primary-container/10 border border-primary/20 rounded-lg flex items-center gap-2 text-primary">
                         <span className="material-symbols-outlined text-body-md">check_circle</span>
@@ -213,21 +207,19 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
                       </div>
                     )}
 
-                    {/* Info Card Saldo Dompet[cite: 7] */}
                     <div className="flex justify-between items-center p-stack-md bg-surface-container-low rounded-lg border border-outline-variant">
                       <div className="flex items-center gap-3">
                         <span className="material-symbols-outlined text-primary">account_balance_wallet</span>
                         <div>
-                          <p className="font-label-md text-on-surface">Jati Wallet</p>
+                          <p className="font-label-md text-on-surface font-semibold">Jati Wallet</p>
                           <p className="font-body-sm text-on-surface-variant font-mono-data">
-                            Available Balance: <span className="text-primary font-semibold">Rp {walletBalance.toLocaleString("id-ID")}</span>
+                            Available Balance: <span className="text-primary font-bold">Rp {walletBalance.toLocaleString("id-ID")}</span>
                           </p>
                         </div>
                       </div>
                       <span className="material-symbols-outlined text-primary">check_circle</span>
                     </div>
 
-                    {/* Breakdown Sisa Saldo[cite: 7] */}
                     <div className="space-y-2 px-1">
                       <div className="flex justify-between text-body-sm">
                         <span className="text-on-surface-variant">Payment Amount</span>
@@ -240,11 +232,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
                         </span>
                       </div>
                     </div>
-
-                    <div className="mt-stack-lg p-stack-sm bg-surface-container rounded-lg flex items-center gap-3">
-                      <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>info</span>
-                      <p className="font-body-sm text-body-sm text-on-surface-variant">Your purchase will be deducted from your wallet balance immediately after confirmation.</p>
-                    </div>
                   </div>
                 </div>
               )}
@@ -252,20 +239,20 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
             </div>
           </section>
 
-          {/* Sisi Kanan: Order Summary[cite: 7] */}
+          {/* Right Side: Order Summary */}
           <aside className="lg:col-span-5">
             <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-stack-lg shadow-sm sticky top-[100px]">
-              <h2 className="font-headline-md text-headline-md text-on-surface mb-stack-md border-b border-outline-variant pb-stack-sm">Order Summary</h2>
+              <h2 className="font-headline-md text-headline-md text-on-surface mb-stack-md border-b border-outline-variant pb-stack-sm font-bold">Order Summary</h2>
               
-              {/* Items List[cite: 7] */}
+              {/* Items List */}
               <div className="space-y-stack-md mb-stack-lg max-h-60 overflow-y-auto pr-1">
                 {cartItems.map((item) => (
                   <div key={item.id} className="flex items-start gap-stack-md">
-                    <div className="w-16 h-16 rounded bg-surface-container overflow-hidden flex-shrink-0">
+                    <div className="w-16 h-16 rounded bg-surface-container overflow-hidden flex-shrink-0 border border-outline-variant">
                       <img className="w-full h-full object-cover" src={item.image} alt={item.name} />
                     </div>
                     <div className="flex-grow">
-                      <h4 className="font-label-md text-label-md text-on-surface line-clamp-1">{item.name}</h4>
+                      <h4 className="font-label-md text-label-md text-on-surface line-clamp-1 font-semibold">{item.name}</h4>
                       <p className="font-body-sm text-body-sm text-on-surface-variant">Qty: {item.quantity}</p>
                     </div>
                     <span className="font-mono-data text-mono-data text-on-surface font-semibold">
@@ -275,7 +262,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
                 ))}
               </div>
 
-              {/* Kalkulasi Total[cite: 7] */}
+              {/* Calculations Total */}
               <div className="space-y-stack-sm border-t border-outline-variant pt-stack-md mb-stack-lg">
                 <div className="flex justify-between font-body-sm text-body-sm text-on-surface-variant">
                   <span>Subtotal</span>
@@ -290,20 +277,20 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
                   <span className="font-mono-data">Rp {tax.toLocaleString("id-ID")}</span>
                 </div>
                 <div className="flex justify-between font-headline-md text-headline-md text-on-surface mt-stack-md pt-stack-sm border-t border-outline-variant border-dashed">
-                  <span>Total</span>
-                  <span className="text-primary font-bold">Rp {total.toLocaleString("id-ID")}</span>
+                  <span className="font-bold">Total</span>
+                  <span className="text-primary font-bold text-[20px]">Rp {total.toLocaleString("id-ID")}</span>
                 </div>
               </div>
 
-              {/* Tombol Konfirmasi Pembayaran[cite: 7] */}
+              {/* Pay Now Confirmation Button */}
               <button 
                 type="button"
                 disabled={paymentMethod === "wallet" && !isBalanceEnough}
                 onClick={handlePayNow}
-                className={`w-full font-label-md text-label-md py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all shadow-sm ${
+                className={`w-full font-label-md text-label-md py-3 px-4 rounded-full flex items-center justify-center gap-2 transition-all shadow-sm font-semibold ${
                   paymentMethod === "wallet" && !isBalanceEnough
                     ? "bg-outline text-surface cursor-not-allowed opacity-50"
-                    : "bg-primary hover:bg-primary-container text-on-primary"
+                    : "bg-primary hover:bg-primary/90 text-on-primary"
                 }`}
               >
                 <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
@@ -324,20 +311,18 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
         </div>
       </footer>
 
-      {/* POPUP MODAL: PAYMENT SUCCESSFUL[cite: 7] */}
+      {/* POPUP MODAL: PAYMENT SUCCESSFUL */}
       {isSuccessModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-margin-mobile bg-on-background/40 backdrop-blur-sm">
             <div className="bg-surface-container-lowest rounded-[20px] shadow-sm max-w-[480px] w-full overflow-hidden animate-in fade-in zoom-in duration-300">
             <div className="p-stack-lg flex flex-col items-center text-center">
-                {/* Success Icon */}
                 <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mb-stack-md">
-                <span className="material-symbols-outlined text-on-primary text-[40px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                  <span className="material-symbols-outlined text-on-primary text-[40px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
                 </div>
                 
                 <h2 className="font-headline-md text-headline-md font-bold text-on-surface mb-unit">Payment Successful!</h2>
                 <p className="font-body-md text-body-md text-on-surface-variant mb-stack-lg">Your payment has been processed successfully.</p>
                 
-                {/* Transaction Summary Card */}
                 <div className="w-full bg-surface-container-low border border-outline-variant rounded-xl p-stack-md text-left space-y-2 mb-stack-lg">
                 <div className="flex justify-between items-center">
                     <span className="text-label-sm text-on-surface-variant">Transaction ID</span>
@@ -349,15 +334,11 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
                 </div>
                 <div className="flex justify-between items-center">
                     <span className="text-label-sm text-on-surface-variant">Payment Date</span>
-                    <span className="text-label-sm text-on-surface">July 14, 2026 • 10:30 AM</span>
+                    <span className="text-label-sm text-on-surface">July 16, 2026 • 3:12 PM</span>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-outline-variant">
                     <span className="text-label-md font-semibold text-on-surface">Amount Paid</span>
                     <span className="text-headline-md font-bold text-primary">Rp {total.toLocaleString("id-ID")}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-label-sm text-on-surface-variant">Order Status</span>
-                  <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full text-[12px] font-bold uppercase tracking-wider">Paid</span>
                 </div>
               </div>
 
@@ -369,12 +350,12 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
                     type="button"
                     onClick={(e) => {
                         e.preventDefault();
-                        setIsSuccessModalOpen(false); // 1. Tutup modal suksesnya
+                        setIsSuccessModalOpen(false);
                         if (onPaymentSuccess) {
-                            onPaymentSuccess();       // 2. Panggil fungsi untuk ganti halaman/tab ke Order History
+                            onPaymentSuccess();
                         }
                     }}
-                    className="w-full bg-primary hover:opacity-90 text-on-primary font-label-md text-label-md py-3 px-4 rounded-lg transition-all shadow-sm"
+                    className="w-full bg-primary hover:opacity-90 text-on-primary font-label-md text-label-md py-3 px-4 rounded-full transition-all shadow-sm font-semibold"
                 >
                     Continue to Order History
                 </button>
