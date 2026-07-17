@@ -45,7 +45,7 @@ export const productService = {
     },
 
     async getCategories(): Promise<Category[]> {
-        const response = await api.get<ApiResponse<Category[]>>('/api/v1/categories');
+        const response = await api.get<ApiResponse<Category[]>>('/api/v1/public/categories');
         return response.data.data;
     },
 

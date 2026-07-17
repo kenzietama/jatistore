@@ -17,6 +17,8 @@ import ProductManagement from "./container/seller/Product";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import OrderFulfillment from "./container/seller/OrderFulfillment";
 
+import SellerFlashSaleManager from "./container/seller/FlashSaleManager";
+
 const App = () => {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState<"catalog" | "detail" | "cart"| "checkout" | "history">("catalog");
@@ -336,6 +338,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/seller/dashboard" element={<Dashboard />} />
           <Route path="/seller/products" element={<ProductManagement />} />
           <Route path="/seller/orders" element={<OrderFulfillment />} />
+          <Route path="/seller/flash-sales" element={<SellerFlashSaleManager />} />
         </Route>
 
         {/* Admin Routes */}

@@ -51,6 +51,8 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
     long countByDeletedAtIsNull();
     
+    java.util.Optional<Product> findByIdAndDeletedAtIsNull(UUID id);
+
     long countByCategoryIdAndDeletedAtIsNull(UUID categoryId);
 
     @Query("SELECT COUNT(DISTINCT p.store.id) FROM Product p WHERE p.category.id = :categoryId AND p.deletedAt IS NULL")

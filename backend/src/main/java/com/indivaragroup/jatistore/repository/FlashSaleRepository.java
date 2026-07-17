@@ -21,4 +21,7 @@ public interface FlashSaleRepository extends JpaRepository<FlashSale, UUID> {
             "(:status = 'ACTIVE' AND f.startTime <= :now AND f.endTime >= :now) OR " +
             "(:status = 'ENDED' AND f.endTime < :now))")
     Page<FlashSale> findBySearchAndStatus(@Param("search") String search, @Param("status") String status, @Param("now") Instant now, Pageable pageable);
+
+    @Query("SELECT f FROM FlashSale f WHERE f.endTime > :now ORDER BY f.startTime ASC")
+    java.util.List<FlashSale> findAvailableFlashSales(@Param("now") Instant now);
 }
