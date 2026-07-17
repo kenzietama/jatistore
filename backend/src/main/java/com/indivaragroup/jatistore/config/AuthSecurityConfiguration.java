@@ -22,13 +22,20 @@ import org.springframework.web.cors.CorsConfigurationSource;
 
 import java.util.List;
 
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class AuthSecurityConfiguration {
 
     private final JWTAuthenticationFilter jwtAuthenticationFilter;
     private final AuthRepository authRepository;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     @Bean
     public UserDetailsService userDetailsService() {
@@ -62,11 +69,9 @@ public class AuthSecurityConfiguration {
                 .formLogin(form -> form.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/v1/products").permitAll()
                         .requestMatchers("/api/v1/products/**").permitAll()
-                        .requestMatchers("/api/seller/dashboard/**").hasRole("SELLER")
-                        .requestMatchers("/api/v1/seller/products/**").hasRole("SELLER")
                         .requestMatchers("/api/v1/utility/**").permitAll()
                         .requestMatchers("/api/v1/auth/**", "/api/v1/user/**", "/api/v1/products/**").permitAll()
                         .requestMatchers(RestApiPath.BASE_PATH + RestApiPath.CART_BASE_PATH + "/**").permitAll()
@@ -74,6 +79,7 @@ public class AuthSecurityConfiguration {
                         .requestMatchers("/api/v1/categories").permitAll()
                         .anyRequest().authenticated()
                 )
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(customAuthenticationEntryPoint))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

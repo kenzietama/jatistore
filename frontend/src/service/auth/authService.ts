@@ -27,4 +27,8 @@ export const authService = {
 		const response = await api.post<RestApiResponse<AuthLoginResponse>>("/api/v1/auth/login", payload);
 		return response.data;
 	},
+	logout: async (): Promise<RestApiResponse<void>> => {
+		const response = await api.post<RestApiResponse<void>>("/api/v1/auth/logout");
+		return response.data;
+	}
 };

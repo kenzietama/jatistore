@@ -12,11 +12,8 @@ export function WelcomeSection() {
   }, []);
 
   return (
-    <section className="mb-[24px]">
-      <div className="mb-[28px]">
-        <h1 className="text-[26px] font-bold text-[#14201e] tracking-[-0.02em] m-0 mb-[4px]">Welcome back, {stats ? stats.sellerName : 'Store Owner'}.</h1>
-        <p className="text-[14px] text-[#6b7876] m-0">Here's a quick overview of your store's performance today.</p>
-      </div>
+    <section className="mb-stack-md">
+      <h1 className="font-headline-lg text-[32px] font-bold text-on-surface m-0">Welcome back, {stats ? stats.sellerName : 'Store Owner'}.</h1>
     </section>
   );
 }

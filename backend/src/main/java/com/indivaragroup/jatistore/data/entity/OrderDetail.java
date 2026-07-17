@@ -27,4 +27,7 @@ public class OrderDetail {
 
     @Column(name = "price_per_item", nullable = false)
     private BigDecimal pricePerItem;
+
+    @Column(name = "flash_sale")
+    private Boolean flashSale;
 }

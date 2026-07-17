@@ -1,6 +1,6 @@
 import { StrictMode, useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import CatalogPage from "./pages/CatalogPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import LoginPage from "./pages/LoginPage";
@@ -15,10 +15,12 @@ import Login from "./container/auth/Login";
 import Dashboard from "./container/seller/Dashboard";
 import ProductManagement from "./container/seller/Product";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import OrderFulfillment from "./container/seller/OrderFulfillment";
 
 const App = () => {
-  const [currentPage, setCurrentPage] = useState<"catalog" | "detail" | "login" | "cart" | "checkout" | "history">("catalog");
-  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState<"catalog" | "detail" | "login" |"cart"| "checkout" | "history">("catalog");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartCount, setCartCount] = useState<number>(0);
@@ -131,99 +133,26 @@ const App = () => {
               </button>
             </div>
 
-            {(currentPage === "catalog" || currentPage === "cart") ? (
-
-              <div className="flex-1 max-w-xl mx-4 flex items-center gap-3">
-                <span className="font-label-md text-label-md text-on-surface-variant font-semibold whitespace-nowrap hidden lg:inline">
-                </span>
-                <div className="relative w-full">
-                  <span className="material-symbols-outlined absolute left-3 top-1/4 -translate-y-1/1 text-on-surface-variant text-[20px]">
-                    search
-                  </span>
-                  <input 
-                    className="w-full pl-10 pr-4 py-2 bg-surface-container rounded-full border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary-fixed focus:outline-none transition-all font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant" 
-                    placeholder={currentPage === "cart" ? "Cari produk" : "Cari barang di JatiStore..."} 
-                    type="text" 
-                    value={catalogSearchQuery}
-                    onChange={(e) => {
-                      setCatalogSearchQuery(e.target.value);
-                      if (currentPage === "cart") {
-                        setCurrentPage("catalog");
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="flex-1"></div>
-            )}
-
-            {/* Sebelah Kanan: Menu Navigasi Kondisional */}
-            <div className="flex items-center gap-stack-md flex-shrink-0">
-              
-              {/* KONDISI 1: JIKA HALAMAN CHECKOUT (Hanya sisakan profil saja jika login) */}
-              {currentPage === "checkout" ? (
-                isLoggedIn && (
-                  <button 
-                    onClick={() => setCurrentPage("history")}
-                    className="flex items-center gap-1 font-label-md text-label-md text-on-surface hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container"
-                  >
-                    <span className="material-symbols-outlined text-[24px]">account_circle</span>
-                    <span className="hidden sm:inline font-medium">Profil</span>
-                  </button>
-                )
-              ) : currentPage !== "cart" ? (
-                /* KONDISI 2: UNTUK HALAMAN SELAIN CART DAN CHECKOUT (TAMPILKAN PENUH) */
-                <>
-                  <button 
-                    onClick={handleNavigateToCart} 
-                    className="p-2 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors relative"
-                  >
-                    <span className="material-symbols-outlined">shopping_cart</span>
-                    {cartCount > 0 && (
-                      <span className="absolute top-0 right-0 bg-error text-on-error font-label-sm text-xs flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1 shadow-sm">
-                        {cartCount}
-                      </span>
-                    )}
-                  </button>
-
-                  <div className="h-6 w-px bg-outline-variant"></div>
-
-                  {!isLoggedIn ? (
-                    <>
-                      <button onClick={() => setCurrentPage("login")} className="font-label-md text-label-md text-primary font-medium hover:underline px-3 py-1.5">
-                        Masuk
-                      </button>
-                      <button onClick={() => setCurrentPage("login")} className="bg-primary text-on-primary font-label-md text-label-md px-4 py-1.5 rounded-full hover:bg-primary/90 transition-colors shadow-sm">
-                        Daftar
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button 
-                        onClick={() => setCurrentPage("history")}
-                        className="flex items-center gap-1 font-label-md text-label-md text-on-surface hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container"
-                      >
-                        <span className="material-symbols-outlined text-[24px]">account_circle</span>
-                        <span className="hidden sm:inline font-medium">Profil</span>
-                      </button>
-                      <button 
-                        onClick={() => {
-                          localStorage.removeItem("token");
-                          setIsLoggedIn(false);
-                          setCartItems([]);
-                          setCartCount(0);
-                          setCurrentPage("catalog");
-                        }} 
-                        className="flex items-center gap-1 font-label-md text-label-md text-error font-medium hover:underline ml-2"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">logout</span> 
-                        <span>Keluar</span>
-                      </button>
-                    </>
-                  )}
-                </>
-              ) : null /* JIKA HALAMAN CART, SEBELAH KANAN KOSONG TOTAL SESUAI REQUEST SEBELUMNYA */}
+      {currentPage === "catalog" && (
+  <CatalogPage 
+    onProductClick={(productId) => {
+      const product = MOCK_PRODUCTS.find((p) => p.id === productId);
+      if (product) {
+        setSelectedProduct(product);
+        setCurrentPage("detail");
+      }
+    }}
+    onCartClick={handleNavigateToCart}
+    // Oper fungsi asli ke properti onAddToCart di sini
+    onAddToCart={handleAddToCart} // 🌟 PASTIKAN BARIS INI ADA
+    isLoggedIn={isLoggedIn}
+    onLoginClick={() => navigate("/auth/login")}
+    onLogoutClick={() => {
+      setIsLoggedIn(false);
+      setCartItems([]);
+    }}
+    />
+    )}
 
             </div>
           </div>
@@ -303,17 +232,29 @@ const App = () => {
   );
 };
 
+import { AdminLayout } from "./components/layout/admin/AdminLayout.tsx";
+import { Dashboard as AdminDashboard } from "./container/admin/Dashboard.tsx";
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
         <Route path="/*" element={<App />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/auth/login" element={<Login />} />
         
         {/* Seller Routes */}
         <Route element={<ProtectedRoute allowedRoles={["SELLER"]} />}>
           <Route path="/seller/dashboard" element={<Dashboard />} />
           <Route path="/seller/products" element={<ProductManagement />} />
+          <Route path="/seller/orders" element={<OrderFulfillment />} />
+        </Route>
+
+        {/* Admin Routes */}
+        <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
+          <Route element={<AdminLayout />}>
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            {/* Flash Sale and Audit Trails will go here in the future */}
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>

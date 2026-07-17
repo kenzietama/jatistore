@@ -7,6 +7,8 @@ import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.Financia
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.RecentOrderResponse;
 import com.indivaragroup.jatistore.data.entity.Store;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.SellerProfileResponse;
+import com.indivaragroup.jatistore.dto.utility.RestApiError;
+import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.repository.OrderDetailRepository;
 import com.indivaragroup.jatistore.repository.ProductRepository;
 import com.indivaragroup.jatistore.repository.SellerRepository;
@@ -17,9 +19,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,11 +31,11 @@ public class SellerDashboardServiceImpl implements SellerDashboardService {
     private final StoreRepository storeRepository;
 
     @Override
-    public SellerProfileResponse getProfile(UUID sellerId) {
+    public SellerProfileResponse getProfile(UUID sellerId) throws CoreThrowHandler {
         Seller seller = sellerRepository.findById(sellerId)
-                .orElseThrow(() -> new IllegalArgumentException("Seller not found"));
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0002));
         Store store = storeRepository.findBySellerId(sellerId)
-                .orElseThrow(() -> new IllegalArgumentException("Store not found"));
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0002));
         return SellerProfileResponse.builder()
                 .storeName(store.getStoreName())
                 .storeImage(store.getImage())
@@ -44,9 +44,9 @@ public class SellerDashboardServiceImpl implements SellerDashboardService {
     }
 
     @Override
-    public DashboardStatsResponse getDashboardStats(UUID sellerId) {
+    public DashboardStatsResponse getDashboardStats(UUID sellerId) throws CoreThrowHandler {
         Seller seller = sellerRepository.findById(sellerId)
-                .orElseThrow(() -> new IllegalArgumentException("Seller not found"));
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0002));
         long totalProducts = productRepository.countActiveProductsBySellerId(sellerId);
         long totalOrders = orderDetailRepository.countDistinctOrdersBySellerId(sellerId);
         
@@ -58,9 +58,9 @@ public class SellerDashboardServiceImpl implements SellerDashboardService {
     }
 
     @Override
-    public FinancialOverviewResponse getFinancialOverview(UUID sellerId) {
+    public FinancialOverviewResponse getFinancialOverview(UUID sellerId) throws CoreThrowHandler {
         Seller seller = sellerRepository.findById(sellerId)
-                .orElseThrow(() -> new IllegalArgumentException("Seller not found"));
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0002));
 
         return FinancialOverviewResponse.builder()
                 .availableBalance(seller.getCachedAvailableBalance())

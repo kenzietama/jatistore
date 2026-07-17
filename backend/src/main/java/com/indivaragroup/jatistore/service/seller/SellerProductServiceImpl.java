@@ -18,9 +18,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
+import com.indivaragroup.jatistore.dto.utility.RestApiError;
+import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 
 import java.time.ZonedDateTime;
 import java.util.UUID;
@@ -35,18 +35,18 @@ public class SellerProductServiceImpl implements SellerProductService {
     private final SellerRepository sellerRepository;
     private final StoreRepository storeRepository;
 
-    private Seller getSellerById(UUID sellerId) {
+    private Seller getSellerById(UUID sellerId) throws CoreThrowHandler {
         return sellerRepository.findById(sellerId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Seller not found"));
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0002));
     }
 
-    private Store getStoreBySeller(Seller seller) {
+    private Store getStoreBySeller(Seller seller) throws CoreThrowHandler {
         return storeRepository.findBySellerId(seller.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seller does not have a store"));
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0002));
     }
 
     @Override
-    public Page<ProductResponse> getProducts(UUID sellerId, String search, String category, String status, String sortBy, String sortDir, int page, int limit) {
+    public Page<ProductResponse> getProducts(UUID sellerId, String search, String category, String status, String sortBy, String sortDir, int page, int limit) throws CoreThrowHandler {
         Seller seller = getSellerById(sellerId);
 
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
@@ -80,24 +80,24 @@ public class SellerProductServiceImpl implements SellerProductService {
     }
 
     @Override
-    public ProductResponse getProduct(UUID sellerId, UUID id) {
+    public ProductResponse getProduct(UUID sellerId, UUID id) throws CoreThrowHandler {
         Seller seller = getSellerById(sellerId);
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+                .orElseThrow(() -> new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Product not found", null));
 
         if (!product.getStore().getSeller().getId().equals(seller.getId()) || product.getDeletedAt() != null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
+            throw new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Product not found", null);
         }
         return ProductResponse.fromEntity(product);
     }
 
     @Override
-    public ProductResponse createProduct(UUID sellerId, ProductCreateRequest request) throws Exception {
+    public ProductResponse createProduct(UUID sellerId, ProductCreateRequest request) throws CoreThrowHandler {
         Seller seller = getSellerById(sellerId);
         Store store = getStoreBySeller(seller);
 
         ProductCategory category = productCategoryRepository.findById(request.getProductCategoryId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+                .orElseThrow(() -> new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Category not found", null));
 
         Product product = new Product();
         product.setStore(store);
@@ -115,18 +115,18 @@ public class SellerProductServiceImpl implements SellerProductService {
     }
 
     @Override
-    public ProductResponse updateProduct(UUID sellerId, UUID id, ProductUpdateRequest request) throws Exception {
+    public ProductResponse updateProduct(UUID sellerId, UUID id, ProductUpdateRequest request) throws CoreThrowHandler {
         Seller seller = getSellerById(sellerId);
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+                .orElseThrow(() -> new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Product not found", null));
 
         if (!product.getStore().getSeller().getId().equals(seller.getId()) || product.getDeletedAt() != null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
+            throw new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Product not found", null);
         }
 
         if (request.getProductCategoryId() != null) {
             ProductCategory category = productCategoryRepository.findById(request.getProductCategoryId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+                    .orElseThrow(() -> new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Category not found", null));
             product.setCategory(category);
         }
 
@@ -153,13 +153,13 @@ public class SellerProductServiceImpl implements SellerProductService {
     }
 
     @Override
-    public void deleteProduct(UUID sellerId, UUID id) {
+    public void deleteProduct(UUID sellerId, UUID id) throws CoreThrowHandler {
         Seller seller = getSellerById(sellerId);
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+                .orElseThrow(() -> new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Product not found", null));
 
         if (!product.getStore().getSeller().getId().equals(seller.getId()) || product.getDeletedAt() != null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
+            throw new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Product not found", null);
         }
 
         product.setDeletedAt(ZonedDateTime.now());

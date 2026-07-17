@@ -8,7 +8,8 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum RestApiSuccess {
 
-    LOGIN_SUCCESS(HttpStatus.OK.value(), "Login successful.");
+    LOGIN_SUCCESS(HttpStatus.OK.value(), "Login successful."),
+    LOGOUT_SUCCESS(HttpStatus.OK.value(), "Logged out successfully.");
 
     private final int code;
     private final String message;

@@ -10,6 +10,11 @@ export interface Product {
     status: string;
 }
 
+export interface Category {
+    id: string;
+    name: string;
+}
+
 export interface PageData<T> {
     content: T[];
     page: number;
@@ -37,6 +42,11 @@ export const productService = {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
         return response.data.data.url;
+    },
+
+    async getCategories(): Promise<Category[]> {
+        const response = await api.get<ApiResponse<Category[]>>('/api/v1/categories');
+        return response.data.data;
     },
 
     async getProducts(search?: string, category?: string, status?: string, sortBy?: string, sortDir?: string, page: number = 0, size: number = 20): Promise<PageData<Product>> {

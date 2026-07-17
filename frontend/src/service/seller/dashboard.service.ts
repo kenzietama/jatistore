@@ -35,20 +35,29 @@ export interface RecentOrder {
     status: string;
 }
 
+export interface ApiResponse<T> {
+    code: string;
+    status: string;
+    message: string;
+    data: T;
+    timestamp: string;
+    requestId: string;
+}
+
 export const dashboardService = {
     async getProfile(): Promise<SellerProfile> {
-        const response = await api.get<SellerProfile>('/api/seller/dashboard/profile');
-        return response.data;
+        const response = await api.get<ApiResponse<SellerProfile>>('/api/v1/seller/dashboard/profile');
+        return response.data.data;
     },
 
     async getStats(): Promise<DashboardStats> {
-        const response = await api.get<DashboardStats>('/api/seller/dashboard/stats');
-        return response.data;
+        const response = await api.get<ApiResponse<DashboardStats>>('/api/v1/seller/dashboard/stats');
+        return response.data.data;
     },
 
     async getFinancials(): Promise<FinancialOverview> {
-        const response = await api.get<FinancialOverview>('/api/seller/dashboard/financial');
-        return response.data;
+        const response = await api.get<ApiResponse<FinancialOverview>>('/api/v1/seller/dashboard/financial');
+        return response.data.data;
     },
 
     async getRecentOrders(search?: string, status?: string, sortBy?: string, sortDir?: string, page?: number, limit: number = 5): Promise<PageResponse<RecentOrder>> {
@@ -60,7 +69,7 @@ export const dashboardService = {
         if (page !== undefined) params.append('page', page.toString());
         params.append('limit', limit.toString());
 
-        const response = await api.get<PageResponse<RecentOrder>>(`/api/seller/dashboard/orders/recent?${params.toString()}`);
-        return response.data;
+        const response = await api.get<ApiResponse<PageResponse<RecentOrder>>>(`/api/v1/seller/dashboard/orders/recent?${params.toString()}`);
+        return response.data.data;
     }
 };
