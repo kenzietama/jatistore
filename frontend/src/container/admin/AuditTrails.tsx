@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { adminService } from '../../service/admin/admin.service';
 import type { AuditTrailResponse } from '../../service/admin/admin.service';
 
@@ -70,6 +70,7 @@ export const AuditTrails = () => {
               <option value="CATEGORIES">Categories</option>
               <option value="SELLERS">Sellers</option>
               <option value="AUTH">Authentication</option>
+              <option value="FLASH_SALES">Flash Sales</option>
             </select>
             <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-outline pointer-events-none text-[18px]">arrow_drop_down</span>
           </div>

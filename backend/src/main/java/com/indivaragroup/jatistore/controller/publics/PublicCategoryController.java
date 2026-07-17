@@ -18,7 +18,7 @@ public class PublicCategoryController {
 
     private final AdminDashboardService adminDashboardService;
 
-    @GetMapping("/categories")
+    @GetMapping("/public/categories")
     public RestApiResponse<List<AdminCategoryResponse>> getCategories() {
         return RestApiResponse.success(adminDashboardService.getCategories());
     }

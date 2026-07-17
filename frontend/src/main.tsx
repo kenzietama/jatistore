@@ -1,6 +1,6 @@
 import { StrictMode, useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import CatalogPage from "./pages/CatalogPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import LoginPage from "./pages/LoginPage";
@@ -322,6 +322,7 @@ const App = () => {
 import { AdminLayout } from "./components/layout/admin/AdminLayout.tsx";
 import { Dashboard as AdminDashboard } from "./container/admin/Dashboard.tsx";
 import { AuditTrails } from "./container/admin/AuditTrails.tsx";
+import { FlashSaleManager } from "./container/admin/FlashSaleManager";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -342,7 +343,7 @@ createRoot(document.getElementById("root")!).render(
           <Route element={<AdminLayout />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/audit-trails" element={<AuditTrails />} />
-            {/* Flash Sale will go here in the future */}
+            <Route path="/admin/flash-sales" element={<FlashSaleManager />} />
           </Route>
         </Route>
       </Routes>

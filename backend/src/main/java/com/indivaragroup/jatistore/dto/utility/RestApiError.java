@@ -46,7 +46,13 @@ public enum RestApiError {
     ADM_0006(HttpStatus.NOT_FOUND.value(), "Seller not found"),
     ADM_0010(HttpStatus.CONFLICT.value(), "Category name already exists"),
     ADM_0011(HttpStatus.NOT_FOUND.value(), "Category not found"),
-    ADM_0012(HttpStatus.CONFLICT.value(), "Cannot delete category with active products");
+    ADM_0012(HttpStatus.CONFLICT.value(), "Cannot delete category with active products"),
+    ADM_0004(HttpStatus.BAD_REQUEST.value(), "Invalid page or size parameter"),
+    ADM_0013(HttpStatus.BAD_REQUEST.value(), "Invalid status parameter"),
+    ADM_0014(HttpStatus.BAD_REQUEST.value(), "End time must be after start time"),
+    ADM_0016(HttpStatus.NOT_FOUND.value(), "Flash sale not found"),
+    ADM_0017(HttpStatus.CONFLICT.value(), "Cannot delete flash sale with attached products"),
+    ADM_0018(HttpStatus.BAD_REQUEST.value(), "Start time cannot be in the past");
 
     private final int code;
     private final String message;
