@@ -5,7 +5,7 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   datasource:
     # Default fallback (overridden by application-dev.yaml)
-    url: jdbc:postgresql://localhost:5432/jatistore
+    url: jdbc:postgresql://localhost:5432/jatistore?stringtype=unspecified
     username: developer
     password: rahasia
   jpa:
@@ -22,9 +22,9 @@ spring:
 jwt:
   secret: 9aDf784GjkLpQweRtyUioPasDfgHjKlZxcVbnM1234567890QWERTYUIOPASDFGHJKLZXCVBNM_HS512_VERY_SECRET_AND_LONG_KEY
   expiration-seconds:
-    admin: 3600
-    seller: 600
-    user: 600
+    admin: 360000
+    seller: 360000
+    user: 360000
 
 cloudinary:
   url: ${CLOUDINARY_URL:cloudinary://653729848272621:_oe0o7FhXU_9-GDZi_Q2En2zJDA@dqoqfiucw}

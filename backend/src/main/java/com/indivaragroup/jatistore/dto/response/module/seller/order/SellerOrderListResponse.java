@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.ZonedDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,7 +16,7 @@ import java.util.UUID;
 @NoArgsConstructor
 public class SellerOrderListResponse {
     private UUID orderId;
-    private ZonedDateTime orderDate;
+    private Instant orderDate;
     private String customerName;
     private BigDecimal totalAmount;
     private String status;

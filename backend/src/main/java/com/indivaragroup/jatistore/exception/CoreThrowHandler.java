@@ -35,6 +35,21 @@ public class CoreThrowHandler extends RuntimeException {
         this.error = error;
     }
 
+    public CoreThrowHandler(RestApiError restApiError, Object... args) {
+        super(restApiError.name());
+        this.code = restApiError.getCode();
+        this.restApiError = restApiError;
+
+        String msg = restApiError.getMessage();
+        if (args != null) {
+            for (Object arg : args) {
+                msg = msg.replaceFirst("\\{\\}", String.valueOf(arg));
+            }
+        }
+        this.customMessage = msg;
+        this.error = Collections.emptyMap();
+    }
+
     public CoreThrowHandler(Integer status, String message, Map<String, Serializable> error) {
         super(message);
         this.code = status;

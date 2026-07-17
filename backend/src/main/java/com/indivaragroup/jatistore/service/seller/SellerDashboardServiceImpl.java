@@ -6,6 +6,7 @@ import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.Dashboar
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.FinancialOverviewResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.RecentOrderResponse;
 import com.indivaragroup.jatistore.data.entity.Store;
+import com.indivaragroup.jatistore.data.utility.constant.OrderStatus;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.SellerProfileResponse;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
@@ -69,7 +70,7 @@ public class SellerDashboardServiceImpl implements SellerDashboardService {
     }
 
     @Override
-    public Page<RecentOrderResponse> getRecentOrders(UUID sellerId, String search, String status, String sortBy, String sortDir, int page, int limit) {
+    public Page<RecentOrderResponse> getRecentOrders(UUID sellerId, String search, OrderStatus status, String sortBy, String sortDir, int page, int limit) {
         Sort.Direction direction = sortDir != null && sortDir.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
         String sortProperty = sortBy != null && !sortBy.isEmpty() ? sortBy : "createdAt";
         if (sortProperty.equals("createdAt")) sortProperty = "order.createdAt";
@@ -93,7 +94,7 @@ public class SellerDashboardServiceImpl implements SellerDashboardService {
                     .itemImage(detail.getProduct().getImage())
                     .quantity(detail.getQuantity())
                     .amount(detail.getPricePerItem().multiply(new java.math.BigDecimal(detail.getQuantity())))
-                    .status(detail.getOrder().getStatus().replace("_", " "))
+                    .status(detail.getOrder().getStatus() != null ? detail.getOrder().getStatus().name().replace("_", " ") : null)
                     .build();
         });
     }

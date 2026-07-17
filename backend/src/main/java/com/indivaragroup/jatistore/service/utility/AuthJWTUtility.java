@@ -54,12 +54,15 @@ public class AuthJWTUtility {
 
     public String resolveSubjectFromEncryptedToken(String serializedJwt) {
         try {
+            verifyToken(serializedJwt);
             SignedJWT signedJWT = SignedJWT.parse(serializedJwt);
             String email = signedJWT.getJWTClaimsSet().getStringClaim("email");
             if (email == null || email.isBlank()) {
                 throw new IllegalArgumentException("Email is missing or empty");
             }
             return email;
+        } catch (CoreThrowHandler e) {
+            throw e;
         } catch (Exception e) {
             log.warn("[AuthJWTUtility:RESOLVE_SUBJECT] Invalid or unreadable token: {}", e.getMessage());
             throw new CoreThrowHandler(RestApiError.AUT_0004);

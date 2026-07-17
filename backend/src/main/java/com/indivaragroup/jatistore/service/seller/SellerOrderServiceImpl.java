@@ -3,6 +3,7 @@ package com.indivaragroup.jatistore.service.seller;
 import com.indivaragroup.jatistore.data.entity.Order;
 import com.indivaragroup.jatistore.data.entity.OrderDetail;
 import com.indivaragroup.jatistore.data.entity.Seller;
+import com.indivaragroup.jatistore.data.utility.constant.OrderStatus;
 import com.indivaragroup.jatistore.dto.response.module.seller.order.SellerOrderDetailResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.order.SellerOrderItemDTO;
 import com.indivaragroup.jatistore.dto.response.module.seller.order.SellerOrderListResponse;
@@ -57,11 +58,11 @@ public class SellerOrderServiceImpl implements SellerOrderService {
     }
 
     @Override
-    public Page<SellerOrderListResponse> getSellerOrders(UUID sellerId, String status, int page, int size) throws CoreThrowHandler {
+    public Page<SellerOrderListResponse> getSellerOrders(UUID sellerId, OrderStatus status, int page, int size) throws CoreThrowHandler {
         Seller seller = getSellerById(sellerId);
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         
-        Page<Order> orders = orderRepository.findOrdersBySellerAndFilters(sellerId, (status == null || status.isEmpty()) ? null : status, pageRequest);
+        Page<Order> orders = orderRepository.findOrdersBySellerAndFilters(sellerId, status, pageRequest);
         
         return orders.map(order -> {
             List<SellerOrderItemDTO> items = mapToOrderItems(order, seller.getId());
@@ -70,7 +71,7 @@ public class SellerOrderServiceImpl implements SellerOrderService {
                     .orderDate(order.getCreatedAt())
                     .customerName(order.getUser().getFullName())
                     .totalAmount(calculateSellerTotalAmount(items))
-                    .status(order.getStatus())
+                    .status(order.getStatus() != null ? order.getStatus().name() : null)
                     .items(items)
                     .build();
         });
@@ -94,7 +95,7 @@ public class SellerOrderServiceImpl implements SellerOrderService {
                 .customerEmail(order.getUser().getEmail())
                 .customerPhone(order.getUser().getPhoneNumber())
                 .totalAmount(calculateSellerTotalAmount(items))
-                .status(order.getStatus())
+                .status(order.getStatus() != null ? order.getStatus().name() : null)
                 .items(items)
                 .build();
     }
@@ -113,10 +114,10 @@ public class SellerOrderServiceImpl implements SellerOrderService {
             throw new CoreThrowHandler(RestApiError.SLR_0021);
         }
         
-        if (!"PAID_ON_HOLD".equals(order.getStatus())) {
+        if (order.getStatus() != OrderStatus.PAID_ON_HOLD) {
             throw new CoreThrowHandler(RestApiError.SLR_0020);
         }
         
-        orderRepository.updateOrderStatus(orderId, "SHIPPED");
+        orderRepository.updateOrderStatus(orderId, OrderStatus.SHIPPED.name());
     }
 }

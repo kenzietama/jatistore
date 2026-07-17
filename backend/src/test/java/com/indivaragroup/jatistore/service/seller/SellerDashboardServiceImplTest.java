@@ -8,6 +8,9 @@ import com.indivaragroup.jatistore.data.entity.User;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.DashboardStatsResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.FinancialOverviewResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.RecentOrderResponse;
+import com.indivaragroup.jatistore.data.utility.constant.OrderStatus;
+import com.indivaragroup.jatistore.dto.utility.RestApiError;
+import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.repository.OrderDetailRepository;
 import com.indivaragroup.jatistore.repository.ProductRepository;
 import com.indivaragroup.jatistore.repository.SellerRepository;
@@ -91,9 +94,9 @@ public class SellerDashboardServiceImplTest {
         // Act & Assert
         try {
             sellerDashboardService.getDashboardStats(sellerId);
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException ex) {
-            assertEquals("Seller not found", ex.getMessage());
+            fail("Expected CoreThrowHandler");
+        } catch (CoreThrowHandler ex) {
+            assertEquals(RestApiError.SLR_0002, ex.getRestApiError());
         }
     }
 
@@ -128,9 +131,9 @@ public class SellerDashboardServiceImplTest {
         // Act & Assert
         try {
             sellerDashboardService.getFinancialOverview(sellerId);
-            fail("Expected IllegalArgumentException");
-        } catch (IllegalArgumentException ex) {
-            assertEquals("Seller not found", ex.getMessage());
+            fail("Expected CoreThrowHandler");
+        } catch (CoreThrowHandler ex) {
+            assertEquals(RestApiError.SLR_0002, ex.getRestApiError());
         }
     }
 
@@ -143,7 +146,7 @@ public class SellerDashboardServiceImplTest {
         // Arrange
         Order mockOrder = new Order();
         mockOrder.setId(UUID.randomUUID());
-        mockOrder.setStatus("SHIPPED");
+        mockOrder.setStatus(OrderStatus.SHIPPED);
 
         Product mockProduct = new Product();
         mockProduct.setName("Test Product");
@@ -178,7 +181,7 @@ public class SellerDashboardServiceImplTest {
         // Arrange
         Order order = new Order();
         order.setId(UUID.randomUUID());
-        order.setStatus("RECEIVED");
+        order.setStatus(OrderStatus.RECEIVED);
         
         Product product = new Product();
         product.setName("Test Product");

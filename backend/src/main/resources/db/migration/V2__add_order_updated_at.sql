@@ -1,0 +1,1 @@
+ALTER TABLE trx_orders ADD COLUMN updated_at timestamptz NOT NULL DEFAULT NOW();

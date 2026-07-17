@@ -1,6 +1,6 @@
 package com.indivaragroup.jatistore.controller.auth;
 
-import com.indivaragroup.jatistore.dto.request.AuthLoginRequest;
+import com.indivaragroup.jatistore.dto.request.auth.AuthLoginRequest;
 import com.indivaragroup.jatistore.dto.response.RestApiPath;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.auth.AuthLoginResponse;
@@ -9,7 +9,6 @@ import com.indivaragroup.jatistore.service.auth.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

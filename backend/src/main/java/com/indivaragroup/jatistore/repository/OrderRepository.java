@@ -1,6 +1,7 @@
 package com.indivaragroup.jatistore.repository;
 
 import com.indivaragroup.jatistore.data.entity.Order;
+import com.indivaragroup.jatistore.data.utility.constant.OrderStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,10 +16,10 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     @Query("SELECT DISTINCT o FROM Order o JOIN o.orderDetails od " +
            "WHERE od.product.store.seller.id = :sellerId " +
-           "AND (:status IS NULL OR CAST(o.status AS text) = CAST(:status AS text))")
+           "AND (:status IS NULL OR o.status = :status)")
     Page<Order> findOrdersBySellerAndFilters(
             @Param("sellerId") UUID sellerId,
-            @Param("status") String status,
+            @Param("status") OrderStatus status,
             Pageable pageable);
 
     @org.springframework.data.jpa.repository.Modifying

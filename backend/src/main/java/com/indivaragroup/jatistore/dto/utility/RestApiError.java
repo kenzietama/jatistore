@@ -18,9 +18,22 @@ public enum RestApiError {
     AUT_0008(HttpStatus.UNAUTHORIZED.value(), "Invalid Token"),
     AUT_0009(HttpStatus.NOT_FOUND.value(), "Session not found"),
     AUT_0010(HttpStatus.FORBIDDEN.value(), "Account has been suspended or deactivated."),
+
+    USR_0009(HttpStatus.BAD_REQUEST.value(), "Cart is empty"),
+    USR_0010(HttpStatus.BAD_REQUEST.value(), "Missing mandatory payment field: {field}"),
+    USR_0011(HttpStatus.BAD_REQUEST.value(), "Insufficient stock for product: {productName}"),
+    USR_0012(HttpStatus.PAYMENT_REQUIRED.value(), "Insufficient wallet balance"),
+    USR_0013(HttpStatus.PAYMENT_REQUIRED.value(), "Payment gateway declined transaction"),
+    USR_0014(HttpStatus.BAD_GATEWAY.value(), "Payment gateway error"),
+    USR_0017(HttpStatus.BAD_GATEWAY.value(), "Payment gateway timeout"),
+    USR_0018(HttpStatus.BAD_REQUEST.value(), "Invalid card holder name format"),
+    USR_0019(HttpStatus.BAD_REQUEST.value(), "Items from different sellers"),
+    USR_0021(HttpStatus.BAD_REQUEST.value(),"Invalid cart item ID"),
+
     SLR_0002(HttpStatus.FORBIDDEN.value(), "User is not a registered seller"),
     SLR_0020(HttpStatus.BAD_REQUEST.value(), "Invalid order status transition"),
     SLR_0021(HttpStatus.FORBIDDEN.value(), "Order does not contain your products"),
+
     ADM_0006(HttpStatus.NOT_FOUND.value(), "Seller not found"),
     ADM_0010(HttpStatus.CONFLICT.value(), "Category name already exists"),
     ADM_0011(HttpStatus.NOT_FOUND.value(), "Category not found"),

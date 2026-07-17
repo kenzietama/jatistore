@@ -22,7 +22,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.server.ResponseStatusException;
+import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
@@ -161,9 +161,9 @@ public class SellerProductServiceImplTest {
         // Act & Assert
         try {
             sellerProductService.getProducts(sellerId, null, null, null, null, null, 0, 10);
-            fail("Expected ResponseStatusException");
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+            fail("Expected CoreThrowHandler");
+        } catch (CoreThrowHandler ex) {
+            assertEquals(HttpStatus.FORBIDDEN.value(), ex.getCode());
         }
     }
 
@@ -194,9 +194,9 @@ public class SellerProductServiceImplTest {
         // Act & Assert
         try {
             sellerProductService.getProduct(sellerId, productId);
-            fail("Expected ResponseStatusException");
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+            fail("Expected CoreThrowHandler");
+        } catch (CoreThrowHandler ex) {
+            assertEquals(HttpStatus.NOT_FOUND.value(), ex.getCode());
         }
     }
 
@@ -211,9 +211,9 @@ public class SellerProductServiceImplTest {
         // Act & Assert
         try {
             sellerProductService.getProduct(sellerId, productId);
-            fail("Expected ResponseStatusException");
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+            fail("Expected CoreThrowHandler");
+        } catch (CoreThrowHandler ex) {
+            assertEquals(HttpStatus.NOT_FOUND.value(), ex.getCode());
         }
     }
 
@@ -227,9 +227,9 @@ public class SellerProductServiceImplTest {
         // Act & Assert
         try {
             sellerProductService.getProduct(sellerId, productId);
-            fail("Expected ResponseStatusException");
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+            fail("Expected CoreThrowHandler");
+        } catch (CoreThrowHandler ex) {
+            assertEquals(HttpStatus.NOT_FOUND.value(), ex.getCode());
         }
     }
 
@@ -278,10 +278,10 @@ public class SellerProductServiceImplTest {
         // Act & Assert
         try {
             sellerProductService.createProduct(sellerId, request);
-            fail("Expected ResponseStatusException");
+            fail("Expected CoreThrowHandler");
         } catch (Exception ex) {
-            assertTrue(ex instanceof ResponseStatusException);
-            assertEquals(HttpStatus.BAD_REQUEST, ((ResponseStatusException) ex).getStatusCode());
+            assertTrue(ex instanceof CoreThrowHandler);
+            assertEquals(HttpStatus.FORBIDDEN.value(), ((CoreThrowHandler) ex).getCode());
         }
     }
 
@@ -298,10 +298,10 @@ public class SellerProductServiceImplTest {
         // Act & Assert
         try {
             sellerProductService.createProduct(sellerId, request);
-            fail("Expected ResponseStatusException");
+            fail("Expected CoreThrowHandler");
         } catch (Exception ex) {
-            assertTrue(ex instanceof ResponseStatusException);
-            assertEquals(HttpStatus.NOT_FOUND, ((ResponseStatusException) ex).getStatusCode());
+            assertTrue(ex instanceof CoreThrowHandler);
+            assertEquals(HttpStatus.NOT_FOUND.value(), ((CoreThrowHandler) ex).getCode());
         }
     }
 
@@ -355,10 +355,10 @@ public class SellerProductServiceImplTest {
         // Act & Assert
         try {
             sellerProductService.updateProduct(sellerId, productId, request);
-            fail("Expected ResponseStatusException");
+            fail("Expected CoreThrowHandler");
         } catch (Exception ex) {
-            assertTrue(ex instanceof ResponseStatusException);
-            assertEquals(HttpStatus.NOT_FOUND, ((ResponseStatusException) ex).getStatusCode());
+            assertTrue(ex instanceof CoreThrowHandler);
+            assertEquals(HttpStatus.NOT_FOUND.value(), ((CoreThrowHandler) ex).getCode());
         }
     }
 
@@ -415,10 +415,10 @@ public class SellerProductServiceImplTest {
         // Act & Assert
         try {
             sellerProductService.updateProduct(sellerId, productId, request);
-            fail("Expected ResponseStatusException");
+            fail("Expected CoreThrowHandler");
         } catch (Exception ex) {
-            assertTrue(ex instanceof ResponseStatusException);
-            assertEquals(HttpStatus.NOT_FOUND, ((ResponseStatusException) ex).getStatusCode());
+            assertTrue(ex instanceof CoreThrowHandler);
+            assertEquals(HttpStatus.NOT_FOUND.value(), ((CoreThrowHandler) ex).getCode());
         }
     }
 
@@ -433,9 +433,9 @@ public class SellerProductServiceImplTest {
         // Act & Assert
         try {
             sellerProductService.updateProduct(sellerId, productId, new ProductUpdateRequest());
-            fail("Expected ResponseStatusException");
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+            fail("Expected CoreThrowHandler");
+        } catch (CoreThrowHandler ex) {
+            assertEquals(HttpStatus.NOT_FOUND.value(), ex.getCode());
         }
     }
 
@@ -449,9 +449,9 @@ public class SellerProductServiceImplTest {
         // Act & Assert
         try {
             sellerProductService.updateProduct(sellerId, productId, new ProductUpdateRequest());
-            fail("Expected ResponseStatusException");
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+            fail("Expected CoreThrowHandler");
+        } catch (CoreThrowHandler ex) {
+            assertEquals(HttpStatus.NOT_FOUND.value(), ex.getCode());
         }
     }
 
@@ -482,9 +482,9 @@ public class SellerProductServiceImplTest {
         // Act & Assert
         try {
             sellerProductService.deleteProduct(sellerId, productId);
-            fail("Expected ResponseStatusException");
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+            fail("Expected CoreThrowHandler");
+        } catch (CoreThrowHandler ex) {
+            assertEquals(HttpStatus.NOT_FOUND.value(), ex.getCode());
         }
     }
 
@@ -499,9 +499,9 @@ public class SellerProductServiceImplTest {
         // Act & Assert
         try {
             sellerProductService.deleteProduct(sellerId, productId);
-            fail("Expected ResponseStatusException");
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+            fail("Expected CoreThrowHandler");
+        } catch (CoreThrowHandler ex) {
+            assertEquals(HttpStatus.NOT_FOUND.value(), ex.getCode());
         }
     }
 
@@ -515,9 +515,9 @@ public class SellerProductServiceImplTest {
         // Act & Assert
         try {
             sellerProductService.deleteProduct(sellerId, productId);
-            fail("Expected ResponseStatusException");
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+            fail("Expected CoreThrowHandler");
+        } catch (CoreThrowHandler ex) {
+            assertEquals(HttpStatus.NOT_FOUND.value(), ex.getCode());
         }
     }
 }
