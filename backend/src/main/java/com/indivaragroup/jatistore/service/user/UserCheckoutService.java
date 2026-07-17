@@ -20,20 +20,20 @@ import com.indivaragroup.jatistore.repository.checkout.CartItemRepository;
 import com.indivaragroup.jatistore.repository.OrderRepository;
 import com.indivaragroup.jatistore.repository.checkout.PaymentCardRepository;
 import com.indivaragroup.jatistore.repository.checkout.TransactionRepository;
-import com.indivaragroup.jatistore.repository.ProductRepository;
-import com.indivaragroup.jatistore.repository.OrderDetailRepository;
-import com.indivaragroup.jatistore.data.entity.checkout.SellerLedger;
-import com.indivaragroup.jatistore.data.entity.Seller;
-import com.indivaragroup.jatistore.data.utility.constant.BalanceType;
-import com.indivaragroup.jatistore.repository.checkout.SellerLedgerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.http.MediaType;
+import com.indivaragroup.jatistore.dto.request.payment.CardChargeRequest;
+import com.indivaragroup.jatistore.dto.request.payment.WalletChargeRequest;
+import com.indivaragroup.jatistore.dto.response.payment.CardChargeResponse;
+import com.indivaragroup.jatistore.dto.response.payment.WalletChargeResponse;
+import com.indivaragroup.jatistore.service.payment.PaymentGatewayClient;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -51,238 +51,198 @@ public class UserCheckoutService {
     private final AuthRepository authRepository;
     private final TransactionRepository transactionRepository;
     private final PaymentCardRepository paymentCardRepository;
-    private final ProductRepository productRepository;
-    private final OrderDetailRepository orderDetailRepository;
-    private final SellerLedgerRepository sellerLedgerRepository;
+    private final PlatformTransactionManager transactionManager;
+    private final PaymentGatewayClient paymentGatewayClient;
+    private final CheckoutFinalizer checkoutFinalizer;
 
-    private final RestClient restClient = RestClient.builder()
-            .baseUrl("https://mock.apidog.com/m1/1332593-1333794-default")
-            .build();
+    private static class OrderContext {
+        Order order;
+        Transaction transaction;
+        List<CartItem> cartItems;
+        BigDecimal amount;
+        PaymentMethod method;
+    }
 
-    private record CardChargeRequest(
-        String cardNumber,
-        String expiry,
-        String cvc,
-        int amount,
-        String cardHolderName
-    ) {}
-
-    private record CardChargeResponse(
-        String status,
-        int amount,
-        String message,
-        String transactionId,
-        String cardLast4
-    ) {}
-
-    private record WalletChargeRequest(
-        int amount
-    ) {}
-
-    private record WalletChargeResponse(
-        String status,
-        int amount,
-        String message,
-        String transactionId
-    ) {}
-
-    @Transactional
     public RestApiResponse<UserCheckoutResponse> checkout(
             UserCheckoutRequest userCheckoutRequest,
             String email
     ) throws CoreThrowHandler {
-        
-        // 1. Validate seller consistency
-        int sellerCount =
-                cartItemRepository.selectDistinctStore(userCheckoutRequest.getUserSelectedCartItemId());
-        if (sellerCount != 1) {
-            throw new CoreThrowHandler(RestApiError.USR_0019);
-        }
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
 
-        // 2. Load and validate cart items/stock
-        List<CartItem> cartItems = cartItemRepository.findAllById(Arrays.asList(userCheckoutRequest.getUserSelectedCartItemId()));
-        if (cartItems.isEmpty()) {
-            throw new CoreThrowHandler(RestApiError.USR_0009);
-        }
-        for (CartItem item : cartItems) {
-            if (item.getProduct().getStock() < item.getQuantity()) {
-                String customMessage = RestApiError.USR_0011.getMessage().replace("{productName}", item.getProduct().getName());
-                throw new CoreThrowHandler(RestApiError.USR_0011.getCode(), customMessage, null);
-            }
-        }
+        // 1. Create order and transaction in PENDING state (committed in Transaction 1)
+        OrderContext ctx;
+        try {
+            ctx = template.execute(status -> {
+                // 1. Validate seller consistency
+                int sellerCount =
+                        cartItemRepository.selectDistinctStore(userCheckoutRequest.getUserSelectedCartItemId());
+                if (sellerCount != 1) {
+                    throw new CoreThrowHandler(RestApiError.USR_0019);
+                }
 
-        User user = authRepository.findByEmail(email).orElseThrow(() -> new CoreThrowHandler(RestApiError.GEN_0005));
-        BigDecimal totalAmount = cartItemRepository.calculateTotalAmount(userCheckoutRequest.getUserSelectedCartItemId());
-        int amountInt = totalAmount.intValue();
+                // 2. Load and validate cart items/stock
+                List<CartItem> cartItems = cartItemRepository.findAllById(Arrays.asList(userCheckoutRequest.getUserSelectedCartItemId()));
+                if (cartItems.isEmpty()) {
+                    throw new CoreThrowHandler(RestApiError.USR_0009);
+                }
+                for (CartItem item : cartItems) {
+                    if (item.getProduct().getStock() < item.getQuantity()) {
+                        String customMessage = RestApiError.USR_0011.getMessage().replace("{productName}", item.getProduct().getName());
+                        throw new CoreThrowHandler(RestApiError.USR_0011.getCode(), customMessage, null);
+                    }
+                }
 
-        // 3. Create order (PENDING)
-        Order order = Order.builder()
-                .user(user)
-                .totalAmount(totalAmount)
-                .status(OrderStatus.PENDING)
-                .build();
-        order = orderRepository.save(order);
+                User user = authRepository.findByEmail(email).orElseThrow(() -> new CoreThrowHandler(RestApiError.GEN_0005));
+                BigDecimal totalAmount = cartItemRepository.calculateTotalAmount(userCheckoutRequest.getUserSelectedCartItemId());
 
-        // 4. Create transaction (PENDING)
-        PaymentMethod method = userCheckoutRequest.getUserCheckoutRequestPaymentMethod();
-        PaymentCard paymentCard = null;
-
-        if (method == PaymentMethod.CARD) {
-            String cardNum = userCheckoutRequest.getUserCheckoutRequestCardNumber();
-            paymentCard = paymentCardRepository.findByCardNumber(cardNum).orElse(null);
-            if (paymentCard == null) {
-                paymentCard = PaymentCard.builder()
+                // 3. Create order (PENDING)
+                Order order = Order.builder()
                         .user(user)
-                        .cardNumber(cardNum)
-                        .cardHolderName(userCheckoutRequest.getUserCheckoutRequestCardHolderName())
-                        .expiryDate(userCheckoutRequest.getUserCheckoutRequestExpiryDate())
+                        .totalAmount(totalAmount)
+                        .status(OrderStatus.PENDING)
                         .build();
-                paymentCard = paymentCardRepository.save(paymentCard);
+                order = orderRepository.save(order);
+
+                // 4. Create transaction (PENDING)
+                PaymentMethod method = userCheckoutRequest.getUserCheckoutRequestPaymentMethod();
+                PaymentCard paymentCard = null;
+
+                if (method == PaymentMethod.CARD) {
+                    String cardNum = userCheckoutRequest.getUserCheckoutRequestCardNumber();
+                    paymentCard = paymentCardRepository.findByCardNumber(cardNum).orElse(null);
+                    if (paymentCard == null) {
+                        paymentCard = PaymentCard.builder()
+                                .user(user)
+                                .cardNumber(cardNum)
+                                .cardHolderName(userCheckoutRequest.getUserCheckoutRequestCardHolderName())
+                                .expiryDate(userCheckoutRequest.getUserCheckoutRequestExpiryDate())
+                                .build();
+                        paymentCard = paymentCardRepository.save(paymentCard);
+                    }
+                }
+
+                Transaction transaction = Transaction.builder()
+                        .order(order)
+                        .paymentMethod(method)
+                        .paymentCard(paymentCard)
+                        .status(TransactionStatus.PENDING)
+                        .build();
+                transaction = transactionRepository.save(transaction);
+
+                OrderContext context = new OrderContext();
+                context.order = order;
+                context.transaction = transaction;
+                context.cartItems = cartItems;
+                context.amount = totalAmount;
+                context.method = method;
+                return context;
+            });
+        } catch (Exception ex) {
+            if (ex instanceof CoreThrowHandler) {
+                throw (CoreThrowHandler) ex;
             }
+            throw ex;
         }
 
-        Transaction transaction = Transaction.builder()
-                .order(order)
-                .paymentMethod(method)
-                .paymentCard(paymentCard)
-                .status(TransactionStatus.PENDING)
-                .build();
-        transaction = transactionRepository.save(transaction);
-
-        // 5. Call payment gateway
-        if (method == PaymentMethod.CARD) {
+        // 5. Call payment gateway outside of any database transaction, keeping DB connections free
+        if (ctx.method == PaymentMethod.CARD) {
             CardChargeRequest chargeRequest = new CardChargeRequest(
                     userCheckoutRequest.getUserCheckoutRequestCardNumber(),
                     userCheckoutRequest.getUserCheckoutRequestExpiryDate(),
                     userCheckoutRequest.getUserCheckoutRequestCvc(),
-                    amountInt,
+                    ctx.amount,
                     userCheckoutRequest.getUserCheckoutRequestCardHolderName()
             );
-
-            try {
-                CardChargeResponse response = restClient.post()
-                        .uri("/api/card/charge")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(chargeRequest)
-                        .retrieve()
-                        .body(CardChargeResponse.class);
-
-                order.setStatus(OrderStatus.PAID_ON_HOLD);
-                orderRepository.save(order);
-
-                transaction.setStatus(TransactionStatus.SUCCESS);
-                transaction.setPaymentGatewayRef(response.transactionId());
-                transactionRepository.save(transaction);
-
-                finalizeOrder(order, cartItems);
-
-                return buildSuccessResponse(order, transaction);
-
-            } catch (HttpClientErrorException ex) {
-                order.setStatus(OrderStatus.CANCELLED);
-                orderRepository.save(order);
-
-                if (ex.getStatusCode().value() == 402) {
-                    transaction.setStatus(TransactionStatus.DECLINED);
-                    transactionRepository.save(transaction);
-                    throw new CoreThrowHandler(RestApiError.USR_0013);
-                } else {
-                    transaction.setStatus(TransactionStatus.FAILED);
-                    transactionRepository.save(transaction);
-                    throw new CoreThrowHandler(RestApiError.USR_0014);
-                }
-            } catch (RestClientException ex) {
-                order.setStatus(OrderStatus.CANCELLED);
-                orderRepository.save(order);
-
-                transaction.setStatus(TransactionStatus.FAILED);
-                transactionRepository.save(transaction);
-
-                throw new CoreThrowHandler(RestApiError.USR_0014);
-            }
+            return executePaymentFlow(
+                    ctx,
+                    () -> paymentGatewayClient.chargeCard(chargeRequest).transactionId(),
+                    RestApiError.USR_0013
+            );
         } else {
-            WalletChargeRequest chargeRequest = new WalletChargeRequest(amountInt);
+            WalletChargeRequest chargeRequest = new WalletChargeRequest(ctx.amount);
+            return executePaymentFlow(
+                    ctx,
+                    () -> paymentGatewayClient.chargeWallet(chargeRequest).transactionId(),
+                    RestApiError.USR_0012
+            );
+        }
+    }
 
-            try {
-                WalletChargeResponse response = restClient.post()
-                        .uri("/api/wallet/charge")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(chargeRequest)
-                        .retrieve()
-                        .body(WalletChargeResponse.class);
+    @FunctionalInterface
+    private interface PaymentCall {
+        String execute() throws HttpClientErrorException, RestClientException;
+    }
 
-                order.setStatus(OrderStatus.PAID_ON_HOLD);
-                orderRepository.save(order);
+    private RestApiResponse<UserCheckoutResponse> executePaymentFlow(
+            OrderContext ctx,
+            PaymentCall paymentCall,
+            RestApiError declinedError
+    ) throws CoreThrowHandler {
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
 
-                transaction.setStatus(TransactionStatus.SUCCESS);
-                transaction.setPaymentGatewayRef(response.transactionId());
-                transactionRepository.save(transaction);
+        try {
+            String gatewayRef = paymentCall.execute();
 
-                finalizeOrder(order, cartItems);
+            // Update database state on gateway success (committed in Transaction 2)
+            Order finalOrder = ctx.order;
+            Transaction finalTransaction = ctx.transaction;
+            List<CartItem> finalCartItems = ctx.cartItems;
+            template.executeWithoutResult(status -> {
+                Order ord = orderRepository.findById(finalOrder.getId()).orElseThrow();
+                Transaction trx = transactionRepository.findById(finalTransaction.getId()).orElseThrow();
 
-                return buildSuccessResponse(order, transaction);
+                ord.setStatus(OrderStatus.PAID_ON_HOLD);
+                orderRepository.save(ord);
 
-            } catch (HttpClientErrorException ex) {
-                order.setStatus(OrderStatus.CANCELLED);
-                orderRepository.save(order);
+                trx.setStatus(TransactionStatus.SUCCESS);
+                trx.setPaymentGatewayRef(gatewayRef);
+                transactionRepository.save(trx);
+
+                checkoutFinalizer.finalizeOrder(ord, finalCartItems);
+            });
+
+            Order committedOrder = orderRepository.findById(ctx.order.getId()).orElseThrow();
+            Transaction committedTrx = transactionRepository.findById(ctx.transaction.getId()).orElseThrow();
+            return RestApiResponse.success(UserCheckoutResponse.from(committedOrder, committedTrx));
+
+        } catch (HttpClientErrorException ex) {
+            Order finalOrder = ctx.order;
+            Transaction finalTransaction = ctx.transaction;
+            template.executeWithoutResult(status -> {
+                Order ord = orderRepository.findById(finalOrder.getId()).orElseThrow();
+                Transaction trx = transactionRepository.findById(finalTransaction.getId()).orElseThrow();
+
+                ord.setStatus(OrderStatus.CANCELLED);
+                orderRepository.save(ord);
 
                 if (ex.getStatusCode().value() == 402) {
-                    transaction.setStatus(TransactionStatus.DECLINED);
-                    transactionRepository.save(transaction);
-                    throw new CoreThrowHandler(RestApiError.USR_0012);
+                    trx.setStatus(TransactionStatus.DECLINED);
                 } else {
-                    transaction.setStatus(TransactionStatus.FAILED);
-                    transactionRepository.save(transaction);
-                    throw new CoreThrowHandler(RestApiError.USR_0014);
+                    trx.setStatus(TransactionStatus.FAILED);
                 }
-            } catch (RestClientException ex) {
-                order.setStatus(OrderStatus.CANCELLED);
-                orderRepository.save(order);
+                transactionRepository.save(trx);
+            });
 
-                transaction.setStatus(TransactionStatus.FAILED);
-                transactionRepository.save(transaction);
-
+            if (ex.getStatusCode().value() == 402) {
+                throw new CoreThrowHandler(declinedError);
+            } else {
                 throw new CoreThrowHandler(RestApiError.USR_0014);
             }
+        } catch (RestClientException ex) {
+            Order finalOrder = ctx.order;
+            Transaction finalTransaction = ctx.transaction;
+            template.executeWithoutResult(status -> {
+                Order ord = orderRepository.findById(finalOrder.getId()).orElseThrow();
+                Transaction trx = transactionRepository.findById(finalTransaction.getId()).orElseThrow();
+
+                ord.setStatus(OrderStatus.CANCELLED);
+                orderRepository.save(ord);
+
+                trx.setStatus(TransactionStatus.FAILED);
+                transactionRepository.save(trx);
+            });
+
+            throw new CoreThrowHandler(RestApiError.USR_0014);
         }
-    }
-
-    private void finalizeOrder(Order order, List<CartItem> cartItems) {
-        for (CartItem item : cartItems) {
-            OrderDetail detail = new OrderDetail();
-            detail.setOrder(order);
-            detail.setProduct(item.getProduct());
-            detail.setQuantity(item.getQuantity());
-            detail.setPricePerItem(item.getProduct().getPrice());
-            detail.setFlashSale(false);
-            orderDetailRepository.save(detail);
-
-            Product product = item.getProduct();
-            product.setStock(product.getStock() - item.getQuantity());
-            productRepository.save(product);
-        }
-
-        Seller seller = cartItems.get(0).getProduct().getStore().getSeller();
-        SellerLedger ledger = SellerLedger.builder()
-                .seller(seller)
-                .order(order)
-                .amount(order.getTotalAmount())
-                .balanceType(BalanceType.ON_HOLD)
-                .build();
-        sellerLedgerRepository.save(ledger);
-
-        List<UUID> cartItemIds = cartItems.stream().map(CartItem::getId).toList();
-        cartItemRepository.deleteAllById(cartItemIds);
-    }
-
-    private RestApiResponse<UserCheckoutResponse> buildSuccessResponse(Order order, Transaction transaction) {
-        UserCheckoutResponse data = new UserCheckoutResponse(
-                order.getId(),
-                transaction.getId(),
-                transaction.getPaymentGatewayRef(),
-                order.getStatus() != null ? order.getStatus().name() : null,
-                order.getTotalAmount()
-        );
-        return RestApiResponse.success(data);
     }
 }
