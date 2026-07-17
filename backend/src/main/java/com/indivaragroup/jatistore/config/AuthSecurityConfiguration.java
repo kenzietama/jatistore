@@ -1,5 +1,6 @@
 package com.indivaragroup.jatistore.config;
 
+import com.indivaragroup.jatistore.dto.response.RestApiPath;
 import com.indivaragroup.jatistore.repository.AuthRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -67,6 +68,10 @@ public class AuthSecurityConfiguration {
                         .requestMatchers("/api/seller/dashboard/**").hasRole("SELLER")
                         .requestMatchers("/api/v1/seller/products/**").hasRole("SELLER")
                         .requestMatchers("/api/v1/utility/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**", "/api/v1/user/**", "/api/v1/products/**").permitAll()
+                        .requestMatchers(RestApiPath.BASE_PATH + RestApiPath.CART_BASE_PATH + "/**").permitAll()
+                        .requestMatchers("/api/v1/products/list").permitAll()
+                        .requestMatchers("/api/v1/categories").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
