@@ -25,8 +25,8 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     long countDistinctStoresByCategoryId(@Param("categoryId") UUID categoryId);
 
     @Query("SELECT p FROM Product p WHERE p.store.seller.id = :sellerId AND p.deletedAt IS NULL AND " +
-           "(:search IS NULL OR :search = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR CAST(p.id AS string) LIKE CONCAT('%', :search, '%')) AND " +
-           "(:category IS NULL OR :category = '' OR p.category.name = :category) AND " +
+           "(COALESCE(:search, '') = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR CAST(p.id AS string) LIKE CONCAT('%', :search, '%')) AND " +
+           "(COALESCE(:category, '') = '' OR p.category.name = :category) AND " +
            "(:minStock IS NULL OR p.stock >= :minStock) AND " +
            "(:maxStock IS NULL OR p.stock <= :maxStock)")
     Page<Product> findProductsBySellerAndFilters(

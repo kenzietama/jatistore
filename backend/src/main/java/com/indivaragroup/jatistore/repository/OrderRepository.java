@@ -16,7 +16,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     @Query("SELECT DISTINCT o FROM Order o JOIN o.orderDetails od " +
            "WHERE od.product.store.seller.id = :sellerId " +
-           "AND (:status IS NULL OR o.status = :status)")
+           "AND (COALESCE(CAST(:status AS text), '') = '' OR o.status = :status)")
     Page<Order> findOrdersBySellerAndFilters(
             @Param("sellerId") UUID sellerId,
             @Param("status") OrderStatus status,

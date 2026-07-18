@@ -2,11 +2,9 @@ package com.indivaragroup.jatistore.service.user;
 
 import com.indivaragroup.jatistore.data.entity.Order;
 import com.indivaragroup.jatistore.data.entity.User;
-import com.indivaragroup.jatistore.data.entity.Product;
-import com.indivaragroup.jatistore.data.entity.OrderDetail;
-import com.indivaragroup.jatistore.data.entity.checkout.PaymentCard;
-import com.indivaragroup.jatistore.data.entity.checkout.Transaction;
-import com.indivaragroup.jatistore.data.entity.checkout.CartItem;
+import com.indivaragroup.jatistore.data.entity.PaymentCard;
+import com.indivaragroup.jatistore.data.entity.Transaction;
+import com.indivaragroup.jatistore.data.entity.CartItem;
 import com.indivaragroup.jatistore.data.utility.constant.OrderStatus;
 import com.indivaragroup.jatistore.data.utility.constant.PaymentMethod;
 import com.indivaragroup.jatistore.data.utility.constant.TransactionStatus;
@@ -16,30 +14,24 @@ import com.indivaragroup.jatistore.dto.response.module.user.UserCheckoutResponse
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.repository.AuthRepository;
-import com.indivaragroup.jatistore.repository.checkout.CartItemRepository;
+import com.indivaragroup.jatistore.repository.CartItemRepository;
 import com.indivaragroup.jatistore.repository.OrderRepository;
-import com.indivaragroup.jatistore.repository.checkout.PaymentCardRepository;
-import com.indivaragroup.jatistore.repository.checkout.TransactionRepository;
+import com.indivaragroup.jatistore.repository.PaymentCardRepository;
+import com.indivaragroup.jatistore.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.web.client.RestClient;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
-import org.springframework.http.MediaType;
 import com.indivaragroup.jatistore.dto.request.payment.CardChargeRequest;
 import com.indivaragroup.jatistore.dto.request.payment.WalletChargeRequest;
-import com.indivaragroup.jatistore.dto.response.payment.CardChargeResponse;
-import com.indivaragroup.jatistore.dto.response.payment.WalletChargeResponse;
 import com.indivaragroup.jatistore.service.payment.PaymentGatewayClient;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor

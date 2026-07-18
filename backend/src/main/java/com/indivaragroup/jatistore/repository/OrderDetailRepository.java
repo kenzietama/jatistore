@@ -19,10 +19,10 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, UUID> 
     long countDistinctOrdersBySellerId(@Param("sellerId") UUID sellerId);
 
     @Query("SELECT od FROM OrderDetail od WHERE od.product.store.seller.id = :sellerId " +
-           "AND (:search IS NULL OR LOWER(od.product.name) LIKE LOWER(CONCAT('%', CAST(:search AS text), '%')) OR CAST(od.order.id AS text) LIKE CONCAT('%', CAST(:search AS text), '%')) " +
-           "AND (:status IS NULL OR od.order.status = :status)")
-    Page<OrderDetail> searchAndFilterOrders(@Param("sellerId") UUID sellerId, 
-                                            @Param("search") String search, 
-                                            @Param("status") OrderStatus status, 
+           "AND (COALESCE(:search, '') = '' OR LOWER(od.product.name) LIKE LOWER(CONCAT('%', CAST(:search AS text), '%')) OR CAST(od.order.id AS text) LIKE CONCAT('%', CAST(:search AS text), '%')) " +
+           "AND (COALESCE(CAST(:status AS text), '') = '' OR od.order.status = :status)")
+    Page<OrderDetail> searchAndFilterOrders(@Param("sellerId") UUID sellerId,
+                                            @Param("search") String search,
+                                            @Param("status") OrderStatus status,
                                             Pageable pageable);
 }
