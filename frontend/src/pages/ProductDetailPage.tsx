@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import api from "../lib/api"; 
 
-// 1. Updated interface to include dynamic store object matching database structure
 interface Product {
   id: string;
   name: string;
@@ -14,7 +13,6 @@ interface Product {
   rating?: number;          
   reviewsCount?: number;    
   thumbnails?: string[];    
-  // Added relation object based on backend/database structure
   store?: {
     id: string;
     storeName: string;
@@ -85,7 +83,6 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
   const finalProductRating = product.rating ?? 5;
   const finalReviewsCount = product.reviewsCount ?? 24;
-  // 🏪 FALLBACK LOGIC: Mengambil storeName dari objek store database jika tersedia
   const finalSoldBy = product.store?.storeName ?? "JatiStore Official";
   const finalThumbnails = product.thumbnails ?? [];
 
