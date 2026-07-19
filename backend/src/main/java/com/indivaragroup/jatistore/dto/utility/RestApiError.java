@@ -29,6 +29,8 @@ public enum RestApiError {
     USR_0018(HttpStatus.BAD_REQUEST.value(), "Invalid card holder name format"),
     USR_0019(HttpStatus.BAD_REQUEST.value(), "Items from different sellers"),
     USR_0021(HttpStatus.BAD_REQUEST.value(),"Invalid cart item ID"),
+    USR_0015(HttpStatus.NOT_FOUND.value(), "Order not found"),
+    USR_0016(HttpStatus.BAD_REQUEST.value(), "Order receipt confirmation not allowed"),
 
     SLR_0002(HttpStatus.FORBIDDEN.value(), "User is not a registered seller"),
     SLR_0020(HttpStatus.BAD_REQUEST.value(), "Invalid order status transition"),

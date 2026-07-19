@@ -13,6 +13,7 @@ public class RestApiPath {
 
     public static final String USER_CHECKOUT_BASE_PATH = "/orders";
     public static final String USER_CHECKOUT_PATH = "/checkout";
+    public static final String USER_ORDER_CONFIRM_RECEIPT_PATH = "/{orderId}/confirm-receipt";
     public static final String USER_BASE_PATH = "/user";
     public static final String USER_PROFILE_PATH = "/profile/{id}";
 
