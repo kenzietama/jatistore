@@ -63,7 +63,7 @@ public class UserOrderService {
         List<OrderHistoryItemResponse> content = orderPage.getContent().stream()
                 .map(row -> {
                     UUID orderId = UUID.fromString(row[0].toString());
-                    Instant createdAt = ((java.sql.Timestamp) row[1]).toInstant();
+                    Instant createdAt = (Instant) row[1];
                     BigDecimal totalAmount = (BigDecimal) row[2];
                     OrderStatus orderStatus = OrderStatus.valueOf(row[3].toString());
 

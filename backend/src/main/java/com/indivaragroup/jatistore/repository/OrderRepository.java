@@ -33,7 +33,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     @Query(value = "SELECT o.id, o.created_at, o.total_amount, o.status " +
                    "FROM trx_orders o " +
                    "WHERE o.user_id = :userId " +
-                   "AND (:status IS NULL OR o.status = CAST(:status AS order_status)) " +
+                   "AND (COALESCE(:status, '') = '' OR o.status = CAST(:status AS order_status)) " +
                    "ORDER BY o.created_at DESC",
            nativeQuery = true)
     Page<Object[]> findOrderHistoryByUserId(@Param("userId") UUID userId,

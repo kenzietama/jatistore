@@ -17,14 +17,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping(RestApiPath.BASE_PATH+RestApiPath.USER_CHECKOUT_BASE_PATH)
+@RequestMapping(RestApiPath.BASE_PATH+RestApiPath.USER_CHECKOUT_PATH)
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('USER')")
 public class UserCheckoutController {
 
     private final UserCheckoutService userCheckoutService;
 
-    @PostMapping(RestApiPath.USER_CHECKOUT_PATH)
+    @PostMapping
     public RestApiResponse<UserCheckoutResponse> checkout(
             @Valid  @RequestBody UserCheckoutRequest userCheckoutRequest,
             @AuthenticationPrincipal UserDetails userDetails

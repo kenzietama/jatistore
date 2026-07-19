@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping(RestApiPath.BASE_PATH + RestApiPath.USER_CHECKOUT_BASE_PATH)
+@RequestMapping(RestApiPath.BASE_PATH + RestApiPath.USER_ORDER_BASE_PATH)
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('USER')")
 public class UserOrderController {

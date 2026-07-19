@@ -92,7 +92,7 @@ class UserOrderControllerTest {
         when(userOrderService.getOrderHistory(eq("user@example.com"), eq(null), any()))
                 .thenReturn(apiResponse);
 
-        mockMvc.perform(get("/api/v1/user/checkout")
+        mockMvc.perform(get("/api/v1/orders")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
@@ -160,7 +160,7 @@ class UserOrderControllerTest {
 
     @Test
     void getOrderHistory_WithoutAuthentication_ShouldReturn401() throws Exception {
-        mockMvc.perform(get("/api/v1/user/checkout")
+        mockMvc.perform(get("/api/v1/orders")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
 
@@ -170,7 +170,7 @@ class UserOrderControllerTest {
     @Test
     @WithMockUser(username = "user@example.com", roles = {"SELLER"})
     void getOrderHistory_WithWrongRole_ShouldReturn403() throws Exception {
-        mockMvc.perform(get("/api/v1/user/checkout")
+        mockMvc.perform(get("/api/v1/orders")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
@@ -196,7 +196,7 @@ class UserOrderControllerTest {
         when(userOrderService.confirmReceipt(eq("user@example.com"), eq(orderId)))
                 .thenReturn(apiResponse);
 
-        mockMvc.perform(post("/api/v1/user/checkout/" + orderId + "/confirm-receipt")
+        mockMvc.perform(post("/api/v1/orders/" + orderId + "/confirm-receipt")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
@@ -210,7 +210,7 @@ class UserOrderControllerTest {
     void confirmReceipt_WithoutAuthentication_ShouldReturn401() throws Exception {
         UUID orderId = UUID.randomUUID();
 
-        mockMvc.perform(post("/api/v1/user/checkout/" + orderId + "/confirm-receipt")
+        mockMvc.perform(post("/api/v1/orders/" + orderId + "/confirm-receipt")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
 
@@ -222,7 +222,7 @@ class UserOrderControllerTest {
     void confirmReceipt_WithWrongRole_ShouldReturn403() throws Exception {
         UUID orderId = UUID.randomUUID();
 
-        mockMvc.perform(post("/api/v1/user/checkout/" + orderId + "/confirm-receipt")
+        mockMvc.perform(post("/api/v1/orders/" + orderId + "/confirm-receipt")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 

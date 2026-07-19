@@ -11,8 +11,8 @@ public class RestApiPath {
     public static final String AUTH_LOGIN_PATH = "/login";
     public static final String AUTH_LOGOUT_PATH = "/logout";
 
-    public static final String USER_CHECKOUT_BASE_PATH = "/orders";
-    public static final String USER_CHECKOUT_PATH = "/checkout";
+    public static final String USER_ORDER_BASE_PATH = "/orders";
+    public static final String USER_CHECKOUT_PATH = "/orders/checkout";
     public static final String USER_ORDER_CONFIRM_RECEIPT_PATH = "/{orderId}/confirm-receipt";
     public static final String USER_BASE_PATH = "/user";
     public static final String USER_PROFILE_PATH = "/profile/{id}";

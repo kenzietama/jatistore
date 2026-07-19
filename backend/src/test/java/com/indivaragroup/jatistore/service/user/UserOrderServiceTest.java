@@ -88,7 +88,7 @@ class UserOrderServiceTest {
     @Test
     void getOrderHistory_Success() throws CoreThrowHandler {
         Pageable pageable = PageRequest.of(0, 20);
-        Timestamp now = Timestamp.from(Instant.now());
+        Instant now = Instant.now();
 
         Object[] orderRow = new Object[] {
                 orderId.toString(),
