@@ -39,7 +39,10 @@ class AuthControllerTest {
     private AuthJWTUtility authJWTUtility;
 
     @MockitoBean
-    private AuthRepository authRepository;
+    private com.indivaragroup.jatistore.repository.AuthRepository authRepository;
+
+    @MockitoBean
+    private com.indivaragroup.jatistore.repository.TokenRepository tokenRepository;
 
     @MockitoBean
     private com.indivaragroup.jatistore.repository.TokenRepository tokenRepository;
@@ -117,5 +120,25 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.error.password").value("Maximum length for property password is 4"));
 
         verify(authService, never()).login(any());
+    }
+
+    @Test
+    void logout_WithValidHeader_ShouldReturnOk() throws Exception {
+        String token = "Bearer dummy_token";
+        RestApiResponse<Void> apiResponse = RestApiResponse.<Void>builder()
+                .restApiResponseHttpCode(200)
+                .restApiResponseHttpStatus("SUCCESS")
+                .restApiResponseMessage("Logout successful")
+                .build();
+        
+        when(authService.logout(token)).thenReturn(apiResponse);
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
+
+        verify(authService, times(1)).logout(token);
     }
 }

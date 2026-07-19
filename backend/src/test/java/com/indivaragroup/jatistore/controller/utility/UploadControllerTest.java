@@ -49,4 +49,15 @@ public class UploadControllerTest {
                 .andExpect(jsonPath("$.message").value("Success"))
                 .andExpect(jsonPath("$.data.url").value("https://secure.url/test.jpg"));
     }
+
+    @Test
+    void uploadImage_whenServiceThrowsException_shouldReturn500() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "test.jpg", "image/jpeg", "image content".getBytes());
+        when(cloudinaryService.uploadImage(any())).thenThrow(new java.io.IOException("Cloudinary failed"));
+
+        mockMvc.perform(multipart("/api/v1/utility/upload-image").file(file))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value(500))
+                .andExpect(jsonPath("$.message").value("Cloudinary failed"));
+    }
 }

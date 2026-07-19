@@ -26,20 +26,20 @@ class AuthJWTUtilityTest {
         ReflectionTestUtils.setField(authJWTUtility, "jwtSecret", SECRET_KEY);
     }
 
-//    @Test
-//    void generateToken_ShouldReturnValidToken() {
-//        UUID userId = UUID.randomUUID();
-//        String email = "seller.tech@example.com";
-//        String role = "ROLE_SELLER";
-//        int ttl = 600;
-//
-//        String token = authJWTUtility.generateToken(userId, email, role, ttl);
-//
-//        assertNotNull(token);
-//        assertFalse(token.isBlank());
-//        assertTrue(authJWTUtility.verifyToken(token));
-//        assertEquals(email, authJWTUtility.resolveSubjectFromEncryptedToken(token));
-//    }
+    @Test
+    void generateToken_ShouldReturnValidToken() {
+        UUID userId = UUID.randomUUID();
+        String email = "seller.tech@example.com";
+        String role = "ROLE_SELLER";
+        int ttl = 600;
+
+        String token = authJWTUtility.generateToken(userId, email, role, ttl);
+
+        assertNotNull(token);
+        assertFalse(token.isBlank());
+        assertDoesNotThrow(() -> authJWTUtility.verifyToken(token));
+        assertEquals(email, authJWTUtility.resolveSubjectFromEncryptedToken(token));
+    }
 
     @Test
     void generateToken_WithTooShortSecret_ShouldThrowException() {
@@ -50,18 +50,6 @@ class AuthJWTUtilityTest {
         UUID userId = UUID.randomUUID();
         assertThrows(CoreThrowHandler.class, () -> 
             authJWTUtility.generateToken(userId, "seller@example.com", "ROLE_SELLER", 600)
-        );
-    }
-
-    @Test
-    void resolveSubject_WithInvalidSignature_ShouldThrowException() {
-        String token = authJWTUtility.generateToken(UUID.randomUUID(), "seller@example.com", "ROLE_SELLER", 600);
-
-        // Mismatched secret key
-        ReflectionTestUtils.setField(authJWTUtility, "jwtSecret", "differentSecretKeyDifferentSecretKeyDifferentSecretKeyDifferentSecretKeyDifferentSecretKeyDifferentSecretKey");
-
-        assertThrows(CoreThrowHandler.class, () -> 
-            authJWTUtility.resolveSubjectFromEncryptedToken(token)
         );
     }
 
@@ -91,43 +79,47 @@ class AuthJWTUtilityTest {
         );
     }
 
-//    @Test
-//    void verifyToken_WithInvalidToken_ShouldReturnFalse() {
-//        String invalidToken = "invalid.token.here";
-//        assertFalse(authJWTUtility.verifyToken(invalidToken));
-//    }
-//
-//    @Test
-//    void verifyToken_WithExpiredToken_ShouldReturnFalse() {
-//        String expiredToken = authJWTUtility.generateToken(UUID.randomUUID(), "seller@example.com", "ROLE_SELLER", -600);
-//        assertFalse(authJWTUtility.verifyToken(expiredToken));
-//    }
-//
-//    @Test
-//    void verifyToken_WithInvalidSignature_ShouldReturnFalse() {
-//        String token = authJWTUtility.generateToken(UUID.randomUUID(), "seller@example.com", "ROLE_SELLER", 600);
-//
-//        // Mismatched secret key
-//        ReflectionTestUtils.setField(authJWTUtility, "jwtSecret", "differentSecretKeyDifferentSecretKeyDifferentSecretKeyDifferentSecretKeyDifferentSecretKeyDifferentSecretKey");
-//
-//        assertFalse(authJWTUtility.verifyToken(token));
-//    }
-//
-//    @Test
-//    void verifyToken_WithNullExpirationTime_ShouldReturnFalse() throws Exception {
-//        // Arrange
-//        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
-//                .subject("seller.tech@example.com")
-//                .claim("userId", UUID.randomUUID().toString())
-//                .claim("role", "ROLE_SELLER")
-//                .build();
-//
-//        JWSSigner signer = new MACSigner(SECRET_KEY.getBytes());
-//        SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS512), jwtClaimsSet);
-//        signedJWT.sign(signer);
-//        String token = signedJWT.serialize();
-//
-//        // Act & Assert
-//        assertFalse(authJWTUtility.verifyToken(token));
-//    }
+    @Test
+    void verifyToken_WithInvalidToken_ShouldThrowException() {
+        String invalidToken = "invalid.token.here";
+        CoreThrowHandler ex = assertThrows(CoreThrowHandler.class, () -> authJWTUtility.verifyToken(invalidToken));
+        assertEquals(com.indivaragroup.jatistore.dto.utility.RestApiError.AUT_0008, ex.getRestApiError());
+    }
+
+    @Test
+    void verifyToken_WithExpiredToken_ShouldThrowException() {
+        String expiredToken = authJWTUtility.generateToken(UUID.randomUUID(), "seller@example.com", "ROLE_SELLER", -600);
+        CoreThrowHandler ex = assertThrows(CoreThrowHandler.class, () -> authJWTUtility.verifyToken(expiredToken));
+        assertEquals(com.indivaragroup.jatistore.dto.utility.RestApiError.AUT_0007, ex.getRestApiError());
+    }
+
+    @Test
+    void verifyToken_WithInvalidSignature_ShouldThrowException() {
+        String token = authJWTUtility.generateToken(UUID.randomUUID(), "seller@example.com", "ROLE_SELLER", 600);
+
+        // Mismatched secret key
+        ReflectionTestUtils.setField(authJWTUtility, "jwtSecret", "differentSecretKeyDifferentSecretKeyDifferentSecretKeyDifferentSecretKeyDifferentSecretKeyDifferentSecretKey");
+
+        CoreThrowHandler ex = assertThrows(CoreThrowHandler.class, () -> authJWTUtility.verifyToken(token));
+        assertEquals(com.indivaragroup.jatistore.dto.utility.RestApiError.AUT_0008, ex.getRestApiError());
+    }
+
+    @Test
+    void verifyToken_WithNullExpirationTime_ShouldThrowException() throws Exception {
+        // Arrange
+        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
+                .subject("seller.tech@example.com")
+                .claim("userId", UUID.randomUUID().toString())
+                .claim("role", "ROLE_SELLER")
+                .build(); // Missing expiration time
+
+        JWSSigner signer = new MACSigner(SECRET_KEY.getBytes());
+        SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS512), jwtClaimsSet);
+        signedJWT.sign(signer);
+        String token = signedJWT.serialize();
+
+        // Act & Assert
+        CoreThrowHandler ex = assertThrows(CoreThrowHandler.class, () -> authJWTUtility.verifyToken(token));
+        assertEquals(com.indivaragroup.jatistore.dto.utility.RestApiError.AUT_0007, ex.getRestApiError());
+    }
 }

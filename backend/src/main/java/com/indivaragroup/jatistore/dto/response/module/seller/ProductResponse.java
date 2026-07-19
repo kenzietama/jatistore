@@ -4,7 +4,7 @@ import com.indivaragroup.jatistore.data.entity.Product;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.ZonedDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Data
@@ -18,8 +18,8 @@ public class ProductResponse {
     private UUID categoryId;
     private String categoryName;
     private String status;
-    private ZonedDateTime createdAt;
-    private ZonedDateTime updatedAt;
+    private Instant createdAt;
+    private Instant updatedAt;
 
     public static ProductResponse fromEntity(Product product) {
         ProductResponse response = new ProductResponse();
