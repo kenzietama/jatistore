@@ -151,7 +151,7 @@ const App = () => {
                   </span>
                   <input
                     className="w-full pl-10 pr-4 py-2 bg-surface-container rounded-full border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary-fixed focus:outline-none transition-all font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant"
-                    placeholder={currentPage === "cart" ? "Cari produk" : "Cari barang di JatiStore..."}
+                    placeholder={currentPage === "cart" ? "Search products" : "Search items on JatiStore..."}
                     type="text"
                     value={catalogSearchQuery}
                     onChange={(e) => {
@@ -200,7 +200,7 @@ const App = () => {
 
                   {!isLoggedIn ? (
                     <button onClick={() => navigate("/auth/login")} className="bg-primary text-on-primary font-label-md text-label-md px-4 py-1.5 rounded-full hover:bg-primary/90 transition-colors shadow-sm">
-                      Masuk
+                      Login
                     </button>
                   ) : (
                     <>
@@ -209,7 +209,7 @@ const App = () => {
                         className="flex items-center gap-1 font-label-md text-label-md text-on-surface hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container"
                       >
                         <span className="material-symbols-outlined text-[24px]">account_circle</span>
-                        <span className="hidden sm:inline font-medium">Profil</span>
+                        <span className="hidden sm:inline font-medium">Profile</span>
                       </button>
                       <button
                         onClick={async () => {
@@ -230,7 +230,7 @@ const App = () => {
                         className="flex items-center gap-1 font-label-md text-label-md text-error font-medium hover:underline ml-2"
                       >
                         <span className="material-symbols-outlined text-[18px]">logout</span>
-                        <span>Keluar</span>
+                        <span>Logout</span>
                       </button>
                     </>
                   )}
