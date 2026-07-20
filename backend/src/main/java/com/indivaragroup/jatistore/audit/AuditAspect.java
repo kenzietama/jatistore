@@ -38,7 +38,7 @@ public class AuditAspect {
         HttpServletRequest request = attributes.getRequest();
         AuditTrail auditTrail = new AuditTrail();
 
-        // 1. Data dari Anotasi
+        // 1. Annotation Data
         auditTrail.setAction(auditAnnotation.action());
         auditTrail.setAffectedModule(auditAnnotation.affectedModule());
         auditTrail.setDescription(auditAnnotation.description());
@@ -64,7 +64,7 @@ public class AuditAspect {
         }
 
         // 3.5. Extract Entity ID
-        // Coba dari parameter (misal @PathVariable UUID id)
+        // Try extracting from parameter (e.g. @PathVariable UUID id)
         if (joinPoint.getSignature() instanceof org.aspectj.lang.reflect.MethodSignature signature) {
             String[] parameterNames = signature.getParameterNames();
             Object[] args = joinPoint.getArgs();
@@ -77,7 +77,7 @@ public class AuditAspect {
                 }
             }
         }
-        // Jika belum dapat, coba dari result (misal return response body)
+        // If not found, try extracting from result
         if (auditTrail.getEntityId() == null && result instanceof com.indivaragroup.jatistore.dto.response.RestApiResponse<?> apiResponse) {
             Object data = apiResponse.getRestApiResponseData();
             if (data != null) {
@@ -112,7 +112,6 @@ public class AuditAspect {
                 auditTrail.setUserRole(role.replace("ROLE_", ""));
             });
         } else if ("LOGIN".equals(auditAnnotation.action())) {
-            // Fallback untuk membaca email dari request body karena SecurityContext belum ada di endpoint public
             try {
                 if (auditTrail.getPayload() != null) {
                     java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"authLoginRequestEmail\"\\s*:\\s*\"([^\"]+)\"").matcher((String)auditTrail.getPayload());
@@ -127,7 +126,7 @@ public class AuditAspect {
             } catch (Exception ignored) {}
         }
 
-        // 5. Simpan
+        // 5. Save
         auditTrailRepository.save(auditTrail);
     }
 
@@ -183,7 +182,7 @@ public class AuditAspect {
     }
 
     private String sanitizePayload(String payload) {
-        // Sensor segala jenis key yang mengandung kata 'password' (case insensitive)
+        // Mask any key containing 'password' (case insensitive)
         return payload.replaceAll("(?i)\"([^\"]*password[^\"]*)\"\\s*:\\s*\"[^\"]+\"", "\"$1\":\"*****\"");
     }
 }

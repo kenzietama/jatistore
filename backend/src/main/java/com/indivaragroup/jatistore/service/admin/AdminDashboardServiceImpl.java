@@ -84,11 +84,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                 if (search != null && !search.isEmpty()) {
                     if (!r.getStoreName().toLowerCase().contains(search.toLowerCase())) return false;
                 }
-                // Mock category filtering (since we don't have category mapped in the seller response directly)
-                // In a real app we'd map this, for now we will just ignore category filtering or mock it
-                if (category != null && !category.isEmpty() && !category.equals("Category: All")) {
-                    // For prototype, we just let it pass if category filter is selected but not properly implemented
-                }
+
                 return true;
             })
             .collect(Collectors.toList());

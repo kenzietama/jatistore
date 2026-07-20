@@ -108,6 +108,10 @@ public class SellerOrderServiceImplTest {
         Page<SellerOrderListResponse> result = sellerOrderService.getSellerOrders(sellerId, "", 0, 10);
         
         assertEquals(1, result.getTotalElements());
+        
+        Page<SellerOrderListResponse> resultNull = sellerOrderService.getSellerOrders(sellerId, null, 0, 10);
+        
+        assertEquals(1, resultNull.getTotalElements());
     }
 
     @Test

@@ -104,6 +104,12 @@ public class AdminFlashSaleServiceTest {
 
         Page<FlashSaleResponse> result = adminFlashSaleService.getAllFlashSales(0, 10, "", "", "", "asc");
         assertEquals(0, result.getTotalElements());
+        
+        Page<FlashSaleResponse> resultBlank = adminFlashSaleService.getAllFlashSales(0, 10, null, "   ", null, "asc");
+        assertEquals(0, resultBlank.getTotalElements());
+
+        Page<FlashSaleResponse> resultNullSearch = adminFlashSaleService.getAllFlashSales(0, 10, null, null, null, "asc");
+        assertEquals(0, resultNullSearch.getTotalElements());
     }
 
     @Test
@@ -198,6 +204,24 @@ public class AdminFlashSaleServiceTest {
         requestPast.setEndTime(Instant.now().plus(2, ChronoUnit.DAYS));
         
         assertThrows(CoreThrowHandler.class, () -> adminFlashSaleService.updateFlashSale(flashSale.getId(), requestPast));
+    }
+    
+    @Test
+    void updateFlashSale_sameStartTimeAndPast_shouldNotThrowTimeError() throws CoreThrowHandler {
+        FlashSale flashSale = new FlashSale();
+        flashSale.setId(UUID.randomUUID());
+        flashSale.setStartTime(Instant.now().minus(1, ChronoUnit.DAYS)); // already in past
+        flashSale.setEndTime(Instant.now().plus(2, ChronoUnit.DAYS));
+        
+        when(flashSaleRepository.findById(flashSale.getId())).thenReturn(Optional.of(flashSale));
+
+        FlashSaleRequest request = new FlashSaleRequest();
+        request.setName("Keep time");
+        request.setStartTime(flashSale.getStartTime()); // same start time
+        request.setEndTime(Instant.now().plus(3, ChronoUnit.DAYS));
+
+        adminFlashSaleService.updateFlashSale(flashSale.getId(), request);
+        assertEquals("Keep time", flashSale.getName());
     }
 
     @Test

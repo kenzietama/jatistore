@@ -109,4 +109,22 @@ public class AdminAuditServiceTest {
         Predicate predicate = spec.toPredicate(root, query, cb);
         assertNotNull(predicate);
     }
+    
+    @Test
+    void getAuditTrails_withEmptyFilters_shouldStillReturnPage() {
+        Page<AuditTrail> page = new PageImpl<>(List.of());
+        when(auditTrailRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        Page<AuditTrailResponse> result = adminAuditService.getAuditTrails("", "", null, null, null, 0, 10);
+        assertEquals(0, result.getTotalElements());
+        
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Specification<AuditTrail>> captor = ArgumentCaptor.forClass(Specification.class);
+        verify(auditTrailRepository).findAll(captor.capture(), any(Pageable.class));
+
+        Specification<AuditTrail> spec = captor.getValue();
+        lenient().when(cb.and(any(Predicate[].class))).thenReturn(mock(Predicate.class));
+        Predicate predicate = spec.toPredicate(root, query, cb);
+        assertNotNull(predicate);
+    }
 }

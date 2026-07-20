@@ -87,17 +87,12 @@ public class SellerProductServiceImplTest {
         mockProduct.setUpdatedAt(ZonedDateTime.now());
     }
 
-    // ==========================================
-    // GET PRODUCTS
-    // ==========================================
-
     @Test
     void getProducts_shouldReturnPageOfProducts() {
         // Arrange
         when(sellerRepository.findById(sellerId)).thenReturn(Optional.of(mockSeller));
         
         Page<Product> page = new PageImpl<>(Arrays.asList(mockProduct));
-        // We will mock the repository call for filter OUT_OF_STOCK
         when(productRepository.findProductsBySellerAndFilters(eq(sellerId), any(), any(), eq(0), eq(0), any(Pageable.class)))
                 .thenReturn(page);
 
@@ -167,10 +162,6 @@ public class SellerProductServiceImplTest {
         }
     }
 
-    // ==========================================
-    // GET PRODUCT
-    // ==========================================
-
     @Test
     void getProduct_shouldReturnProduct_whenValid() {
         // Arrange
@@ -232,11 +223,6 @@ public class SellerProductServiceImplTest {
             assertEquals(HttpStatus.NOT_FOUND.value(), ex.getCode());
         }
     }
-
-    // ==========================================
-    // CREATE PRODUCT
-    // ==========================================
-
     @Test
     void createProduct_shouldSaveAndReturnProduct() throws Exception {
         // Arrange
@@ -304,10 +290,6 @@ public class SellerProductServiceImplTest {
             assertEquals(HttpStatus.NOT_FOUND.value(), ((CoreThrowHandler) ex).getCode());
         }
     }
-
-    // ==========================================
-    // UPDATE PRODUCT
-    // ==========================================
 
     @Test
     void updateProduct_shouldUpdateFieldsAndSave() throws Exception {
@@ -454,10 +436,6 @@ public class SellerProductServiceImplTest {
             assertEquals(HttpStatus.NOT_FOUND.value(), ex.getCode());
         }
     }
-
-    // ==========================================
-    // DELETE PRODUCT
-    // ==========================================
 
     @Test
     void deleteProduct_shouldSetDeletedAtAndSave() {

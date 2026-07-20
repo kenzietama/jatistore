@@ -177,11 +177,17 @@ public class AuditAspectTest {
         assertEquals(expectedId, captor.getValue().getEntityId());
     }
 
+    static class DummyResponse {
+        private UUID id;
+        public DummyResponse(UUID id) { this.id = id; }
+        public UUID getId() { return id; }
+    }
+
     @Test
-    void logAuditActivity_extractIdFromResult() {
+    void logAuditActivity_extractIdFromResultObjectWithGetId() {
         UUID expectedId = UUID.randomUUID();
-        Map<String, UUID> data = Map.of("flashSaleId", expectedId);
-        RestApiResponse<Map<String, UUID>> response = RestApiResponse.<Map<String, UUID>>builder()
+        DummyResponse data = new DummyResponse(expectedId);
+        RestApiResponse<DummyResponse> response = RestApiResponse.<DummyResponse>builder()
                 .restApiResponseData(data)
                 .build();
 
@@ -190,6 +196,35 @@ public class AuditAspectTest {
         ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
         verify(auditTrailRepository).save(captor.capture());
         assertEquals(expectedId, captor.getValue().getEntityId());
+    }
+
+    @Test
+    void logAuditActivity_extractIdFromResultMap() {
+        UUID expectedId = UUID.randomUUID();
+        Map<String, String> data = Map.of("flashSaleId", expectedId.toString());
+        RestApiResponse<Map<String, String>> response = RestApiResponse.<Map<String, String>>builder()
+                .restApiResponseData(data)
+                .build();
+
+        auditAspect.logAuditActivity(joinPoint, auditAnnotation, response);
+
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository).save(captor.capture());
+        assertEquals(expectedId, captor.getValue().getEntityId());
+    }
+
+    @Test
+    void logAuditActivity_extractIdFromResultMap_invalidUuid() {
+        Map<String, String> data = Map.of("flashSaleId", "invalid-uuid");
+        RestApiResponse<Map<String, String>> response = RestApiResponse.<Map<String, String>>builder()
+                .restApiResponseData(data)
+                .build();
+
+        auditAspect.logAuditActivity(joinPoint, auditAnnotation, response);
+
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository).save(captor.capture());
+        assertNull(captor.getValue().getEntityId());
     }
 
     @Test
@@ -245,6 +280,25 @@ public class AuditAspectTest {
     }
     
     @Test
+    void logAuditFailure_loginFailedStandardExceptionIpv6() {
+        when(auditAnnotation.action()).thenReturn("LOGIN");
+        when(request.getHeader("X-Forwarded-For")).thenReturn("");
+        when(request.getRemoteAddr()).thenReturn("0:0:0:0:0:0:0:1");
+
+        Exception ex = new Exception("Standard error");
+
+        auditAspect.logAuditFailure(joinPoint, auditAnnotation, ex);
+
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository).save(captor.capture());
+        AuditTrail trail = captor.getValue();
+        
+        assertEquals("LOGIN_FAILED", trail.getAction());
+        assertTrue(trail.getDescription().contains("Standard error"));
+        assertEquals("127.0.0.1", trail.getIpAddress());
+    }
+    
+    @Test
     void logAuditActivity_nullAttributes() {
         requestContextHolderMock.when(RequestContextHolder::getRequestAttributes).thenReturn(null);
         auditAspect.logAuditActivity(joinPoint, auditAnnotation, null);
@@ -253,6 +307,7 @@ public class AuditAspectTest {
     
     @Test
     void logAuditFailure_nullAttributes() {
+        when(auditAnnotation.action()).thenReturn("LOGIN");
         requestContextHolderMock.when(RequestContextHolder::getRequestAttributes).thenReturn(null);
         auditAspect.logAuditFailure(joinPoint, auditAnnotation, new Exception());
         verify(auditTrailRepository, never()).save(any());
@@ -296,5 +351,167 @@ public class AuditAspectTest {
         ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
         verify(auditTrailRepository).save(captor.capture());
         assertNull(captor.getValue().getEntityId());
+    }
+    
+    @Test
+    void logAuditActivity_extractIdFromArgs_invalidTypes() {
+        MethodSignature signature = mock(MethodSignature.class);
+        when(joinPoint.getSignature()).thenReturn(signature);
+        when(signature.getParameterNames()).thenReturn(new String[]{"orderId", "name"});
+        
+        when(joinPoint.getArgs()).thenReturn(new Object[]{"not-a-uuid", UUID.randomUUID()});
+
+        auditAspect.logAuditActivity(joinPoint, auditAnnotation, null);
+
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository).save(captor.capture());
+        assertNull(captor.getValue().getEntityId());
+    }
+
+    static class DummyResponseString {
+        private String id = "not-uuid";
+        public String getId() { return id; }
+    }
+
+    @Test
+    void logAuditActivity_extractIdFromResultObjectWithGetIdString() {
+        RestApiResponse<DummyResponseString> response = RestApiResponse.<DummyResponseString>builder()
+                .restApiResponseData(new DummyResponseString())
+                .build();
+        auditAspect.logAuditActivity(joinPoint, auditAnnotation, response);
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository).save(captor.capture());
+        assertNull(captor.getValue().getEntityId());
+    }
+
+    @Test
+    void logAuditActivity_extractIdFromResultMap_noIdKey() {
+        Map<String, String> data = Map.of("name", UUID.randomUUID().toString());
+        RestApiResponse<Map<String, String>> response = RestApiResponse.<Map<String, String>>builder()
+                .restApiResponseData(data)
+                .build();
+        auditAspect.logAuditActivity(joinPoint, auditAnnotation, response);
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository).save(captor.capture());
+        assertNull(captor.getValue().getEntityId());
+    }
+
+    @Test
+    void logAuditActivity_withSecurityContext_principalNotUserDetails() {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn("anonymousUser");
+
+        auditAspect.logAuditActivity(joinPoint, auditAnnotation, null);
+
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository).save(captor.capture());
+        assertNull(captor.getValue().getUserId());
+    }
+
+    @Test
+    void logAuditActivity_loginAction_variousPayloadScenarios() {
+        when(auditAnnotation.action()).thenReturn("LOGIN");
+        
+        // 1. null payload
+        auditAspect.logAuditActivity(joinPoint, auditAnnotation, null);
+        
+        // 2. no email match
+        webUtilsMock.when(() -> WebUtils.getNativeRequest(request, ContentCachingRequestWrapper.class)).thenReturn(wrapper);
+        when(wrapper.getContentAsByteArray()).thenReturn("{\"other\":\"data\"}".getBytes());
+        auditAspect.logAuditActivity(joinPoint, auditAnnotation, null);
+        
+        verify(auditTrailRepository, times(2)).save(any());
+    }
+
+    @Test
+    void logAuditFailure_emptyBuffer() {
+        when(auditAnnotation.action()).thenReturn("LOGIN");
+        when(request.getHeader("X-Forwarded-For")).thenReturn("192.168.1.1");
+        webUtilsMock.when(() -> WebUtils.getNativeRequest(request, ContentCachingRequestWrapper.class)).thenReturn(wrapper);
+        when(wrapper.getContentAsByteArray()).thenReturn(new byte[0]);
+
+        auditAspect.logAuditFailure(joinPoint, auditAnnotation, new Exception());
+        
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository).save(captor.capture());
+        assertNull(captor.getValue().getPayload());
+    }
+
+    @Test
+    void logAuditFailure_notLoginAction() {
+        when(auditAnnotation.action()).thenReturn("OTHER_ACTION");
+        auditAspect.logAuditFailure(joinPoint, auditAnnotation, new Exception());
+        verify(auditTrailRepository, never()).save(any());
+    }
+
+    @Test
+    void logAuditFailure_noEmailMatch() {
+        when(auditAnnotation.action()).thenReturn("LOGIN");
+        when(request.getHeader("X-Forwarded-For")).thenReturn("192.168.1.1");
+        webUtilsMock.when(() -> WebUtils.getNativeRequest(request, ContentCachingRequestWrapper.class)).thenReturn(wrapper);
+        when(wrapper.getContentAsByteArray()).thenReturn("{\"other\":\"data\"}".getBytes());
+
+        auditAspect.logAuditFailure(joinPoint, auditAnnotation, new Exception());
+        
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository).save(captor.capture());
+        assertNotNull(captor.getValue().getPayload());
+        assertNull(captor.getValue().getUserId());
+    }
+
+    @Test
+    void logAuditActivity_ipAddressEmpty() {
+        when(request.getHeader("X-Forwarded-For")).thenReturn(null);
+        when(request.getRemoteAddr()).thenReturn(null);
+
+        auditAspect.logAuditActivity(joinPoint, auditAnnotation, null);
+
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository).save(captor.capture());
+        assertNull(captor.getValue().getIpAddress());
+    }
+
+    @Test
+    void logAuditActivity_extractIdFromResult_dataNull() {
+        RestApiResponse<Object> response = RestApiResponse.builder()
+                .restApiResponseData(null)
+                .build();
+        auditAspect.logAuditActivity(joinPoint, auditAnnotation, response);
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository).save(captor.capture());
+        assertNull(captor.getValue().getEntityId());
+    }
+
+    @Test
+    void logAuditActivity_loginAction_exceptionCaught() {
+        when(auditAnnotation.action()).thenReturn("LOGIN");
+        webUtilsMock.when(() -> WebUtils.getNativeRequest(request, ContentCachingRequestWrapper.class)).thenReturn(wrapper);
+        String payload = "{\"authLoginRequestEmail\":\"user@test.com\"}";
+        when(wrapper.getContentAsByteArray()).thenReturn(payload.getBytes());
+
+        when(authRepository.findByEmail("user@test.com")).thenThrow(new RuntimeException("DB error"));
+
+        auditAspect.logAuditActivity(joinPoint, auditAnnotation, null);
+
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository).save(captor.capture());
+        assertNull(captor.getValue().getUserId());
+    }
+    
+    @Test
+    void logAuditFailure_loginAction_exceptionCaught() {
+        when(auditAnnotation.action()).thenReturn("LOGIN");
+        when(request.getHeader("X-Forwarded-For")).thenReturn("192.168.1.1");
+        webUtilsMock.when(() -> WebUtils.getNativeRequest(request, ContentCachingRequestWrapper.class)).thenReturn(wrapper);
+        String payload = "{\"authLoginRequestEmail\":\"user@test.com\"}";
+        when(wrapper.getContentAsByteArray()).thenReturn(payload.getBytes());
+
+        when(authRepository.findByEmail("user@test.com")).thenThrow(new RuntimeException("DB error"));
+
+        auditAspect.logAuditFailure(joinPoint, auditAnnotation, new Exception());
+
+        ArgumentCaptor<AuditTrail> captor = ArgumentCaptor.forClass(AuditTrail.class);
+        verify(auditTrailRepository).save(captor.capture());
+        assertNull(captor.getValue().getUserId());
     }
 }

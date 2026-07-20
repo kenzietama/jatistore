@@ -146,6 +146,33 @@ public class SellerFlashSaleServiceTest {
         assertNotNull(wrapper);
         assertEquals(1, wrapper.getItems().size());
     }
+    
+    @Test
+    void getFlashSaleItems_zeroPrice_shouldReturnWrapper() throws CoreThrowHandler {
+        User user = createMockUser();
+        Seller seller = createMockSeller();
+        setupMockAuth(user, seller);
+
+        FlashSale fs = new FlashSale();
+        fs.setId(UUID.randomUUID());
+        when(flashSaleRepository.findById(fs.getId())).thenReturn(Optional.of(fs));
+
+        FlashSaleItem item = new FlashSaleItem();
+        item.setId(UUID.randomUUID());
+        Product product = new Product();
+        product.setId(UUID.randomUUID());
+        product.setPrice(BigDecimal.ZERO); // ZERO PRICE
+        item.setProduct(product);
+        item.setFlashPrice(new BigDecimal("100"));
+
+        Page<FlashSaleItem> page = new PageImpl<>(List.of(item));
+        when(flashSaleItemRepository.findByFlashSaleIdAndSellerId(eq(fs.getId()), eq(seller.getId()), any(Pageable.class)))
+                .thenReturn(page);
+
+        SellerFlashSaleResponse.Wrapper wrapper = sellerFlashSaleService.getFlashSaleItems("test@example.com", fs.getId(), 0, 10);
+        assertNotNull(wrapper);
+        assertEquals(1, wrapper.getItems().size());
+    }
 
     @Test
     void getFlashSaleItems_notFound_shouldThrow() {
