@@ -1,7 +1,5 @@
-package com.indivaragroup.jatistore.data.entity.checkout;
+package com.indivaragroup.jatistore.data.entity;
 
-import com.indivaragroup.jatistore.data.entity.Order;
-import com.indivaragroup.jatistore.data.entity.Seller;
 import com.indivaragroup.jatistore.data.utility.constant.BalanceType;
 import com.indivaragroup.jatistore.data.utility.table.schema.SellerLedgerVariable;
 import jakarta.persistence.*;

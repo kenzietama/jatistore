@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../../../service/auth/authService";
 import { useAuthStore } from "../../../store/auth/useAuthStore";
@@ -13,6 +13,13 @@ const Login: React.FC = () => {
 	const navigate = useNavigate();
 
 	const setToken = useAuthStore((state) => state.setToken);
+	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+	useEffect(() => {
+		if (isAuthenticated) {
+			navigate("/", { replace: true });
+		}
+	}, [isAuthenticated, navigate]);
 
 	const togglePasswordVisibility = () => {
 		setShowPassword(!showPassword);
@@ -35,12 +42,12 @@ const Login: React.FC = () => {
 
 		try {
 			const response = await authService.login({ email, password });
-			
+
 			if (response.data?.accessToken) {
 				setToken(response.data.accessToken);
 				// Success path: Redirect or load role-specific views
 				const role = response.data.role;
-				
+
 				if (role === "SELLER") {
 					navigate("/seller/dashboard");
 				} else if (role === "BUYER") {
@@ -63,13 +70,20 @@ const Login: React.FC = () => {
 			if (error.response?.data) {
 				const responseData = error.response.data;
 				// Check for validation field errors (e.g. from RestControllerAdviceHandler)
-				if (responseData.error && Object.keys(responseData.error).length > 0) {
+				if (
+					responseData.error &&
+					Object.keys(responseData.error).length > 0
+				) {
 					const fieldErrors = Object.entries(responseData.error)
 						.map(([field, msg]) => `${field}: ${msg}`)
 						.join(" | ");
-					setValidationError(fieldErrors || "Validation error occurred.");
+					setValidationError(
+						fieldErrors || "Validation error occurred.",
+					);
 				} else {
-					setAuthError(responseData.message || "Authentication failed.");
+					setAuthError(
+						responseData.message || "Authentication failed.",
+					);
 				}
 			} else {
 				console.error("Network error:", error);
@@ -86,7 +100,7 @@ const Login: React.FC = () => {
 			<header className="bg-surface border-b border-outline-variant shadow-sm w-full top-0 z-50">
 				<div className="flex justify-between items-center w-full px-margin-desktop max-w-container-max mx-auto h-16">
 					{/* Brand Logo */}
-					<a className="flex items-center gap-2 group" href="#">
+					<a className="flex items-center gap-2 group" href="/">
 						<span className="material-symbols-outlined text-primary text-[32px] group-hover:scale-110 transition-transform">
 							storefront
 						</span>
@@ -102,10 +116,12 @@ const Login: React.FC = () => {
 				<div className="w-full max-w-md bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant p-stack-lg relative overflow-hidden">
 					{/* Decorative accent */}
 					<div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary"></div>
-					
+
 					<div className="text-center mb-stack-lg">
 						<div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary-container text-on-primary-container mb-stack-sm shadow-sm">
-							<span className="material-symbols-outlined text-[32px]">login</span>
+							<span className="material-symbols-outlined text-[32px]">
+								login
+							</span>
 						</div>
 						<h1 className="font-headline-lg text-headline-lg text-on-surface mb-unit">
 							Welcome Back
@@ -192,7 +208,9 @@ const Login: React.FC = () => {
 									type={showPassword ? "text" : "password"}
 									disabled={isLoading}
 									value={password}
-									onChange={(e) => setPassword(e.target.value)}
+									onChange={(e) =>
+										setPassword(e.target.value)
+									}
 								/>
 								<button
 									className="absolute inset-y-0 right-0 pr-3 flex items-center text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
@@ -204,7 +222,9 @@ const Login: React.FC = () => {
 										className="material-symbols-outlined text-[20px]"
 										id="password-toggle-icon"
 									>
-										{showPassword ? "visibility_off" : "visibility"}
+										{showPassword
+											? "visibility_off"
+											: "visibility"}
 									</span>
 								</button>
 							</div>
@@ -216,24 +236,14 @@ const Login: React.FC = () => {
 							disabled={isLoading}
 							type="submit"
 						>
-							<span>{isLoading ? "Signing In..." : "Sign In"}</span>
+							<span>
+								{isLoading ? "Signing In..." : "Sign In"}
+							</span>
 							<span className="material-symbols-outlined text-[18px]">
 								arrow_forward
 							</span>
 						</button>
 					</form>
-
-					<div className="mt-stack-lg pt-stack-md border-t border-outline-variant text-center">
-						<p className="font-body-sm text-body-sm text-on-surface-variant">
-							Don't have an account?{" "}
-							<a
-								className="font-label-md text-label-md text-primary hover:underline underline-offset-4 decoration-2 decoration-primary/30 hover:decoration-primary transition-all"
-								href="#"
-							>
-								Sign up
-							</a>
-						</p>
-					</div>
 				</div>
 			</main>
 		</div>

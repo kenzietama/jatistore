@@ -1,18 +1,24 @@
 package com.indivaragroup.jatistore.data.entity;
 
+import com.indivaragroup.jatistore.data.utility.table.schema.CartVariable;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
+
 import java.util.UUID;
 
 @Entity
-@Table(name = "trx_carts")
-@Data
+@Table(name = CartVariable.TABLE_TRX_CARTS)
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Cart {
 
     @Id
-    @Column(name = "id", updatable = false, nullable = false)
+    @Column(name = CartVariable.COLUMN_TRX_CARTS_ID, nullable = false)
     private UUID id;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = CartVariable.COLUMN_TRX_CARTS_USER_ID, nullable = false, unique = true)
     private UUID userId;
 }

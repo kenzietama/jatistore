@@ -1,35 +1,34 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import api from "../lib/api"; 
 
 interface CartItem {
-  id: string; 
+  id: string;
+  productId: string;
+  productName: string;
+  productImage: string;
+  unitPrice: number;
   quantity: number;
-  product: {
-    id: string;
-    name: string;
-    price: number;
-    image: string;
-    stock: number;
-    store: {
-      id: string;
-      storeName: string;
-    };
-  };
+  subtotal: number;
+  maxStock: number;
+  storeId: string;
+  storeName: string;
 }
 
 interface CartPageProps {
   onBackToCatalog: () => void;
   onCheckout: (checkedItems: any[]) => void;
-  onRefreshCartCount: () => void; // Sinkronisasi badge keranjang di header global
+  onRefreshCartCount: () => void;
+  onProductClick: (productId: string) => void;
 }
 
-const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefreshCartCount }) => {
+const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefreshCartCount, onProductClick }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [checkedItemIds, setCheckedItemIds] = useState<string[]>([]);
+  const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   const fetchCartData = async () => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("jatistore_token");
     
     if (!token) {
       setCartItems([]);
@@ -39,25 +38,26 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
 
     try {
       setIsLoading(true);
-      const response = await api.get("/api/v1/carts");
-      if (response.data && response.data.code === 200) {
-        const items: CartItem[] = response.data.data || [];
-        
+      const response = await api.get("/api/v1/cart");
+      if (response.data && (response.data.restApiResponseHttpCode === 200 || response.data.code === 200)) {
+        const responseData = response.data.restApiResponseData || response.data.data;
+        const items: CartItem[] = responseData?.items || [];
+
         const sortedItems = [...items].sort((a, b) => {
-          const storeA = a.product?.store?.storeName || "";
-          const storeB = b.product?.store?.storeName || "";
-          return storeA.localeCompare(storeB) || a.product.name.localeCompare(b.product.name);
+          const storeA = a.storeName || "";
+          const storeB = b.storeName || "";
+          return storeA.localeCompare(storeB) || a.productName.localeCompare(b.productName);
         });
 
         setCartItems(sortedItems);
-        
+
         // 2. Logika Checked: Jika belum ada it di list.
         if (sortedItems.length > 0) {
-          const firstStoreName = sortedItems[0].product?.store?.storeName;
+          const firstStoreName = sortedItems[0].storeName;
           const firstStoreItems = sortedItems
-            .filter(item => item.product?.store?.storeName === firstStoreName)
+            .filter(item => item.storeName === firstStoreName)
             .map(item => item.id);
-          
+
           // Hanya set jika checkedItemIds masih kosong (untuk menjaga pilihan user)
           if (checkedItemIds.length === 0) {
             setCheckedItemIds(firstStoreItems);
@@ -77,49 +77,62 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
     fetchCartData();
   }, []);
 
-  const updateQuantity = async (productId: string, type: "increment" | "decrement", currentQuantity: number, cartItemId: string) => {
-  // 1. Logika Hapus jika kuantitas <= 1
-  if (type === "decrement" && currentQuantity <= 1) {
-    await removeItem(cartItemId);
-    return;
-  }
-
-  // 2. Optimistic Update: Perbarui UI segera sebelum API selesai
-  setCartItems((prevItems) =>
-    prevItems.map((item) =>
-      item.id === cartItemId
-        ? { ...item, quantity: type === "increment" ? item.quantity + 1 : item.quantity - 1 }
-        : item
-    )
-  );
-
-  // 3. Panggil API di background
-  try {
-    const response = await api.post("/api/v1/carts/items", {
-      productId: productId,
-      quantity: type === "increment" ? 1 : -1
-    });
-
-    if (response.data && (response.data.code === 200 || response.data.restApiResponseHttpCode === 200)) {
-      // Sukses: Cukup refresh badge keranjang tanpa fetch ulang seluruh data
-      onRefreshCartCount(); 
-    } else {
-      // Jika gagal dari server, kembalikan state ke semula (rollback)
-      fetchCartData(); 
+  const updateQuantity = async (type: "increment" | "decrement", currentQuantity: number, cartItemId: string) => {
+    // 1. Logika Hapus jika kuantitas <= 1
+    if (type === "decrement" && currentQuantity <= 1) {
+      await removeItem(cartItemId);
+      return;
     }
-  } catch (error) {
-    console.error("Gagal memperbarui kuantitas:", error);
-    fetchCartData(); // Rollback jika terjadi error koneksi
-  }
-};
+
+    // 2. Optimistic Update: Perbarui UI segera sebelum API selesai
+    setCartItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === cartItemId
+          ? { ...item, quantity: type === "increment" ? item.quantity + 1 : item.quantity - 1 }
+          : item
+      )
+    );
+
+    // 3. Clear existing debounce timer for this item
+    const existingTimer = debounceTimers.current.get(cartItemId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    // 4. Set new debounce timer (500ms delay)
+    const timer = setTimeout(async () => {
+      try {
+        const item = cartItems.find(i => i.id === cartItemId);
+        if (!item) return;
+
+        const newQuantity = type === "increment" ? currentQuantity + 1 : currentQuantity - 1;
+        const response = await api.patch(`/api/v1/cart/items/${cartItemId}`, {
+          quantity: newQuantity
+        });
+
+        if (response.data && (response.data.restApiResponseHttpCode === 200 || response.data.code === 200)) {
+          onRefreshCartCount();
+        } else {
+          fetchCartData();
+        }
+      } catch (error) {
+        console.error("Gagal memperbarui kuantitas:", error);
+        fetchCartData();
+      } finally {
+        debounceTimers.current.delete(cartItemId);
+      }
+    }, 500);
+
+    debounceTimers.current.set(cartItemId, timer);
+  };
 
   const removeItem = async (cartItemId: string) => {
     try {
-      const response = await api.delete(`/api/v1/carts/items/${cartItemId}`);
-      if (response.data && response.data.code === 200) {
+      const response = await api.delete(`/api/v1/cart/items/${cartItemId}`);
+      if (response.data && (response.data.restApiResponseHttpCode === 200 || response.data.code === 200)) {
         setCheckedItemIds(prev => prev.filter(id => id !== cartItemId));
-        await fetchCartData(); 
-        onRefreshCartCount(); 
+        await fetchCartData();
+        onRefreshCartCount();
       }
     } catch (error) {
       console.error("Gagal menghapus item:", error);
@@ -130,7 +143,7 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
     const itemToToggle = cartItems.find(item => item.id === cartItemId);
     if (!itemToToggle) return;
 
-    const currentStoreId = itemToToggle.product?.store?.id;
+    const currentStoreId = itemToToggle.storeId;
 
     setCheckedItemIds((prev) => {
       const isCurrentlyChecked = prev.includes(cartItemId);
@@ -140,7 +153,7 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
       } else {
         const currentlyCheckedItems = cartItems.filter((item) => prev.includes(item.id));
         const hasDifferentStore = currentlyCheckedItems.some(
-          (item) => item.product?.store?.id !== currentStoreId
+          (item) => item.storeId !== currentStoreId
         );
 
         if (hasDifferentStore) {
@@ -154,7 +167,7 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
 
   const handleToggleStoreCheck = (storeName: string, isChecked: boolean) => {
     const storeItemIds = cartItems
-      .filter((item) => item.product?.store?.storeName === storeName)
+      .filter((item) => item.storeName === storeName)
       .map((item) => item.id);
 
     if (isChecked) {
@@ -167,22 +180,23 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
   const subtotal = cartItems
     .filter(item => checkedItemIds.includes(item.id))
     .reduce((acc, item) => {
-      const harga = item.product?.price || 0;
+      const harga = item.unitPrice || 0;
       return acc + (harga * item.quantity);
     }, 0);
 
   const stores = Array.from(
-    new Set(cartItems.map((item) => item.product?.store?.storeName).filter(Boolean))
+    new Set(cartItems.map((item) => item.storeName).filter(Boolean))
   );
 
   const handleProceedToCheckout = () => {
     const itemsToCheckout = cartItems
       .filter(item => checkedItemIds.includes(item.id))
       .map(item => ({
-        id: item.product.id,
-        name: item.product.name,
-        price: item.product.price,
-        image: item.product.image,
+        id: item.productId,
+        cartItemId: item.id,
+        name: item.productName,
+        price: item.unitPrice,
+        image: item.productImage,
         quantity: item.quantity
       }));
 
@@ -220,7 +234,7 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
           {/* Kolom Kiri: Toko & Daftar Barang */}
           <div className="lg:col-span-8 flex flex-col gap-stack-md">
             {stores.map((storeName) => {
-              const storeItems = cartItems.filter((item) => item.product?.store?.storeName === storeName);
+              const storeItems = cartItems.filter((item) => item.storeName === storeName);
               const isAllStoreItemsChecked = storeItems.every(item => checkedItemIds.includes(item.id));
 
               return (
@@ -248,32 +262,40 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
                           className="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary cursor-pointer" 
                         />
                       </div>
-                      <div className="w-full sm:w-32 h-32 flex-shrink-0 rounded bg-surface-container-low overflow-hidden border border-outline-variant">
-                        <img alt={item.product?.name} className="w-full h-full object-cover" src={item.product?.image || "https://placehold.co/150"} />
+                      <div
+                        onClick={() => onProductClick(item.productId)}
+                        className="w-full sm:w-32 h-32 flex-shrink-0 rounded bg-surface-container-low overflow-hidden border border-outline-variant cursor-pointer hover:opacity-80 transition-opacity"
+                      >
+                        <img alt={item.productName} className="w-full h-full object-cover" src={item.productImage || "https://placehold.co/150"} />
                       </div>
                       <div className="flex-1 flex flex-col justify-between">
                         <div>
                           <div className="flex justify-between items-start gap-stack-sm">
-                            <h3 className="font-headline-md text-body-lg text-on-background font-bold">{item.product?.name}</h3>
+                            <h3
+                              onClick={() => onProductClick(item.productId)}
+                              className="font-headline-md text-body-lg text-on-background font-bold cursor-pointer hover:text-primary transition-colors"
+                            >
+                              {item.productName}
+                            </h3>
                             <button onClick={() => removeItem(item.id)} className="text-on-surface-variant hover:text-error transition-colors p-1">
                               <span className="material-symbols-outlined text-[20px]">close</span>
                             </button>
                           </div>
-                          <p className="text-body-sm text-on-surface-variant text-[13px] mt-1">Stok Tersedia: {item.product?.stock || 0}</p>
+                          <p className="text-body-sm text-on-surface-variant text-[13px] mt-1">Stok Tersedia: {item.maxStock || 0}</p>
                         </div>
 
                         <div className="flex flex-wrap items-end justify-between mt-4 gap-stack-md">
                           <div className="flex items-center border border-outline-variant rounded bg-surface h-10 w-32">
-                            <button 
-                              onClick={() => updateQuantity(item.product?.id, "decrement", item.quantity, item.id)} 
+                            <button
+                              onClick={() => updateQuantity("decrement", item.quantity, item.id)}
                               className="w-10 h-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container"
                             >
                               <span className="material-symbols-outlined text-[18px]">remove</span>
                             </button>
                             <input readOnly className="w-12 h-full text-center border-none bg-transparent font-mono-data text-mono-data p-0 focus:ring-0" type="text" value={item.quantity} />
-                            <button 
-                              onClick={() => updateQuantity(item.product?.id, "increment", item.quantity, item.id)} 
-                              disabled={item.quantity >= (item.product?.stock || 99)}
+                            <button
+                              onClick={() => updateQuantity("increment", item.quantity, item.id)}
+                              disabled={item.quantity >= (item.maxStock || 99)}
                               className="w-10 h-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container disabled:opacity-30"
                             >
                               <span className="material-symbols-outlined text-[18px]">add</span>
@@ -281,7 +303,7 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
                           </div>
                           <div className="text-right">
                             <p className="font-headline-md text-[18px] font-bold text-primary">
-                              Rp {((item.product?.price || 0) * item.quantity).toLocaleString("id-ID")}
+                              Rp {((item.unitPrice || 0) * item.quantity).toLocaleString("id-ID")}
                             </p>
                           </div>
                         </div>

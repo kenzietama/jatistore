@@ -1,6 +1,6 @@
-package com.indivaragroup.jatistore.repository.checkout;
+package com.indivaragroup.jatistore.repository;
 
-import com.indivaragroup.jatistore.data.entity.checkout.SellerLedger;
+import com.indivaragroup.jatistore.data.entity.SellerLedger;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.UUID;

@@ -1,18 +1,27 @@
 package com.indivaragroup.jatistore.controller.cart;
 
 import com.indivaragroup.jatistore.data.entity.CartItem;
+import com.indivaragroup.jatistore.data.entity.User;
 import com.indivaragroup.jatistore.dto.request.cart.AddToCartRequest;
+import com.indivaragroup.jatistore.dto.request.cart.UpdateCartItemQuantityRequest;
 import com.indivaragroup.jatistore.dto.response.RestApiPath;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
+import com.indivaragroup.jatistore.dto.response.cart.CartResponse;
+import com.indivaragroup.jatistore.dto.utility.RestApiError;
+import com.indivaragroup.jatistore.exception.CoreThrowHandler;
+import com.indivaragroup.jatistore.repository.AuthRepository;
 import com.indivaragroup.jatistore.service.cart.CartService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -22,57 +31,101 @@ import java.util.UUID;
 public class CartController {
 
     private final CartService cartService;
-
-    @PostMapping(RestApiPath.CART_ADD_ITEM_PATH) // Menghasilkan POST /api/v1/carts/items
-    public RestApiResponse<CartItem> addToCart(@RequestBody AddToCartRequest request) {
-        log.info("Menerima permintaan REST untuk menambah produk ke keranjang belanja");
-
-        // CATATAN SEMENTARA: Karena login session/JWT belum dikoneksikan ke AuthenticationContext Spring Security,
-        // Kita gunakan ID User Demo dari database Postgres kita kemarin untuk uji coba.
-        UUID mockUserId = UUID.fromString("b0000000-0000-0000-0000-000000000001");
-
-        CartItem savedItem = cartService.addToCart(mockUserId, request);
-
-        return RestApiResponse.<CartItem>builder()
-                .restApiResponseHttpCode(200)
-                .restApiResponseHttpStatus("OK")
-                .restApiResponseMessage("Produk berhasil ditambahkan ke keranjang!")
-                .restApiResponseData(savedItem)
-                .restApiResponseTimestamp(Instant.now())
-                .restApiResponseRequestId("REQ-CART-" + System.currentTimeMillis())
-                .build();
-    }
+    private final AuthRepository authRepository;
 
     @GetMapping
-    public ResponseEntity<RestApiResponse<List<CartItem>>> getCart() {
-        UUID mockUserId = UUID.fromString("b0000000-0000-0000-0000-000000000001");
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<RestApiResponse<CartResponse>> getCart(
+            @AuthenticationPrincipal UserDetails userDetails) {
 
-        List<CartItem> cartItems = cartService.getCartByUserId(mockUserId);
+        String email = userDetails.getUsername();
+        User user = authRepository.findByEmail(email)
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.USR_0006));
 
-        RestApiResponse<List<CartItem>> response = RestApiResponse.<List<CartItem>>builder()
+        CartResponse cartResponse = cartService.getCartByUserId(user.getId());
+
+        RestApiResponse<CartResponse> response = RestApiResponse.<CartResponse>builder()
                 .restApiResponseHttpCode(HttpStatus.OK.value())
                 .restApiResponseHttpStatus(HttpStatus.OK.name())
-                .restApiResponseMessage("Berhasil mengambil data keranjang belanja")
-                .restApiResponseData(cartItems)
+                .restApiResponseMessage(cartResponse.getItems().isEmpty()
+                        ? "Your cart is empty."
+                        : "Cart retrieved successfully.")
+                .restApiResponseData(cartResponse)
+                .restApiResponseTimestamp(Instant.now())
+                .restApiResponseRequestId(MDC.get("requestId"))
                 .build();
 
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/items/{cartItemId}")
-    public ResponseEntity<RestApiResponse<String>> removeItem(@PathVariable UUID cartItemId) {
-        log.info("Menerima permintaan REST untuk menghapus item keranjang belanja dengan ID: {}", cartItemId);
+    @PostMapping(RestApiPath.CART_ADD_ITEM_PATH)
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<RestApiResponse<UUID>> addToCart(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody AddToCartRequest request) {
 
-        UUID mockUserId = UUID.fromString("b0000000-0000-0000-0000-000000000001");
+        String email = userDetails.getUsername();
+        User user = authRepository.findByEmail(email)
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.USR_0006));
 
-        // Panggil service untuk menghapus data item keranjang
-        cartService.removeItemFromCart(mockUserId, cartItemId);
+        CartItem savedItem = cartService.addToCart(user.getId(), request);
 
-        RestApiResponse<String> response = RestApiResponse.<String>builder()
+        RestApiResponse<UUID> response = RestApiResponse.<UUID>builder()
                 .restApiResponseHttpCode(HttpStatus.OK.value())
                 .restApiResponseHttpStatus(HttpStatus.OK.name())
-                .restApiResponseMessage("Barang berhasil dihapus dari keranjang!")
-                .restApiResponseData("Item " + cartItemId + " Deleted")
+                .restApiResponseMessage("Product added to cart successfully.")
+                .restApiResponseData(savedItem.getId())
+                .restApiResponseTimestamp(Instant.now())
+                .restApiResponseRequestId(MDC.get("requestId"))
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping(RestApiPath.CART_UPDATE_ITEM_PATH)
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<RestApiResponse<Void>> updateCartItemQuantity(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable UUID cartItemId,
+            @RequestBody UpdateCartItemQuantityRequest request) {
+
+        String email = userDetails.getUsername();
+        User user = authRepository.findByEmail(email)
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.USR_0006));
+
+        cartService.updateCartItemQuantity(user.getId(), cartItemId, request);
+
+        RestApiResponse<Void> response = RestApiResponse.<Void>builder()
+                .restApiResponseHttpCode(HttpStatus.OK.value())
+                .restApiResponseHttpStatus(HttpStatus.OK.name())
+                .restApiResponseMessage("Cart item updated successfully.")
+                .restApiResponseData(null)
+                .restApiResponseTimestamp(Instant.now())
+                .restApiResponseRequestId(MDC.get("requestId"))
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping(RestApiPath.CART_DELETE_ITEM_PATH)
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<RestApiResponse<Void>> removeItem(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable UUID cartItemId) {
+
+        String email = userDetails.getUsername();
+        User user = authRepository.findByEmail(email)
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.USR_0006));
+
+        cartService.removeItemFromCart(user.getId(), cartItemId);
+
+        RestApiResponse<Void> response = RestApiResponse.<Void>builder()
+                .restApiResponseHttpCode(HttpStatus.OK.value())
+                .restApiResponseHttpStatus(HttpStatus.OK.name())
+                .restApiResponseMessage("Cart item removed successfully.")
+                .restApiResponseData(null)
+                .restApiResponseTimestamp(Instant.now())
+                .restApiResponseRequestId(MDC.get("requestId"))
                 .build();
 
         return ResponseEntity.ok(response);

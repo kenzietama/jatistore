@@ -1,28 +1,30 @@
 package com.indivaragroup.jatistore.data.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.indivaragroup.jatistore.data.utility.table.schema.CartItemVariable;
 import jakarta.persistence.*;
 import lombok.Data;
+
 import java.util.UUID;
 
 @Entity
-@Table(name = "trx_cart_items")
+@Table(name = CartItemVariable.TABLE_TRX_CART_ITEMS)
 @Data
 public class CartItem {
 
     @Id
-    @Column(name = "id", updatable = false, nullable = false)
+    @Column(name = CartItemVariable.COLUMN_TRX_CART_ITEMS_ID, nullable = false)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "cart_id", nullable = false)
+    @JoinColumn(name = CartItemVariable.COLUMN_TRX_CART_ITEMS_CART_ID, nullable = false)
     @JsonIgnoreProperties("items")
     private Cart cart;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "product_id", nullable = false)
+    @JoinColumn(name = CartItemVariable.COLUMN_TRX_CART_ITEMS_PRODUCT_ID, nullable = false)
     private Product product;
 
-    @Column(name = "quantity", nullable = false)
+    @Column(name = CartItemVariable.COLUMN_TRX_CART_ITEMS_QUANTITY, nullable = false)
     private Integer quantity;
 }

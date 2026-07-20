@@ -74,7 +74,6 @@ public class AuthSecurityConfiguration {
                         .requestMatchers("/api/v1/products/**").permitAll()
                         .requestMatchers("/api/v1/utility/**").permitAll()
                         .requestMatchers("/api/v1/auth/**", "/api/v1/user/**", "/api/v1/products/**").permitAll()
-                        .requestMatchers(RestApiPath.BASE_PATH + RestApiPath.CART_BASE_PATH + "/**").permitAll()
                         .requestMatchers("/api/v1/products/list").permitAll()
                         .requestMatchers("/api/v1/categories").permitAll()
                         .anyRequest().authenticated()

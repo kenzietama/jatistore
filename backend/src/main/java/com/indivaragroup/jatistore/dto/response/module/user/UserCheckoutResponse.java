@@ -1,12 +1,11 @@
 package com.indivaragroup.jatistore.dto.response.module.user;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import com.indivaragroup.jatistore.data.entity.Order;
-import com.indivaragroup.jatistore.data.entity.checkout.Transaction;
+import com.indivaragroup.jatistore.data.entity.Transaction;
 import java.math.BigDecimal;
 import java.util.UUID;
 

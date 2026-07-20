@@ -1,8 +1,6 @@
-package com.indivaragroup.jatistore.data.entity.checkout;
+package com.indivaragroup.jatistore.data.entity;
 
-import com.indivaragroup.jatistore.data.entity.User;
 import com.indivaragroup.jatistore.data.utility.table.schema.PaymentCardVariable;
-import com.indivaragroup.jatistore.data.utility.table.schema.TransactionVariable;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.*;

@@ -1,6 +1,5 @@
-package com.indivaragroup.jatistore.data.entity.checkout;
+package com.indivaragroup.jatistore.data.entity;
 
-import com.indivaragroup.jatistore.data.entity.Order;
 import com.indivaragroup.jatistore.data.utility.constant.PaymentMethod;
 import com.indivaragroup.jatistore.data.utility.constant.TransactionStatus;
 import com.indivaragroup.jatistore.data.utility.table.schema.TransactionVariable;

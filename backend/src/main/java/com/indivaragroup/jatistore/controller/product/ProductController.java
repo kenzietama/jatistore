@@ -3,18 +3,20 @@ package com.indivaragroup.jatistore.controller.product;
 import com.indivaragroup.jatistore.data.entity.Product;
 import com.indivaragroup.jatistore.dto.response.RestApiPath;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
+import com.indivaragroup.jatistore.dto.response.module.product.ProductListItemResponse;
+import com.indivaragroup.jatistore.dto.response.utility.PageData;
 import com.indivaragroup.jatistore.repository.ProductRepository;
+import com.indivaragroup.jatistore.service.product.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -23,35 +25,46 @@ import java.util.UUID;
 @Slf4j
 public class ProductController {
     private final ProductRepository productRepository;
+    private final ProductService productService;
 
-    @GetMapping(RestApiPath.PRODUCT_LIST_PATH)
-    public RestApiResponse<List<Product>> getProductList() {
-        log.info("Menerima permintaan REST untuk mengambil seluruh daftar produk");
-        List<Product> products = productRepository.findAll();
-        return RestApiResponse.<List<Product>>builder()
+    @GetMapping(value = RestApiPath.PRODUCT_LIST_PATH, params = {"!id"})
+    public RestApiResponse<PageData<ProductListItemResponse>> getProductList(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        log.info("Fetching product list - search: {}, page: {}, size: {}", search, page, size);
+
+        if (page < 0 || size < 1 || size > 100) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid page or size parameter");
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+        PageData<ProductListItemResponse> pageData = productService.getProductList(search, pageable);
+
+        return RestApiResponse.<PageData<ProductListItemResponse>>builder()
                 .restApiResponseHttpCode(200)
-                .restApiResponseHttpStatus("OK")
-                .restApiResponseMessage("Daftar produk berhasil diambil!")
-                .restApiResponseData(products)
+                .restApiResponseHttpStatus("SUCCESS")
+                .restApiResponseMessage("Products retrieved successfully.")
+                .restApiResponseData(pageData)
                 .restApiResponseTimestamp(Instant.now())
-                .restApiResponseRequestId("REQ-PROD-" + System.currentTimeMillis())
+                .restApiResponseRequestId(MDC.get("requestId"))
                 .build();
     }
 
     @GetMapping(RestApiPath.PRODUCT_DETAIL_PATH)
     public RestApiResponse<Product> getProductById(@PathVariable("id") UUID id) {
-        log.info("Menerima permintaan REST untuk mengambil detail produk dengan ID: {}", id);
+        log.info("Fetching product detail for ID: {}", id);
 
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produk tidak ditemukan"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
 
         return RestApiResponse.<Product>builder()
                 .restApiResponseHttpCode(200)
                 .restApiResponseHttpStatus("OK")
-                .restApiResponseMessage("Detail produk berhasil diambil!")
+                .restApiResponseMessage("Product detail retrieved successfully.")
                 .restApiResponseData(product)
                 .restApiResponseTimestamp(Instant.now())
-                .restApiResponseRequestId("REQ-PROD-DETAIL-" + System.currentTimeMillis())
+                .restApiResponseRequestId(MDC.get("requestId"))
                 .build();
     }
 
