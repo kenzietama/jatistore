@@ -1,50 +1,123 @@
-import React, { useState } from "react";
-import { type CartItem } from "../data/productsMock";
+import React, { useState, useEffect } from "react";
+import api from "../lib/api";
+
+interface CheckoutItem {
+  id: string;
+  cartItemId: string;
+  name: string;
+  price: number;
+  image: string;
+  quantity: number;
+}
 
 interface CheckoutPageProps {
-  cartItems: CartItem[];
+  cartItems: CheckoutItem[];
   onBackToCart: () => void;
-  onPaymentSuccess: () => void; 
+  onPaymentSuccess: () => void;
 }
 
 const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, onPaymentSuccess }) => {
   const [paymentMethod, setPaymentMethod] = useState<"card" | "wallet">("card");
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [isLoadingBalance, setIsLoadingBalance] = useState<boolean>(true);
+
+  const [cardNumber, setCardNumber] = useState<string>("");
+  const [cardHolderName, setCardHolderName] = useState<string>("");
+  const [expiryDate, setExpiryDate] = useState<string>("");
+  const [cvc, setCvc] = useState<string>("");
+
+  const [checkoutResponse, setCheckoutResponse] = useState<any>(null);
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const shipping = cartItems.length > 0 ? 12000 : 0;
-  const tax = Math.round(subtotal * 0.11); 
+  const tax = Math.round(subtotal * 0.11);
   const total = subtotal + shipping + tax;
 
-  const walletBalance = 500000; 
   const remainingBalance = walletBalance - total;
   const isBalanceEnough = remainingBalance >= 0;
 
-  const handlePayNow = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchWalletBalance();
+  }, []);
+
+  const fetchWalletBalance = async () => {
+    const token = localStorage.getItem("jatistore_token");
+    if (!token) {
+      setIsLoadingBalance(false);
+      return;
+    }
+
+    try {
+      const response = await api.get("/api/v1/user/balance");
+      if (response.data && (response.data.code === 200 || response.data.restApiResponseHttpCode === 200)) {
+        const balance = response.data.data?.balance || response.data.restApiResponseData?.balance || 0;
+        setWalletBalance(balance);
+      }
+    } catch (error) {
+      console.error("Failed to fetch wallet balance:", error);
+      setError("Failed to fetch wallet balance. Please try again.");
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  };
+
+  const handlePayNow = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const savedOrders = localStorage.getItem("jatistore_orders");
-    const existingOrders = savedOrders ? JSON.parse(savedOrders) : [];
+    if (isLoading) return;
 
-    const newOrders = cartItems.map((item) => ({
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-        orderNumber: `#JS-${Math.floor(1000 + Math.random() * 9000)}`,
-        datePlaced: new Date().toLocaleDateString("en-US", { 
-          month: "short", 
-          day: "numeric", 
-          year: "numeric" 
-        }),
-        totalAmount: item.price * item.quantity,
-        status: "Shipped",
-        productName: item.name,
-        variant: "Standard",
-        quantity: item.quantity,
-        image: item.image,
-    }));
+    setError(null);
+    setIsLoading(true);
 
-    localStorage.setItem("jatistore_orders", JSON.stringify([...newOrders, ...existingOrders]));
-    setIsSuccessModalOpen(true);
+    try {
+      const token = localStorage.getItem("jatistore_token");
+      if (!token) {
+        setError("Not authenticated. Please log in.");
+        setIsLoading(false);
+        return;
+      }
+
+      const selectedCartItemIds = cartItems.map(item => item.cartItemId);
+
+      const payload: any = {
+        selected_cart_items_id: selectedCartItemIds,
+        payment_method: paymentMethod.toUpperCase()
+      };
+
+      if (paymentMethod === "card") {
+        if (!cardNumber || !cardHolderName || !expiryDate || !cvc) {
+          setError("Please fill in all card details.");
+          setIsLoading(false);
+          return;
+        }
+        payload.card_number = cardNumber.replace(/\s/g, '');
+        payload.card_holder_name = cardHolderName;
+        payload.expiry_date = expiryDate;
+        payload.cvc = cvc;
+      }
+
+      const response = await api.post("/api/v1/orders/checkout", payload);
+
+      if (response.data && (response.data.code === 200 || response.data.restApiResponseHttpCode === 200)) {
+        const checkoutData = response.data.data || response.data.restApiResponseData;
+        setCheckoutResponse(checkoutData);
+        setIsSuccessModalOpen(true);
+      } else {
+        setError(response.data?.message || response.data?.restApiResponseMessage || "Payment failed. Please try again.");
+      }
+    } catch (error: any) {
+      console.error("Checkout failed:", error);
+      const errorMessage = error.response?.data?.restApiResponseMessage ||
+                          error.response?.data?.message ||
+                          "Payment failed. Please try again.";
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -70,6 +143,14 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
               <h1 className="font-headline-lg text-headline-lg text-on-background mb-unit font-bold">Secure Checkout</h1>
               <p className="font-body-md text-body-md text-on-surface-variant">Complete your purchase safely and securely.</p>
             </div>
+
+            {/* Error Alert */}
+            {error && (
+              <div className="bg-error-container text-on-error-container p-stack-md rounded-lg mb-stack-lg flex items-start gap-3 border border-error/20">
+                <span className="material-symbols-outlined text-[20px]">error</span>
+                <span className="font-label-md">{error}</span>
+              </div>
+            )}
 
             {/* Payment Method Selector */}
             <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-stack-lg shadow-sm mb-stack-lg">
@@ -126,25 +207,35 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
                     <div>
                       <label className="block font-label-md text-label-md text-on-surface-variant mb-unit" htmlFor="cardName">Cardholder Name</label>
                       <div className="relative rounded-lg border border-outline-variant bg-surface-bright transition-all input-focus-ring">
-                        <input 
-                          className="w-full bg-transparent border-none font-body-md text-body-md text-on-surface py-2 px-3 focus:ring-0" 
-                          id="cardName" 
-                          placeholder="Jane Doe" 
-                          required 
-                          type="text" 
+                        <input
+                          className="w-full bg-transparent border-none font-body-md text-body-md text-on-surface py-2 px-3 focus:ring-0"
+                          id="cardName"
+                          placeholder="Jane Doe"
+                          required
+                          type="text"
+                          value={cardHolderName}
+                          onChange={(e) => setCardHolderName(e.target.value)}
+                          disabled={isLoading}
                         />
                       </div>
                     </div>
                     <div>
                       <label className="block font-label-md text-label-md text-on-surface-variant mb-unit" htmlFor="cardNumber">Card Number</label>
                       <div className="relative rounded-lg border border-outline-variant bg-surface-bright transition-all input-focus-ring flex items-center pr-3">
-                        <input 
-                          className="w-full bg-transparent border-none font-body-md text-body-md text-on-surface py-2 px-3 focus:ring-0 font-mono-data" 
-                          id="cardNumber" 
-                          maxLength={19} 
-                          placeholder="0000 0000 0000 0000" 
-                          required 
-                          type="text" 
+                        <input
+                          className="w-full bg-transparent border-none font-body-md text-body-md text-on-surface py-2 px-3 focus:ring-0 font-mono-data"
+                          id="cardNumber"
+                          maxLength={19}
+                          placeholder="0000 0000 0000 0000"
+                          required
+                          type="text"
+                          value={cardNumber}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\s/g, '');
+                            const formatted = value.match(/.{1,4}/g)?.join(' ') || value;
+                            setCardNumber(formatted);
+                          }}
+                          disabled={isLoading}
                         />
                         <span className="material-symbols-outlined text-outline-variant">payment</span>
                       </div>
@@ -153,26 +244,38 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
                       <div>
                         <label className="block font-label-md text-label-md text-on-surface-variant mb-unit" htmlFor="expiry">Expiry (MM/YY)</label>
                         <div className="relative rounded-lg border border-outline-variant bg-surface-bright transition-all input-focus-ring">
-                          <input 
-                            className="w-full bg-transparent border-none font-body-md text-body-md text-on-surface py-2 px-3 focus:ring-0 font-mono-data" 
-                            id="expiry" 
-                            maxLength={5} 
-                            placeholder="MM/YY" 
-                            required 
-                            type="text" 
+                          <input
+                            className="w-full bg-transparent border-none font-body-md text-body-md text-on-surface py-2 px-3 focus:ring-0 font-mono-data"
+                            id="expiry"
+                            maxLength={5}
+                            placeholder="MM/YY"
+                            required
+                            type="text"
+                            value={expiryDate}
+                            onChange={(e) => {
+                              let value = e.target.value.replace(/\D/g, '');
+                              if (value.length >= 2) {
+                                value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                              }
+                              setExpiryDate(value);
+                            }}
+                            disabled={isLoading}
                           />
                         </div>
                       </div>
                       <div>
                         <label className="block font-label-md text-label-md text-on-surface-variant mb-unit" htmlFor="cvv">CVV</label>
                         <div className="relative rounded-lg border border-outline-variant bg-surface-bright transition-all input-focus-ring flex items-center pr-3">
-                          <input 
-                            className="w-full bg-transparent border-none font-body-md text-body-md text-on-surface py-2 px-3 focus:ring-0 font-mono-data" 
-                            id="cvv" 
-                            maxLength={4} 
-                            placeholder="123" 
-                            required 
-                            type="password" 
+                          <input
+                            className="w-full bg-transparent border-none font-body-md text-body-md text-on-surface py-2 px-3 focus:ring-0 font-mono-data"
+                            id="cvv"
+                            maxLength={4}
+                            placeholder="123"
+                            required
+                            type="password"
+                            value={cvc}
+                            onChange={(e) => setCvc(e.target.value.replace(/\D/g, ''))}
+                            disabled={isLoading}
                           />
                           <span className="material-symbols-outlined text-outline-variant" style={{ fontVariationSettings: "'FILL' 0" }}>help</span>
                         </div>
@@ -195,7 +298,12 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
                   </h2>
                   <div className="space-y-stack-md">
                     
-                    {isBalanceEnough ? (
+                    {isLoadingBalance ? (
+                      <div className="mb-stack-md p-stack-sm bg-surface-container rounded-lg flex items-center gap-2 text-on-surface-variant">
+                        <span className="material-symbols-outlined text-body-md animate-spin">progress_activity</span>
+                        <span className="font-label-md">Loading wallet balance...</span>
+                      </div>
+                    ) : isBalanceEnough ? (
                       <div className="mb-stack-md p-stack-sm bg-primary-container/10 border border-primary/20 rounded-lg flex items-center gap-2 text-primary">
                         <span className="material-symbols-outlined text-body-md">check_circle</span>
                         <span className="font-label-md">Sufficient wallet balance available.</span>
@@ -283,18 +391,20 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
               </div>
 
               {/* Pay Now Confirmation Button */}
-              <button 
+              <button
                 type="button"
-                disabled={paymentMethod === "wallet" && !isBalanceEnough}
+                disabled={isLoading || isLoadingBalance || (paymentMethod === "wallet" && !isBalanceEnough)}
                 onClick={handlePayNow}
                 className={`w-full font-label-md text-label-md py-3 px-4 rounded-full flex items-center justify-center gap-2 transition-all shadow-sm font-semibold ${
-                  paymentMethod === "wallet" && !isBalanceEnough
+                  isLoading || isLoadingBalance || (paymentMethod === "wallet" && !isBalanceEnough)
                     ? "bg-outline text-surface cursor-not-allowed opacity-50"
                     : "bg-primary hover:bg-primary/90 text-on-primary"
                 }`}
               >
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
-                Pay Now
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  {isLoading ? "progress_activity" : "lock"}
+                </span>
+                {isLoading ? "Processing..." : "Pay Now"}
               </button>
               <p className="text-center font-label-sm text-label-sm text-outline mt-stack-md flex items-center justify-center gap-1">
                 <span className="material-symbols-outlined text-[16px]">shield</span>
@@ -325,20 +435,34 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
                 
                 <div className="w-full bg-surface-container-low border border-outline-variant rounded-xl p-stack-md text-left space-y-2 mb-stack-lg">
                 <div className="flex justify-between items-center">
+                    <span className="text-label-sm text-on-surface-variant">Order ID</span>
+                    <span className="text-label-sm font-mono-data text-on-surface">
+                      {checkoutResponse?.order_id || "N/A"}
+                    </span>
+                </div>
+                <div className="flex justify-between items-center">
                     <span className="text-label-sm text-on-surface-variant">Transaction ID</span>
-                    <span className="text-label-sm font-mono-data text-on-surface">#JT202600123</span>
+                    <span className="text-label-sm font-mono-data text-on-surface">
+                      {checkoutResponse?.transaction_id || "N/A"}
+                    </span>
                 </div>
                 <div className="flex justify-between items-center">
-                    <span className="text-label-sm text-on-surface-variant">Payment Method</span>
-                    <span className="text-label-sm text-on-surface capitalize">{paymentMethod}</span>
+                    <span className="text-label-sm text-on-surface-variant">Payment Gateway Ref</span>
+                    <span className="text-label-sm font-mono-data text-on-surface">
+                      {checkoutResponse?.payment_gateway_ref || "N/A"}
+                    </span>
                 </div>
                 <div className="flex justify-between items-center">
-                    <span className="text-label-sm text-on-surface-variant">Payment Date</span>
-                    <span className="text-label-sm text-on-surface">July 16, 2026 • 3:12 PM</span>
+                    <span className="text-label-sm text-on-surface-variant">Status</span>
+                    <span className="text-label-sm text-on-surface capitalize">
+                      {checkoutResponse?.order_status?.replace(/_/g, ' ').toLowerCase() || paymentMethod}
+                    </span>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-outline-variant">
                     <span className="text-label-md font-semibold text-on-surface">Amount Paid</span>
-                    <span className="text-headline-md font-bold text-primary">Rp {total.toLocaleString("id-ID")}</span>
+                    <span className="text-headline-md font-bold text-primary">
+                      Rp {(checkoutResponse?.total_amount || total).toLocaleString("id-ID")}
+                    </span>
                 </div>
               </div>
 
