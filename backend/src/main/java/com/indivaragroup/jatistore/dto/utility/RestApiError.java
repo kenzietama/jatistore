@@ -32,7 +32,7 @@ public enum RestApiError {
     USR_0012(HttpStatus.PAYMENT_REQUIRED.value(), "Insufficient wallet balance"),
     USR_0013(HttpStatus.PAYMENT_REQUIRED.value(), "Payment gateway declined transaction"),
     USR_0014(HttpStatus.BAD_GATEWAY.value(), "Payment gateway error"),
-    USR_0017(HttpStatus.BAD_GATEWAY.value(), "Payment gateway timeout"),
+    USR_0017(HttpStatus.GATEWAY_TIMEOUT.value(), "Payment gateway timeout"),
     USR_0018(HttpStatus.BAD_REQUEST.value(), "Invalid card holder name format"),
     USR_0019(HttpStatus.BAD_REQUEST.value(), "Items from different sellers"),
     USR_0021(HttpStatus.BAD_REQUEST.value(),"Invalid cart item ID"),

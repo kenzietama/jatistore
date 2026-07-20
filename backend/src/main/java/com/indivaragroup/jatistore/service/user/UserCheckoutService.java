@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientException;
 import com.indivaragroup.jatistore.dto.request.payment.CardChargeRequest;
 import com.indivaragroup.jatistore.dto.request.payment.WalletChargeRequest;
@@ -220,6 +221,21 @@ public class UserCheckoutService {
             } else {
                 throw new CoreThrowHandler(RestApiError.USR_0014);
             }
+        } catch (ResourceAccessException ex) {
+            Order finalOrder = ctx.order;
+            Transaction finalTransaction = ctx.transaction;
+            template.executeWithoutResult(status -> {
+                Order ord = orderRepository.findById(finalOrder.getId()).orElseThrow();
+                Transaction trx = transactionRepository.findById(finalTransaction.getId()).orElseThrow();
+
+                ord.setStatus(OrderStatus.CANCELLED);
+                orderRepository.save(ord);
+
+                trx.setStatus(TransactionStatus.FAILED);
+                transactionRepository.save(trx);
+            });
+
+            throw new CoreThrowHandler(RestApiError.USR_0017);
         } catch (RestClientException ex) {
             Order finalOrder = ctx.order;
             Transaction finalTransaction = ctx.transaction;
