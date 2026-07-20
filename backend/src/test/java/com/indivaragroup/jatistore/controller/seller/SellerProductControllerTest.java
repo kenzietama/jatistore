@@ -98,10 +98,6 @@ public class SellerProductControllerTest {
         mockProduct.setStock(10);
     }
 
-    // ==========================================
-    // GET PRODUCTS
-    // ==========================================
-
     @Test
     void getProducts_shouldReturnOk() throws Exception {
         // Arrange
@@ -131,10 +127,6 @@ public class SellerProductControllerTest {
                 .andExpect(status().isInternalServerError());
     }
 
-    // ==========================================
-    // GET PRODUCT
-    // ==========================================
-
     @Test
     void getProduct_shouldReturnOk() throws Exception {
         // Arrange
@@ -161,10 +153,6 @@ public class SellerProductControllerTest {
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isInternalServerError());
     }
-
-    // ==========================================
-    // CREATE PRODUCT
-    // ==========================================
 
     @Test
     void createProduct_shouldReturnCreated() throws Exception {
@@ -205,10 +193,6 @@ public class SellerProductControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
-    // ==========================================
-    // UPDATE PRODUCT
-    // ==========================================
-
     @Test
     void updateProduct_shouldReturnOk() throws Exception {
         // Arrange
@@ -240,10 +224,6 @@ public class SellerProductControllerTest {
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
     }
-
-    // ==========================================
-    // DELETE PRODUCT
-    // ==========================================
 
     @Test
     void deleteProduct_shouldReturnOk() throws Exception {

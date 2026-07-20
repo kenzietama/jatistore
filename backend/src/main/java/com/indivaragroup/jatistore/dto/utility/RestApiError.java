@@ -16,7 +16,7 @@ public enum RestApiError {
     AUT_0006(HttpStatus.UNAUTHORIZED.value(), "Unauthorized access"),
     AUT_0007(HttpStatus.UNAUTHORIZED.value(), "Token has expired"),
     AUT_0008(HttpStatus.UNAUTHORIZED.value(), "Invalid Token"),
-    AUT_0009(HttpStatus.NOT_FOUND.value(), "Session not found"),
+    AUT_0009(HttpStatus.UNAUTHORIZED.value(), "Session not found"),
     AUT_0010(HttpStatus.FORBIDDEN.value(), "Account has been suspended or deactivated."),
 
     USR_0001(HttpStatus.NOT_FOUND.value(), "Product not found"),
@@ -46,7 +46,23 @@ public enum RestApiError {
     ADM_0006(HttpStatus.NOT_FOUND.value(), "Seller not found"),
     ADM_0010(HttpStatus.CONFLICT.value(), "Category name already exists"),
     ADM_0011(HttpStatus.NOT_FOUND.value(), "Category not found"),
-    ADM_0012(HttpStatus.CONFLICT.value(), "Cannot delete category with active products");
+    ADM_0012(HttpStatus.CONFLICT.value(), "Cannot delete category with active products"),
+    ADM_0004(HttpStatus.BAD_REQUEST.value(), "Invalid page or size parameter"),
+    ADM_0013(HttpStatus.BAD_REQUEST.value(), "Invalid status parameter"),
+    ADM_0014(HttpStatus.BAD_REQUEST.value(), "End time must be after start time"),
+    ADM_0016(HttpStatus.NOT_FOUND.value(), "Flash sale not found"),
+    ADM_0017(HttpStatus.CONFLICT.value(), "Cannot delete flash sale with attached products"),
+    ADM_0018(HttpStatus.BAD_REQUEST.value(), "Start time cannot be in the past"),
+    SLR_0001(HttpStatus.UNAUTHORIZED.value(), "Unauthorized access"),
+    SLR_0016(HttpStatus.NOT_FOUND.value(), "Product not found"),
+    SLR_0017(HttpStatus.FORBIDDEN.value(), "Forbidden: Product belongs to another seller"),
+    SLR_0030(HttpStatus.BAD_REQUEST.value(), "Flash price must be less than retail price"),
+    SLR_0033(HttpStatus.BAD_REQUEST.value(), "Remaining quota exceeds available stock"),
+    SLR_0034(HttpStatus.BAD_REQUEST.value(), "Remaining quota must be greater than zero"),
+    SLR_0035(HttpStatus.CONFLICT.value(), "Product time conflict"),
+    SLR_0044(HttpStatus.NOT_FOUND.value(), "Flash sale event not found"),
+    SLR_0045(HttpStatus.BAD_REQUEST.value(), "Flash sale event has already ended"),
+    SLR_0046(HttpStatus.CONFLICT.value(), "Product already in this flash sale event");
 
     private final int code;
     private final String message;

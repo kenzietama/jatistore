@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 
-import java.time.ZonedDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -107,8 +107,8 @@ public class SellerProductServiceImpl implements SellerProductService {
         product.setPrice(request.getPrice());
         product.setStock(request.getStock());
         product.setImage(request.getImage());
-        product.setCreatedAt(ZonedDateTime.now());
-        product.setUpdatedAt(ZonedDateTime.now());
+        product.setCreatedAt(Instant.now());
+        product.setUpdatedAt(Instant.now());
 
         Product savedProduct = productRepository.save(product);
         return ProductResponse.fromEntity(savedProduct);
@@ -146,7 +146,7 @@ public class SellerProductServiceImpl implements SellerProductService {
         if (request.getStock() != null) {
             product.setStock(request.getStock());
         }
-        product.setUpdatedAt(ZonedDateTime.now());
+        product.setUpdatedAt(Instant.now());
 
         Product savedProduct = productRepository.save(product);
         return ProductResponse.fromEntity(savedProduct);
@@ -162,7 +162,7 @@ public class SellerProductServiceImpl implements SellerProductService {
             throw new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Product not found", null);
         }
 
-        product.setDeletedAt(ZonedDateTime.now());
+        product.setDeletedAt(Instant.now());
         productRepository.save(product);
     }
 }

@@ -24,4 +24,5 @@ public class ProductListItemResponse {
     private Boolean isFlashSale;
     private Instant flashSaleEndTime;
     private String image;
+    private UUID categoryId;
 }

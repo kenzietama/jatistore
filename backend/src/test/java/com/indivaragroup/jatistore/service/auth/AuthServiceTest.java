@@ -201,4 +201,32 @@ class AuthServiceTest {
         assertEquals("CUSTOMER", response.getRestApiResponseData().getRole());
         assertEquals(600, response.getRestApiResponseData().getExpiresIn());
     }
+
+    @Test
+    void logout_Success() throws CoreThrowHandler {
+        String tokenStr = "mocked_jwt_token";
+        Token token = new Token();
+        token.setToken(tokenStr);
+
+        when(tokenRepository.findByToken(tokenStr)).thenReturn(Optional.of(token));
+
+        RestApiResponse<Void> response = authService.logout("Bearer " + tokenStr);
+        assertNotNull(response);
+        assertEquals(200, response.getRestApiResponseHttpCode());
+        verify(tokenRepository).delete(token);
+    }
+
+    @Test
+    void logout_NullHeader_ShouldThrow() {
+        assertThrows(CoreThrowHandler.class, () -> authService.logout(null));
+        assertThrows(CoreThrowHandler.class, () -> authService.logout("InvalidHeader"));
+    }
+
+    @Test
+    void logout_TokenNotFound_ShouldThrow() {
+        String tokenStr = "mocked_jwt_token";
+        when(tokenRepository.findByToken(tokenStr)).thenReturn(Optional.empty());
+
+        assertThrows(CoreThrowHandler.class, () -> authService.logout("Bearer " + tokenStr));
+    }
 }

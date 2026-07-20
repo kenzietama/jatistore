@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../store/auth/useAuthStore';
 import { authService } from '../../../service/auth/authService';
 
@@ -16,7 +16,6 @@ export function AdminSidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsM
 
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
   const logoutStore = useAuthStore((state) => state.logout);
 
   const handleLogout = async () => {
@@ -33,11 +32,9 @@ export function AdminSidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsM
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'admin_panel_settings', path: '/admin/dashboard', disabled: false },
-    { id: 'flash_sale', label: 'Flash Sale Manager', icon: 'campaign', path: '#', disabled: true },
-    { id: 'audit_trails', label: 'Audit Trails', icon: 'history_edu', path: '#', disabled: true }
+    { id: 'flash_sale', label: 'Flash Sale Manager', icon: 'campaign', path: '/admin/flash-sales', disabled: false },
+    { id: 'audit_trails', label: 'Audit Trails', icon: 'history_edu', path: '/admin/audit-trails', disabled: false }
   ];
-
-  const currentPath = location.pathname;
 
   return (
     <>
@@ -84,10 +81,7 @@ export function AdminSidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsM
 
       {/* Main Navigation */}
       <div className="flex-1 overflow-y-auto">
-        <div className="space-y-stack-sm">
-          <div className={`font-label-sm text-label-sm text-on-surface-variant mb-unit mt-stack-md ${isCollapsed ? 'text-center' : 'px-unit'}`}>
-            {isCollapsed ? 'MENU' : 'MAIN MENU'}
-          </div>
+        <div className="space-y-stack-sm pt-stack-md">
 
           {navItems.map((item) => (
             <NavLink

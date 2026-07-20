@@ -25,6 +25,20 @@ export interface AdminCategoryResponse {
   sellerCount: number;
 }
 
+export interface AuditTrailResponse {
+  id: string;
+  userId: string | null;
+  username: string | null;
+  userRole: string | null;
+  action: string;
+  affectedModule: string;
+  entityId: string | null;
+  description: string;
+  payload: string | null;
+  ipAddress: string;
+  createdAt: string;
+}
+
 export interface CategoryRequest {
   name: string;
 }
@@ -70,5 +84,15 @@ export const adminService = {
 
   deleteCategory: async (categoryId: string): Promise<void> => {
     await api.delete<RestApiResponse<void>>(`/api/v1/admin/categories/${categoryId}`);
+  },
+
+  getAuditTrails: async (page: number = 0, size: number = 50, action?: string, module?: string): Promise<PageData<AuditTrailResponse>> => {
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+    params.append('size', size.toString());
+    if (action && action !== 'ALL') params.append('action', action);
+    if (module && module !== 'ALL') params.append('module', module);
+    const response = await api.get<RestApiResponse<PageData<AuditTrailResponse>>>(`/api/v1/admin/audit-trails?${params.toString()}`);
+    return response.data.data;
   }
 };

@@ -10,6 +10,7 @@ import com.indivaragroup.jatistore.dto.utility.RestApiSuccess;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.repository.TokenRepository;
 import com.indivaragroup.jatistore.service.utility.AuthJWTUtility;
+import com.indivaragroup.jatistore.audit.Audit;
 import com.indivaragroup.jatistore.repository.AuthRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -96,6 +97,7 @@ public class AuthService {
                 .build();
     }
 
+    @Audit(action = "LOGOUT", affectedModule = "AUTH", description = "User logout")
     @Transactional
     public RestApiResponse<Void> logout(String authorizationHeader) throws CoreThrowHandler {
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {

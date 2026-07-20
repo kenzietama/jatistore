@@ -13,6 +13,7 @@ import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.user.UserCheckoutResponse;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
+import com.indivaragroup.jatistore.audit.Audit;
 import com.indivaragroup.jatistore.repository.AuthRepository;
 import com.indivaragroup.jatistore.repository.CartItemRepository;
 import com.indivaragroup.jatistore.repository.OrderRepository;
@@ -56,6 +57,7 @@ public class UserCheckoutService {
         PaymentMethod method;
     }
 
+    @Audit(action = "ORDER_CREATE", affectedModule = "ORDERS", description = "User places new order")
     public RestApiResponse<UserCheckoutResponse> checkout(
             UserCheckoutRequest userCheckoutRequest,
             String email

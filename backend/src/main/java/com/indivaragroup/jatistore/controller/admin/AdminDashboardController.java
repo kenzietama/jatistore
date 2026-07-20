@@ -9,6 +9,7 @@ import com.indivaragroup.jatistore.dto.response.module.admin.AdminCategoryRespon
 import com.indivaragroup.jatistore.dto.response.module.admin.AdminDashboardResponse;
 import com.indivaragroup.jatistore.dto.response.module.admin.AdminSellerResponse;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
+import com.indivaragroup.jatistore.audit.Audit;
 import com.indivaragroup.jatistore.service.admin.AdminDashboardService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,7 @@ public class AdminDashboardController {
     }
 
     @PatchMapping(RestApiPath.ADMIN_SELLERS_PATH + "/{sellerId}/status")
+    @Audit(action = "SELLER_UPDATE_STATUS", affectedModule = "SELLERS", description = "Admin updated seller status")
     public RestApiResponse<Void> updateSellerStatus(
             @PathVariable UUID sellerId,
             @Valid @RequestBody UpdateSellerStatusRequest request) throws CoreThrowHandler {
@@ -55,12 +57,14 @@ public class AdminDashboardController {
     }
 
     @PostMapping(RestApiPath.ADMIN_CATEGORIES_PATH)
+    @Audit(action = "CATEGORY_CREATE", affectedModule = "CATEGORIES", description = "Admin created a new category")
     public RestApiResponse<AdminCategoryResponse> createCategory(
             @Valid @RequestBody CategoryRequest request) throws CoreThrowHandler {
         return RestApiResponse.success(adminDashboardService.createCategory(request));
     }
 
     @PutMapping(RestApiPath.ADMIN_CATEGORIES_PATH + "/{categoryId}")
+    @Audit(action = "CATEGORY_UPDATE", affectedModule = "CATEGORIES", description = "Admin updated a category")
     public RestApiResponse<Void> updateCategory(
             @PathVariable UUID categoryId,
             @Valid @RequestBody CategoryRequest request) throws CoreThrowHandler {
@@ -69,6 +73,7 @@ public class AdminDashboardController {
     }
 
     @DeleteMapping(RestApiPath.ADMIN_CATEGORIES_PATH + "/{categoryId}")
+    @Audit(action = "CATEGORY_DELETE", affectedModule = "CATEGORIES", description = "Admin deleted a category")
     public RestApiResponse<Void> deleteCategory(@PathVariable UUID categoryId) throws CoreThrowHandler {
         adminDashboardService.deleteCategory(categoryId);
         return RestApiResponse.success(null);

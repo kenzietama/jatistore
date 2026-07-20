@@ -23,8 +23,8 @@ public class ProductService {
     private final ProductRepository productRepository;
 
     @Transactional(readOnly = true)
-    public PageData<ProductListItemResponse> getProductList(String search, Pageable pageable) {
-        Page<Object[]> resultPage = productRepository.findProductsWithFlashSale(search, pageable);
+    public PageData<ProductListItemResponse> getProductList(String search, String categoryId, Pageable pageable) {
+        Page<Object[]> resultPage = productRepository.findProductsWithFlashSale(search, categoryId, pageable);
 
         List<ProductListItemResponse> content = resultPage.getContent().stream()
                 .map(this::mapToResponse)
@@ -51,6 +51,7 @@ public class ProductService {
                 .isFlashSale((Boolean) row[7])
                 .flashSaleEndTime((Instant) row[8])
                 .image((String) row[9])
+                .categoryId(row[10] != null ? UUID.fromString((String) row[10]) : null)
                 .build();
     }
 }

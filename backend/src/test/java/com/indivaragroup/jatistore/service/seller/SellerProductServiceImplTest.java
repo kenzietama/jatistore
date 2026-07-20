@@ -26,6 +26,7 @@ import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Optional;
@@ -83,13 +84,9 @@ public class SellerProductServiceImplTest {
         mockProduct.setName("Laptop");
         mockProduct.setPrice(new BigDecimal("1000.00"));
         mockProduct.setStock(10);
-        mockProduct.setCreatedAt(ZonedDateTime.now());
-        mockProduct.setUpdatedAt(ZonedDateTime.now());
+        mockProduct.setCreatedAt(Instant.now());
+        mockProduct.setUpdatedAt(Instant.now());
     }
-
-    // ==========================================
-    // GET PRODUCTS
-    // ==========================================
 
     @Test
     void getProducts_shouldReturnPageOfProducts() {
@@ -97,7 +94,6 @@ public class SellerProductServiceImplTest {
         when(sellerRepository.findById(sellerId)).thenReturn(Optional.of(mockSeller));
         
         Page<Product> page = new PageImpl<>(Arrays.asList(mockProduct));
-        // We will mock the repository call for filter OUT_OF_STOCK
         when(productRepository.findProductsBySellerAndFilters(eq(sellerId), any(), any(), eq(0), eq(0), any(Pageable.class)))
                 .thenReturn(page);
 
@@ -167,10 +163,6 @@ public class SellerProductServiceImplTest {
         }
     }
 
-    // ==========================================
-    // GET PRODUCT
-    // ==========================================
-
     @Test
     void getProduct_shouldReturnProduct_whenValid() {
         // Arrange
@@ -220,7 +212,7 @@ public class SellerProductServiceImplTest {
     @Test
     void getProduct_shouldThrowException_whenProductSoftDeleted() {
         // Arrange
-        mockProduct.setDeletedAt(ZonedDateTime.now());
+        mockProduct.setDeletedAt(Instant.now());
         when(sellerRepository.findById(sellerId)).thenReturn(Optional.of(mockSeller));
         when(productRepository.findById(productId)).thenReturn(Optional.of(mockProduct));
 
@@ -232,11 +224,6 @@ public class SellerProductServiceImplTest {
             assertEquals(HttpStatus.NOT_FOUND.value(), ex.getCode());
         }
     }
-
-    // ==========================================
-    // CREATE PRODUCT
-    // ==========================================
-
     @Test
     void createProduct_shouldSaveAndReturnProduct() throws Exception {
         // Arrange
@@ -304,10 +291,6 @@ public class SellerProductServiceImplTest {
             assertEquals(HttpStatus.NOT_FOUND.value(), ((CoreThrowHandler) ex).getCode());
         }
     }
-
-    // ==========================================
-    // UPDATE PRODUCT
-    // ==========================================
 
     @Test
     void updateProduct_shouldUpdateFieldsAndSave() throws Exception {
@@ -442,7 +425,7 @@ public class SellerProductServiceImplTest {
     @Test
     void updateProduct_shouldThrowException_whenProductSoftDeleted() throws Exception {
         // Arrange
-        mockProduct.setDeletedAt(ZonedDateTime.now());
+        mockProduct.setDeletedAt(Instant.now());
         when(sellerRepository.findById(sellerId)).thenReturn(Optional.of(mockSeller));
         when(productRepository.findById(productId)).thenReturn(Optional.of(mockProduct));
 
@@ -454,10 +437,6 @@ public class SellerProductServiceImplTest {
             assertEquals(HttpStatus.NOT_FOUND.value(), ex.getCode());
         }
     }
-
-    // ==========================================
-    // DELETE PRODUCT
-    // ==========================================
 
     @Test
     void deleteProduct_shouldSetDeletedAtAndSave() {
@@ -508,7 +487,7 @@ public class SellerProductServiceImplTest {
     @Test
     void deleteProduct_shouldThrowException_whenAlreadyDeleted() {
         // Arrange
-        mockProduct.setDeletedAt(ZonedDateTime.now());
+        mockProduct.setDeletedAt(Instant.now());
         when(sellerRepository.findById(sellerId)).thenReturn(Optional.of(mockSeller));
         when(productRepository.findById(productId)).thenReturn(Optional.of(mockProduct));
 
