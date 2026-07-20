@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,4 +40,15 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
     @Query("SELECT p FROM Product p WHERE p.category.id = :categoryId")
     List<Product> findByCategoryId(@Param("categoryId") UUID categoryId);
+
+    @Query(value = """
+            SELECT COALESCE(fsi.flash_price, p.price) as current_price
+            FROM mst_products p
+            LEFT JOIN mst_flash_sale_items fsi ON fsi.product_id = p.id
+            LEFT JOIN mst_flash_sales fs ON fs.id = fsi.flash_sale_id
+                AND NOW() BETWEEN fs.start_time AND fs.end_time
+            WHERE p.id = :productId
+            LIMIT 1
+            """, nativeQuery = true)
+    BigDecimal getCurrentPrice(@Param("productId") UUID productId);
 }

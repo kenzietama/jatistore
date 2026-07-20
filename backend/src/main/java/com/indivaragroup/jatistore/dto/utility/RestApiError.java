@@ -19,6 +19,13 @@ public enum RestApiError {
     AUT_0009(HttpStatus.NOT_FOUND.value(), "Session not found"),
     AUT_0010(HttpStatus.FORBIDDEN.value(), "Account has been suspended or deactivated."),
 
+    USR_0001(HttpStatus.NOT_FOUND.value(), "Product not found"),
+    USR_0003(HttpStatus.BAD_REQUEST.value(), "Insufficient stock"),
+    USR_0004(HttpStatus.NOT_FOUND.value(), "Cart item not found"),
+    USR_0005(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Internal server error"),
+    USR_0006(HttpStatus.UNAUTHORIZED.value(), "Unauthorized access"),
+    USR_0007(HttpStatus.UNAUTHORIZED.value(), "Token expired"),
+    USR_0008(HttpStatus.UNAUTHORIZED.value(), "Invalid token"),
     USR_0009(HttpStatus.BAD_REQUEST.value(), "Cart is empty"),
     USR_0010(HttpStatus.BAD_REQUEST.value(), "Missing mandatory payment field: {field}"),
     USR_0011(HttpStatus.BAD_REQUEST.value(), "Insufficient stock for product: {productName}"),
