@@ -114,11 +114,10 @@ class UserCheckoutServiceTest {
         mockProduct.setStore(mockStore);
 
         // Mock CartItem
-        mockCartItem = CartItem.builder()
-                .id(UUID.randomUUID())
-                .product(mockProduct)
-                .quantity(2)
-                .build();
+        mockCartItem = new CartItem();
+        mockCartItem.setId(UUID.randomUUID());
+        mockCartItem.setProduct(mockProduct);
+        mockCartItem.setQuantity(2);
 
         // Mock Order
         mockOrder = Order.builder()
