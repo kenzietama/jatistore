@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { authService } from "../../../service/auth/authService";
 import { useAuthStore } from "../../../store/auth/useAuthStore";
 
@@ -11,12 +11,14 @@ const Login: React.FC = () => {
 	const [authError, setAuthError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 	const navigate = useNavigate();
+	const location = useLocation();
+	const hasJustLoggedIn = React.useRef(false);
 
 	const setToken = useAuthStore((state) => state.setToken);
 	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
 	useEffect(() => {
-		if (isAuthenticated) {
+		if (isAuthenticated && !hasJustLoggedIn.current) {
 			navigate("/", { replace: true });
 		}
 	}, [isAuthenticated, navigate]);
@@ -44,6 +46,7 @@ const Login: React.FC = () => {
 			const response = await authService.login({ email, password });
 
 			if (response.data?.accessToken) {
+				hasJustLoggedIn.current = true;
 				setToken(response.data.accessToken);
 				// Success path: Redirect or load role-specific views
 				const role = response.data.role;
@@ -51,11 +54,7 @@ const Login: React.FC = () => {
 				if (role === "SELLER") {
 					navigate("/seller/dashboard");
 				} else if (role === "BUYER") {
-					if (window.history.length > 1) {
-						navigate(-1);
-					} else {
-						navigate("/");
-					}
+					navigate("/", { state: location.state || {} });
 				} else if (role === "ADMIN") {
 					navigate("/admin/dashboard");
 				} else {

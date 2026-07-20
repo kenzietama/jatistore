@@ -27,7 +27,8 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
                 p.stock,
                 CASE WHEN fsi.flash_price IS NOT NULL THEN true ELSE false END as isFlashSale,
                 NULL as flashSaleEndTime,
-                p.image
+                p.image,
+                CAST(p.product_category_id AS VARCHAR) as categoryId
             FROM mst_products p
             LEFT JOIN mst_stores s ON s.id = p.store_id
             LEFT JOIN mst_flash_sale_items fsi ON fsi.product_id = p.id
@@ -35,6 +36,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
                 AND NOW() BETWEEN fs.start_time AND fs.end_time
             WHERE p.deleted_at IS NULL
                 AND (CAST(:search AS TEXT) IS NULL OR CAST(:search AS TEXT) = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:search AS TEXT), '%')))
+                AND (CAST(:categoryId AS TEXT) IS NULL OR CAST(:categoryId AS TEXT) = '' OR CAST(p.product_category_id AS TEXT) = CAST(:categoryId AS TEXT))
             ORDER BY p.id, p.created_at DESC
             """,
             countQuery = """
@@ -42,9 +44,10 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
             FROM mst_products p
             WHERE p.deleted_at IS NULL
                 AND (CAST(:search AS TEXT) IS NULL OR CAST(:search AS TEXT) = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:search AS TEXT), '%')))
+                AND (CAST(:categoryId AS TEXT) IS NULL OR CAST(:categoryId AS TEXT) = '' OR CAST(p.product_category_id AS TEXT) = CAST(:categoryId AS TEXT))
             """,
             nativeQuery = true)
-    Page<Object[]> findProductsWithFlashSale(@Param("search") String search, Pageable pageable);
+    Page<Object[]> findProductsWithFlashSale(@Param("search") String search, @Param("categoryId") String categoryId, Pageable pageable);
     
     @Query("SELECT COUNT(p) FROM Product p WHERE p.store.seller.id = :sellerId AND p.deletedAt IS NULL")
     long countActiveProductsBySellerId(@Param("sellerId") UUID sellerId);

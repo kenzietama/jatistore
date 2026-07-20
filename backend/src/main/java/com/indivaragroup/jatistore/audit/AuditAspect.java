@@ -128,6 +128,19 @@ public class AuditAspect {
 
         // 5. Save
         auditTrailRepository.save(auditTrail);
+
+        if ("ORDER_CREATE".equals(auditAnnotation.action())) {
+            AuditTrail paidAudit = new AuditTrail();
+            paidAudit.setAction("ORDER_PAID");
+            paidAudit.setAffectedModule("ORDERS");
+            paidAudit.setDescription("Payment successful for order");
+            paidAudit.setIpAddress(auditTrail.getIpAddress());
+            paidAudit.setPayload(auditTrail.getPayload());
+            paidAudit.setEntityId(auditTrail.getEntityId());
+            paidAudit.setUserId(auditTrail.getUserId());
+            paidAudit.setUserRole(auditTrail.getUserRole());
+            auditTrailRepository.save(paidAudit);
+        }
     }
 
     @AfterThrowing(pointcut = "@annotation(auditAnnotation)", throwing = "exception")
@@ -175,6 +188,51 @@ public class AuditAspect {
                         }
                     } catch (Exception ignored) {}
                 }
+            }
+
+            auditTrailRepository.save(auditTrail);
+        } else if ("ORDER_CREATE".equals(auditAnnotation.action())) {
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attributes == null) return;
+
+            HttpServletRequest request = attributes.getRequest();
+            AuditTrail auditTrail = new AuditTrail();
+            
+            auditTrail.setAction("ORDER_CANCELLED");
+            auditTrail.setAffectedModule("ORDERS");
+            
+            String errorMsg = exception.getMessage();
+            if (exception instanceof com.indivaragroup.jatistore.exception.CoreThrowHandler coreThrow) {
+                errorMsg = coreThrow.getRestApiError().getMessage();
+            }
+            auditTrail.setDescription("Order cancelled due to payment failure: " + errorMsg);
+
+            String ipAddress = request.getHeader("X-Forwarded-For");
+            if (ipAddress == null || ipAddress.isEmpty()) {
+                ipAddress = request.getRemoteAddr();
+            }
+            if ("0:0:0:0:0:0:0:1".equals(ipAddress)) {
+                ipAddress = "127.0.0.1";
+            }
+            auditTrail.setIpAddress(ipAddress);
+
+            ContentCachingRequestWrapper wrapper = WebUtils.getNativeRequest(request, ContentCachingRequestWrapper.class);
+            if (wrapper != null) {
+                byte[] buf = wrapper.getContentAsByteArray();
+                if (buf.length > 0) {
+                    String payload = new String(buf, 0, buf.length, StandardCharsets.UTF_8);
+                    auditTrail.setPayload(sanitizePayload(payload));
+                }
+            }
+
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof UserDetails userDetails) {
+                String email = userDetails.getUsername();
+                authRepository.findByEmail(email).ifPresent(user -> {
+                    auditTrail.setUserId(user.getId());
+                    String role = userDetails.getAuthorities().iterator().next().getAuthority();
+                    auditTrail.setUserRole(role.replace("ROLE_", ""));
+                });
             }
 
             auditTrailRepository.save(auditTrail);

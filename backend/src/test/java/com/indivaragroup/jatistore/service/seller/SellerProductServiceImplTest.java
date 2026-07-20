@@ -26,6 +26,7 @@ import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Optional;
@@ -83,8 +84,8 @@ public class SellerProductServiceImplTest {
         mockProduct.setName("Laptop");
         mockProduct.setPrice(new BigDecimal("1000.00"));
         mockProduct.setStock(10);
-        mockProduct.setCreatedAt(ZonedDateTime.now());
-        mockProduct.setUpdatedAt(ZonedDateTime.now());
+        mockProduct.setCreatedAt(Instant.now());
+        mockProduct.setUpdatedAt(Instant.now());
     }
 
     @Test
@@ -211,7 +212,7 @@ public class SellerProductServiceImplTest {
     @Test
     void getProduct_shouldThrowException_whenProductSoftDeleted() {
         // Arrange
-        mockProduct.setDeletedAt(ZonedDateTime.now());
+        mockProduct.setDeletedAt(Instant.now());
         when(sellerRepository.findById(sellerId)).thenReturn(Optional.of(mockSeller));
         when(productRepository.findById(productId)).thenReturn(Optional.of(mockProduct));
 
@@ -424,7 +425,7 @@ public class SellerProductServiceImplTest {
     @Test
     void updateProduct_shouldThrowException_whenProductSoftDeleted() throws Exception {
         // Arrange
-        mockProduct.setDeletedAt(ZonedDateTime.now());
+        mockProduct.setDeletedAt(Instant.now());
         when(sellerRepository.findById(sellerId)).thenReturn(Optional.of(mockSeller));
         when(productRepository.findById(productId)).thenReturn(Optional.of(mockProduct));
 
@@ -486,7 +487,7 @@ public class SellerProductServiceImplTest {
     @Test
     void deleteProduct_shouldThrowException_whenAlreadyDeleted() {
         // Arrange
-        mockProduct.setDeletedAt(ZonedDateTime.now());
+        mockProduct.setDeletedAt(Instant.now());
         when(sellerRepository.findById(sellerId)).thenReturn(Optional.of(mockSeller));
         when(productRepository.findById(productId)).thenReturn(Optional.of(mockProduct));
 

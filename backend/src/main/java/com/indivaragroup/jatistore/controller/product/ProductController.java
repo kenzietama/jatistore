@@ -30,16 +30,17 @@ public class ProductController {
     @GetMapping(value = RestApiPath.PRODUCT_LIST_PATH, params = {"!id"})
     public RestApiResponse<PageData<ProductListItemResponse>> getProductList(
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String categoryId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        log.info("Fetching product list - search: {}, page: {}, size: {}", search, page, size);
+        log.info("Fetching product list - search: {}, categoryId: {}, page: {}, size: {}", search, categoryId, page, size);
 
         if (page < 0 || size < 1 || size > 100) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid page or size parameter");
         }
 
         Pageable pageable = PageRequest.of(page, size);
-        PageData<ProductListItemResponse> pageData = productService.getProductList(search, pageable);
+        PageData<ProductListItemResponse> pageData = productService.getProductList(search, categoryId, pageable);
 
         return RestApiResponse.<PageData<ProductListItemResponse>>builder()
                 .restApiResponseHttpCode(200)

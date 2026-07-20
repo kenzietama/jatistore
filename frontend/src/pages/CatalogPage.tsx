@@ -85,6 +85,10 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
       if (searchQuery) {
         params.append('search', searchQuery);
       }
+      
+      if (selectedCategoryId) {
+        params.append('categoryId', selectedCategoryId);
+      }
 
       const response = await api.get(`/api/v1/products?${params.toString()}`);
       if (response.data && response.data.code === 200) {
@@ -100,11 +104,15 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
   };
 
   useEffect(() => {
-    fetchProducts(currentPage);
-  }, [currentPage, searchQuery]);
+    setCurrentPage(0);
+  }, [searchQuery, selectedCategoryId]);
 
   useEffect(() => {
-    api.get("/api/v1/categories")
+    fetchProducts(currentPage);
+  }, [currentPage, searchQuery, selectedCategoryId]);
+
+  useEffect(() => {
+    api.get("/api/v1/public/categories")
       .then((res) => {
         if (res.data?.code === 200) setCategories(res.data.data);
       })
@@ -114,13 +122,8 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
   }, []);
 
   const filteredProducts = products.filter((product) => {
-    const matchesCategory = selectedCategoryId
-      ? (String(product.category?.id) === String(selectedCategoryId) || String(product.categoryId) === String(selectedCategoryId))
-      : true;
-
     const matchesPrice = product.price >= minPrice && product.price <= maxPrice;
-
-    return matchesCategory && matchesPrice;
+    return matchesPrice;
   });
 
   return (

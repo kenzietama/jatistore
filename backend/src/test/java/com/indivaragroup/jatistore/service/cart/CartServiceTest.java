@@ -207,8 +207,6 @@ class CartServiceTest {
         // Arrange
         when(cartRepository.findByUserId(userId)).thenReturn(Optional.of(cart));
         when(cartItemRepository.findByCartId(cartId)).thenReturn(List.of(cartItem));
-        when(productRepository.getCurrentPrice(any(UUID.class)))
-                .thenReturn(new BigDecimal("100.00"));
 
         // Act
         CartResponse result = cartService.getCartByUserId(userId);
@@ -221,7 +219,6 @@ class CartServiceTest {
         assertEquals(10, result.getItems().get(0).getMaxStock());
         assertEquals(productId, result.getItems().get(0).getProductId());
         assertEquals(cartItemId, result.getItems().get(0).getId());
-        verify(productRepository, times(1)).getCurrentPrice(any(UUID.class));
     }
 
     // ====================================================================

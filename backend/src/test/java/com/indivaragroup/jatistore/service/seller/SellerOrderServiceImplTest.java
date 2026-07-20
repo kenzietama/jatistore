@@ -6,6 +6,7 @@ import com.indivaragroup.jatistore.data.entity.Product;
 import com.indivaragroup.jatistore.data.entity.Seller;
 import com.indivaragroup.jatistore.data.entity.Store;
 import com.indivaragroup.jatistore.data.entity.User;
+import com.indivaragroup.jatistore.data.utility.constant.OrderStatus;
 import com.indivaragroup.jatistore.dto.response.module.seller.order.SellerOrderDetailResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.order.SellerOrderListResponse;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
@@ -49,7 +50,7 @@ public class SellerOrderServiceImplTest {
         return seller;
     }
 
-    private Order setupMockOrder(UUID orderId, UUID sellerId, String status) {
+    private Order setupMockOrder(UUID orderId, UUID sellerId, OrderStatus status) {
         Order order = new Order();
         order.setId(orderId);
         order.setStatus(status);
@@ -83,15 +84,15 @@ public class SellerOrderServiceImplTest {
         UUID sellerId = UUID.randomUUID();
         setupMockSeller(sellerId);
         
-        Order order = setupMockOrder(UUID.randomUUID(), sellerId, "PROCESSED");
+        Order order = setupMockOrder(UUID.randomUUID(), sellerId, OrderStatus.SHIPPED);
 
         Page<Order> page = new PageImpl<>(List.of(order));
-        when(orderRepository.findOrdersBySellerAndFilters(eq(sellerId), eq("PROCESSED"), any(Pageable.class))).thenReturn(page);
+        when(orderRepository.findOrdersBySellerAndFilters(eq(sellerId), eq(OrderStatus.SHIPPED), any(Pageable.class))).thenReturn(page);
 
-        Page<SellerOrderListResponse> result = sellerOrderService.getSellerOrders(sellerId, "PROCESSED", 0, 10);
+        Page<SellerOrderListResponse> result = sellerOrderService.getSellerOrders(sellerId, OrderStatus.SHIPPED, 0, 10);
         
         assertEquals(1, result.getTotalElements());
-        assertEquals("PROCESSED", result.getContent().get(0).getStatus());
+        assertEquals("SHIPPED", result.getContent().get(0).getStatus());
         assertEquals(new BigDecimal("200"), result.getContent().get(0).getTotalAmount());
     }
 
@@ -100,15 +101,11 @@ public class SellerOrderServiceImplTest {
         UUID sellerId = UUID.randomUUID();
         setupMockSeller(sellerId);
         
-        Order order = setupMockOrder(UUID.randomUUID(), sellerId, "PROCESSED");
+        Order order = setupMockOrder(UUID.randomUUID(), sellerId, OrderStatus.SHIPPED);
 
         Page<Order> page = new PageImpl<>(List.of(order));
         when(orderRepository.findOrdersBySellerAndFilters(eq(sellerId), eq(null), any(Pageable.class))).thenReturn(page);
 
-        Page<SellerOrderListResponse> result = sellerOrderService.getSellerOrders(sellerId, "", 0, 10);
-        
-        assertEquals(1, result.getTotalElements());
-        
         Page<SellerOrderListResponse> resultNull = sellerOrderService.getSellerOrders(sellerId, null, 0, 10);
         
         assertEquals(1, resultNull.getTotalElements());
@@ -118,7 +115,7 @@ public class SellerOrderServiceImplTest {
     void getSellerOrders_sellerNotFound_shouldThrow() {
         UUID sellerId = UUID.randomUUID();
         when(sellerRepository.findById(sellerId)).thenReturn(Optional.empty());
-        assertThrows(CoreThrowHandler.class, () -> sellerOrderService.getSellerOrders(sellerId, "PROCESSED", 0, 10));
+        assertThrows(CoreThrowHandler.class, () -> sellerOrderService.getSellerOrders(sellerId, OrderStatus.SHIPPED, 0, 10));
     }
 
     @Test
@@ -127,7 +124,7 @@ public class SellerOrderServiceImplTest {
         UUID orderId = UUID.randomUUID();
         setupMockSeller(sellerId);
 
-        Order order = setupMockOrder(orderId, sellerId, "PROCESSED");
+        Order order = setupMockOrder(orderId, sellerId, OrderStatus.SHIPPED);
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
         SellerOrderDetailResponse response = sellerOrderService.getSellerOrderDetail(sellerId, orderId);
@@ -150,7 +147,7 @@ public class SellerOrderServiceImplTest {
         UUID orderId = UUID.randomUUID();
         setupMockSeller(sellerId);
 
-        Order order = setupMockOrder(orderId, sellerId, "PAID_ON_HOLD");
+        Order order = setupMockOrder(orderId, sellerId, OrderStatus.PAID_ON_HOLD);
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
         sellerOrderService.markOrderAsShipped(sellerId, orderId);
@@ -172,7 +169,7 @@ public class SellerOrderServiceImplTest {
         UUID orderId = UUID.randomUUID();
         setupMockSeller(sellerId);
 
-        Order order = setupMockOrder(orderId, sellerId, "PENDING"); // not PAID_ON_HOLD
+        Order order = setupMockOrder(orderId, sellerId, OrderStatus.PENDING); // not PAID_ON_HOLD
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
         assertThrows(CoreThrowHandler.class, () -> sellerOrderService.markOrderAsShipped(sellerId, orderId));
@@ -199,7 +196,7 @@ public class SellerOrderServiceImplTest {
         UUID orderId = UUID.randomUUID();
         setupMockSeller(sellerId);
 
-        Order order = setupMockOrder(orderId, UUID.randomUUID(), "PROCESSED"); // different sellerId
+        Order order = setupMockOrder(orderId, UUID.randomUUID(), OrderStatus.SHIPPED); // different sellerId
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
         assertThrows(CoreThrowHandler.class, () -> sellerOrderService.getSellerOrderDetail(sellerId, orderId));
@@ -211,7 +208,7 @@ public class SellerOrderServiceImplTest {
         UUID orderId = UUID.randomUUID();
         setupMockSeller(sellerId);
 
-        Order order = setupMockOrder(orderId, UUID.randomUUID(), "PAID_ON_HOLD"); // different sellerId
+        Order order = setupMockOrder(orderId, UUID.randomUUID(), OrderStatus.PAID_ON_HOLD); // different sellerId
         when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
 
         assertThrows(CoreThrowHandler.class, () -> sellerOrderService.markOrderAsShipped(sellerId, orderId));

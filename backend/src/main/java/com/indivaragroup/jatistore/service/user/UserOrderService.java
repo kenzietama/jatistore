@@ -13,6 +13,7 @@ import com.indivaragroup.jatistore.dto.response.module.user.OrderItemResponse;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.dto.utility.RestApiSuccess;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
+import com.indivaragroup.jatistore.audit.Audit;
 import com.indivaragroup.jatistore.repository.AuthRepository;
 import com.indivaragroup.jatistore.repository.OrderRepository;
 import com.indivaragroup.jatistore.repository.SellerLedgerRepository;
@@ -100,6 +101,7 @@ public class UserOrderService {
                 .build();
     }
 
+    @Audit(action = "ORDER_RECEIVED", affectedModule = "ORDERS", description = "User confirms order delivery")
     @Transactional
     public RestApiResponse<OrderConfirmReceiptResponse> confirmReceipt(
             String email,

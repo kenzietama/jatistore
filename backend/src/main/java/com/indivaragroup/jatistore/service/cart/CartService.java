@@ -12,6 +12,7 @@ import com.indivaragroup.jatistore.repository.CartRepository;
 import com.indivaragroup.jatistore.repository.ProductRepository;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
+import com.indivaragroup.jatistore.audit.Audit;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
 
+    @Audit(action = "CART_ADD_ITEM", affectedModule = "CART", description = "User added item to cart")
     @Transactional
     public CartItem addToCart(UUID userId, AddToCartRequest request) {
         Product product = productRepository.findById(request.getProductId())
@@ -109,6 +111,7 @@ public class CartService {
                 .build();
     }
 
+    @Audit(action = "CART_UPDATE_ITEM", affectedModule = "CART", description = "User updated cart item quantity")
     @Transactional
     public void updateCartItemQuantity(UUID userId, UUID cartItemId, UpdateCartItemQuantityRequest request) {
         CartItem cartItem = cartItemRepository.findById(cartItemId)
@@ -136,6 +139,7 @@ public class CartService {
         cartItemRepository.save(cartItem);
     }
 
+    @Audit(action = "CART_REMOVE_ITEM", affectedModule = "CART", description = "User removed item from cart")
     @Transactional
     public void removeItemFromCart(UUID userId, UUID cartItemId) {
         CartItem cartItem = cartItemRepository.findById(cartItemId)

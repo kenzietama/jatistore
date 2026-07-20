@@ -1,13 +1,13 @@
 import { StrictMode, useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import CatalogPage from "./pages/CatalogPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import LoginPage from "./pages/LoginPage";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
-import { MOCK_PRODUCTS, type Product, type CartItem } from "./data/productsMock";
+import { type Product, type CartItem } from "./data/productsMock";
 import api from "./lib/api";
 
 import "./App.css";
@@ -21,12 +21,17 @@ import SellerFlashSaleManager from "./container/seller/FlashSaleManager";
 
 const App = () => {
   const navigate = useNavigate();
-  const [currentPage, setCurrentPage] = useState<"catalog" | "detail" | "cart"| "checkout" | "history">("catalog");
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const location = useLocation();
+  const [currentPage, setCurrentPage] = useState<"catalog" | "detail" | "cart"| "checkout" | "history">(
+    (location.state?.returnToPage as any) || "catalog"
+  );
+  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartCount, setCartCount] = useState<number>(0);
-  const [pendingProductId, setPendingProductId] = useState<string | null>(null);
+  const [pendingProductId, setPendingProductId] = useState<string | null>(
+    location.state?.pendingProductId || null
+  );
   const [selectedCheckoutItems, setSelectedCheckoutItems] = useState<any[]>([]);
 
   // STATE PENCARIAN GLOBAL
@@ -44,7 +49,7 @@ const App = () => {
 
   const handleNavigateToCart = () => {
     if (!isLoggedIn) {
-      navigate("/auth/login");
+      navigate("/auth/login", { state: { returnToPage: "cart" } });
     } else {
       setCurrentPage("cart");
     }
@@ -54,7 +59,7 @@ const App = () => {
     const token = localStorage.getItem("jatistore_token");
 
     if (!token) {
-      navigate("/auth/login");
+      navigate("/auth/login", { state: { returnToPage: "cart", pendingProductId: productId } });
       return;
     }
 
@@ -95,37 +100,22 @@ const App = () => {
   };
 
   const handleLoginSuccess = () => {
-    setIsLoggedIn(true);
-
-    if (pendingProductId) {
-      const productData = MOCK_PRODUCTS.find((p) => p.id === pendingProductId);
-      
-      if (productData) {
-        const newItem: CartItem = {
-          id: productData.id,
-          name: productData.name,
-          store: "JatiStore Official",
-          price: productData.price,
-          image: productData.image,
-          variant: "Standard Version",
-          quantity: 1,
-          maxStock: 5,
-        };
-        
-        setCartItems([newItem]);
-      }
-      setPendingProductId(null); 
-      setCurrentPage("cart");
-    } else {
-      setCurrentPage("catalog");
-    }
+    // Legacy mock login success, now unused by real Login
   };
+
+  useEffect(() => {
+    if (isLoggedIn && pendingProductId) {
+      handleAddToCart(pendingProductId, 1).then(() => {
+        setPendingProductId(null);
+        navigate(".", { replace: true, state: { ...location.state, pendingProductId: null } });
+      });
+    }
+  }, [isLoggedIn, pendingProductId]);
 
   return (
     <div className="text-on-background bg-background min-h-screen flex flex-col font-sans antialiased">
       
       {/* 👑 GLOBAL HEADER UTAMA */}
-      {currentPage !== "login" && (
         <nav className="bg-surface border-b border-outline-variant shadow-sm w-full sticky top-0 z-50">
           <div className="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto h-16 gap-4">
 
@@ -201,7 +191,7 @@ const App = () => {
                   <div className="h-6 w-px bg-outline-variant"></div>
 
                   {!isLoggedIn ? (
-                    <button onClick={() => navigate("/auth/login")} className="bg-primary text-on-primary font-label-md text-label-md px-4 py-1.5 rounded-full hover:bg-primary/90 transition-colors shadow-sm">
+                    <button onClick={() => navigate("/auth/login", { state: { returnToPage: currentPage } })} className="bg-primary text-on-primary font-label-md text-label-md px-4 py-1.5 rounded-full hover:bg-primary/90 transition-colors shadow-sm">
                       Login
                     </button>
                   ) : (
@@ -242,7 +232,6 @@ const App = () => {
             </div>
           </div>
         </nav>
-      )}
 
       {/* RENDER KONTEN HALAMAN */}
       {currentPage === "catalog" && (
@@ -254,7 +243,7 @@ const App = () => {
           onCartClick={handleNavigateToCart}
           onAddToCart={handleAddToCart} 
           isLoggedIn={isLoggedIn}
-          onLoginClick={() => navigate("/auth/login")}
+          onLoginClick={() => navigate("/auth/login", { state: { returnToPage: currentPage } })}
           onLogoutClick={() => {
             setIsLoggedIn(false);
             setCartItems([]);
@@ -269,16 +258,6 @@ const App = () => {
           onBackToCatalog={() => setCurrentPage("catalog")} 
           onAddToCart={handleAddToCart}
           onCartClick={handleNavigateToCart} 
-        />
-      )}
-
-      {currentPage === "login" && (
-        <LoginPage 
-          onLoginSuccess={handleLoginSuccess} 
-          onBackToCatalog={() => {
-            setPendingProductId(null);
-            setCurrentPage("catalog");
-          }}
         />
       )}
 
