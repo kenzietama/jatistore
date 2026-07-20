@@ -1,6 +1,7 @@
 package com.indivaragroup.jatistore.repository;
 
 import com.indivaragroup.jatistore.data.entity.Product;
+import com.indivaragroup.jatistore.dto.response.module.product.ProductListItemResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,6 +15,36 @@ import java.util.UUID;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, UUID> {
+
+    @Query(value = """
+            SELECT DISTINCT ON (p.id)
+                p.id,
+                p.name,
+                s.store_name as storeName,
+                p.description,
+                COALESCE(fsi.flash_price, p.price) as price,
+                CASE WHEN fsi.flash_price IS NOT NULL THEN p.price ELSE NULL END as originalPrice,
+                p.stock,
+                CASE WHEN fsi.flash_price IS NOT NULL THEN true ELSE false END as isFlashSale,
+                NULL as flashSaleEndTime,
+                p.image
+            FROM mst_products p
+            LEFT JOIN mst_stores s ON s.id = p.store_id
+            LEFT JOIN mst_flash_sale_items fsi ON fsi.product_id = p.id
+            LEFT JOIN mst_flash_sales fs ON fs.id = fsi.flash_sale_id
+                AND NOW() BETWEEN fs.start_time AND fs.end_time
+            WHERE p.deleted_at IS NULL
+                AND (CAST(:search AS TEXT) IS NULL OR CAST(:search AS TEXT) = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:search AS TEXT), '%')))
+            ORDER BY p.id, p.created_at DESC
+            """,
+            countQuery = """
+            SELECT COUNT(p.id)
+            FROM mst_products p
+            WHERE p.deleted_at IS NULL
+                AND (CAST(:search AS TEXT) IS NULL OR CAST(:search AS TEXT) = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:search AS TEXT), '%')))
+            """,
+            nativeQuery = true)
+    Page<Object[]> findProductsWithFlashSale(@Param("search") String search, Pageable pageable);
     
     @Query("SELECT COUNT(p) FROM Product p WHERE p.store.seller.id = :sellerId AND p.deletedAt IS NULL")
     long countActiveProductsBySellerId(@Param("sellerId") UUID sellerId);

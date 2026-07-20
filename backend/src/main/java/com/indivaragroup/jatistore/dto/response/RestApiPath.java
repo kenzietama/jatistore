@@ -19,7 +19,7 @@ public class RestApiPath {
     public static final String USER_BALANCE_PATH = "/balance";
 
     public static final String PRODUCT_BASE_PATH = "/products";
-    public static final String PRODUCT_LIST_PATH = "/list";
+    public static final String PRODUCT_LIST_PATH = "";
     public static final String PRODUCT_DETAIL_PATH = "/{id}";
     public static final String CART_BASE_PATH = "/cart";
     public static final String CART_ADD_ITEM_PATH = "/items";
