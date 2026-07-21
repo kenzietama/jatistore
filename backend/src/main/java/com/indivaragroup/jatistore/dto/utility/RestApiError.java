@@ -62,7 +62,11 @@ public enum RestApiError {
     SLR_0035(HttpStatus.CONFLICT.value(), "Product time conflict"),
     SLR_0044(HttpStatus.NOT_FOUND.value(), "Flash sale event not found"),
     SLR_0045(HttpStatus.BAD_REQUEST.value(), "Flash sale event has already ended"),
-    SLR_0046(HttpStatus.CONFLICT.value(), "Product already in this flash sale event");
+    SLR_0046(HttpStatus.CONFLICT.value(), "Product already in this flash sale event"),
+    SLR_0040(HttpStatus.BAD_REQUEST.value(), "Invalid balance type filter"),
+    SLR_0041(HttpStatus.BAD_REQUEST.value(), "Amount must be greater than zero"),
+    SLR_0042(HttpStatus.BAD_REQUEST.value(), "Insufficient available balance"),
+    SLR_0043(HttpStatus.BAD_REQUEST.value(), "Withdrawal amount exceeds maximum limit");
 
     private final int code;
     private final String message;

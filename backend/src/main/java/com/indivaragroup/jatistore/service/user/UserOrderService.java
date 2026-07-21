@@ -124,14 +124,6 @@ public class UserOrderService {
         UUID sellerId = orderRepository.findSellerIdByOrderId(orderId);
         Seller seller = entityManager.getReference(Seller.class, sellerId);
 
-        SellerLedger availableLedger = SellerLedger.builder()
-                .seller(seller)
-                .order(order)
-                .amount(order.getTotalAmount())
-                .balanceType(BalanceType.AVAILABLE)
-                .build();
-        sellerLedgerRepository.save(availableLedger);
-
         SellerLedger onHoldLedger = SellerLedger.builder()
                 .seller(seller)
                 .order(order)
@@ -139,6 +131,14 @@ public class UserOrderService {
                 .balanceType(BalanceType.ON_HOLD)
                 .build();
         sellerLedgerRepository.save(onHoldLedger);
+
+        SellerLedger availableLedger = SellerLedger.builder()
+                .seller(seller)
+                .order(order)
+                .amount(order.getTotalAmount())
+                .balanceType(BalanceType.AVAILABLE)
+                .build();
+        sellerLedgerRepository.save(availableLedger);
 
         order.setStatus(OrderStatus.RECEIVED);
         orderRepository.save(order);
