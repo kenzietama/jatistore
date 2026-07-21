@@ -4,11 +4,11 @@ import { financialsService } from '../../../service/seller/financials.service';
 interface WithdrawalModalProps {
     availableBalance: number;
     onClose: () => void;
-    onSuccess: () => void;
+    onSuccess: (gatewayRef: string) => void;
 }
 
 export default function WithdrawalModal({ availableBalance, onClose, onSuccess }: WithdrawalModalProps) {
-    const [amount, setAmount] = useState<string>('');
+    const [amountStr, setAmountStr] = useState<string>('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -16,7 +16,7 @@ export default function WithdrawalModal({ availableBalance, onClose, onSuccess }
         e.preventDefault();
         setError(null);
 
-        const withdrawAmount = Number(amount);
+        const withdrawAmount = parseCurrency(amountStr);
         
         if (isNaN(withdrawAmount) || withdrawAmount <= 0) {
             setError("Amount must be greater than zero.");
@@ -36,8 +36,7 @@ export default function WithdrawalModal({ availableBalance, onClose, onSuccess }
         setIsSubmitting(true);
         try {
             const response = await financialsService.simulateWithdrawal({ amount: withdrawAmount });
-            alert(`Withdrawal successful! Gateway Ref: ${response.mockGatewayRef}`);
-            onSuccess();
+            onSuccess(response.mockGatewayRef);
         } catch (err: any) {
             setError(err.message || err.response?.data?.message || err.response?.data?.restApiResponseMessage || "Failed to process withdrawal.");
             setIsSubmitting(false);
@@ -50,6 +49,30 @@ export default function WithdrawalModal({ availableBalance, onClose, onSuccess }
             currency: 'IDR',
             minimumFractionDigits: 0
         }).format(val);
+    };
+
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        // Remove non-digit characters
+        const rawValue = e.target.value.replace(/\D/g, '');
+        if (!rawValue) {
+            setAmountStr('');
+            return;
+        }
+        
+        // Format with thousand separators and Rp prefix
+        const numericValue = parseInt(rawValue, 10);
+        const formatted = new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0
+        }).format(numericValue);
+        
+        setAmountStr(formatted);
+    };
+
+    const parseCurrency = (str: string): number => {
+        const raw = str.replace(/\D/g, '');
+        return raw ? parseInt(raw, 10) : 0;
     };
 
     return (
@@ -72,14 +95,12 @@ export default function WithdrawalModal({ availableBalance, onClose, onSuccess }
                             Withdrawal Amount (IDR)
                         </label>
                         <input 
-                            type="number"
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
+                            type="text"
+                            value={amountStr}
+                            onChange={handleAmountChange}
                             className="w-full px-3 py-2 border border-outline-variant rounded focus:border-primary focus:ring-2 focus:ring-primary-fixed focus:outline-none transition-all"
-                            placeholder="Enter amount"
+                            placeholder="Rp 0"
                             required
-                            min="1"
-                            max={Math.min(availableBalance, 1000000000)}
                             disabled={isSubmitting}
                         />
                     </div>
@@ -96,7 +117,7 @@ export default function WithdrawalModal({ availableBalance, onClose, onSuccess }
                         <button 
                             type="submit"
                             className="px-4 py-2 rounded bg-primary text-on-primary hover:bg-surface-tint transition-colors font-label-md text-label-md flex items-center justify-center min-w-[100px]"
-                            disabled={isSubmitting || !amount || Number(amount) <= 0}
+                            disabled={isSubmitting || !amountStr || parseCurrency(amountStr) <= 0}
                         >
                             {isSubmitting ? (
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>

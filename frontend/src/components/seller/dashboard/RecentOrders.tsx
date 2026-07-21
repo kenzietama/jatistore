@@ -44,131 +44,129 @@ export function RecentOrders() {
 
   return (
     <>
-      {/* Search & Filter Bar */}
-      <div className="flex items-center gap-[12px] bg-white border border-[#e6e9eb] rounded-[10px] py-[10px] px-[14px] mb-[16px]">
-        <div className="flex-1 flex items-center gap-[8px] text-[#6b7876] text-[14px]">
-          🔍
-          <input 
-            className="border-none outline-none text-[14px] w-full bg-transparent placeholder:text-[#6b7876]" 
-            placeholder="Search orders by ID or item..." 
-            type="text" 
-            value={search}
-            onChange={handleSearchChange}
-          />
-        </div>
-        
-        {/* Filter Dropdown */}
-        <div className="relative">
-          <button 
-            className="text-[13px] font-semibold text-[#14201e] flex items-center gap-[6px] py-[6px] px-[10px] rounded-[6px] cursor-pointer border border-[#e6e9eb]"
-            onClick={() => { setFilterOpen(!filterOpen); setSortOpen(false); }}
-          >
-            ⇅ Filters {status && <span className="w-2 h-2 rounded-full bg-[#0f9b8e] ml-1"></span>}
-          </button>
-          
-          {filterOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white border border-[#e6e9eb] rounded shadow-lg z-50 py-2">
-              <div className="px-4 py-1 text-[12px] font-medium text-[#6b7876]">Filter by Status</div>
-              {['', 'PENDING', 'PAID_ON_HOLD', 'SHIPPED', 'RECEIVED', 'CANCELLED'].map((s) => (
-                <button
-                  key={s}
-                  className={`w-full text-left px-4 py-2 text-[14px] hover:bg-[#f4f6f7] transition-colors ${status === s ? 'text-[#0f9b8e] bg-[#e6f6f4] font-medium' : 'text-[#14201e]'}`}
-                  onClick={() => { setStatus(s); setPage(1); setFilterOpen(false); }}
-                >
-                  {s === '' ? 'All Status' : s.replace('_', ' ')}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Sort Dropdown */}
-        <div className="relative">
-          <button 
-            className="text-[13px] font-semibold text-[#14201e] flex items-center gap-[6px] py-[6px] px-[10px] rounded-[6px] cursor-pointer border border-[#e6e9eb]"
-            onClick={() => { setSortOpen(!sortOpen); setFilterOpen(false); }}
-          >
-            ↕ Sort
-          </button>
-          
-          {sortOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white border border-[#e6e9eb] rounded shadow-lg z-50 py-2">
-              <div className="px-4 py-1 text-[12px] font-medium text-[#6b7876]">Sort Orders</div>
-              {[
-                { label: 'Newest First', by: 'createdAt', dir: 'desc' },
-                { label: 'Oldest First', by: 'createdAt', dir: 'asc' },
-                { label: 'Highest Amount', by: 'amount', dir: 'desc' },
-                { label: 'Lowest Amount', by: 'amount', dir: 'asc' },
-                { label: 'Name (A-Z)', by: 'name', dir: 'asc' },
-                { label: 'Name (Z-A)', by: 'name', dir: 'desc' },
-              ].map((opt, i) => (
-                <button
-                  key={i}
-                  className={`w-full text-left px-4 py-2 text-[14px] hover:bg-[#f4f6f7] transition-colors ${sortBy === opt.by && sortDir === opt.dir ? 'text-[#0f9b8e] bg-[#e6f6f4] font-medium' : 'text-[#14201e]'}`}
-                  onClick={() => { setSortBy(opt.by); setSortDir(opt.dir); setPage(1); setSortOpen(false); }}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Orders Table */}
-      <div className="bg-white border border-[#e6e9eb] rounded-[10px] shadow-sm flex flex-col h-[calc(100vh-380px)]">
-        <div className="flex items-center justify-between py-[16px] px-[20px] border-b border-[#e6e9eb]">
-          <h2 className="text-[16px] font-bold m-0 text-[#14201e]">Recent Orders</h2>
-          <a className="text-[13px] font-semibold text-[#0c7d73] no-underline hover:underline" href="#">View All</a>
+      <div className="bg-surface-container-lowest rounded-lg border border-outline-variant shadow-sm overflow-hidden flex-grow flex flex-col">
+        
+        <div className="flex items-center gap-stack-md bg-surface-container-lowest p-stack-sm border-b border-outline-variant w-full shrink-0">
+          <div className="flex-grow flex items-center relative">
+            <span className="material-symbols-outlined absolute left-stack-sm text-on-surface-variant">search</span>
+            <input 
+              className="w-full pl-10 pr-stack-sm py-stack-sm bg-transparent border-none focus:ring-0 font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant transition-all" 
+              placeholder="Search orders by ID or item..." 
+              type="text" 
+              value={search}
+              onChange={handleSearchChange}
+            />
+          </div>
+          <div className="h-6 w-px bg-outline-variant"></div>
+          
+          {/* Filter Dropdown */}
+          <div className="relative">
+            <button 
+              className="flex items-center gap-unit px-2 py-1.5 font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors"
+              onClick={() => { setFilterOpen(!filterOpen); setSortOpen(false); }}
+            >
+              <span className="material-symbols-outlined text-[18px]">filter_list</span>
+              Filters {status && <span className="w-2 h-2 rounded-full bg-primary ml-1"></span>}
+            </button>
+            
+            {filterOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-surface border border-outline-variant rounded shadow-lg z-50 py-2">
+                <div className="px-4 py-1 text-label-sm text-on-surface-variant uppercase">Filter by Status</div>
+                {['', 'PENDING', 'PAID_ON_HOLD', 'SHIPPED', 'RECEIVED', 'CANCELLED'].map((s) => (
+                  <button
+                    key={s}
+                    className={`w-full text-left px-4 py-2 font-body-sm text-body-sm hover:bg-surface-container transition-colors ${status === s ? 'text-primary bg-primary-container/10 font-medium' : 'text-on-surface'}`}
+                    onClick={() => { setStatus(s); setPage(1); setFilterOpen(false); }}
+                  >
+                    {s === '' ? 'All Status' : s.replace('_', ' ')}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Sort Dropdown */}
+          <div className="relative">
+            <button 
+              className="flex items-center gap-unit px-2 py-1.5 font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors"
+              onClick={() => { setSortOpen(!sortOpen); setFilterOpen(false); }}
+            >
+              <span className="material-symbols-outlined text-[18px]">sort</span>
+              Sort
+            </button>
+            
+            {sortOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-surface border border-outline-variant rounded shadow-lg z-50 py-2">
+                <div className="px-4 py-1 text-label-sm text-on-surface-variant uppercase">Sort Orders</div>
+                {[
+                  { label: 'Newest First', by: 'createdAt', dir: 'desc' },
+                  { label: 'Oldest First', by: 'createdAt', dir: 'asc' },
+                  { label: 'Highest Amount', by: 'amount', dir: 'desc' },
+                  { label: 'Lowest Amount', by: 'amount', dir: 'asc' },
+                  { label: 'Name (A-Z)', by: 'name', dir: 'asc' },
+                  { label: 'Name (Z-A)', by: 'name', dir: 'desc' },
+                ].map((opt, i) => (
+                  <button
+                    key={i}
+                    className={`w-full text-left px-4 py-2 font-body-sm text-body-sm hover:bg-surface-container transition-colors ${sortBy === opt.by && sortDir === opt.dir ? 'text-primary bg-primary-container/10 font-medium' : 'text-on-surface'}`}
+                    onClick={() => { setSortBy(opt.by); setSortDir(opt.dir); setPage(1); setSortOpen(false); }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex-1 overflow-auto rounded-t-[10px]">
           <table className="w-full border-collapse text-left">
-            <thead className="sticky top-0 z-10 bg-surface-container">
-              <tr className="text-on-surface-variant border-b border-[#e6e9eb]">
-                <th className="text-left text-[11.5px] font-bold tracking-[0.04em] uppercase text-[#6b7876] py-[10px] px-[20px] border-b border-[#e6e9eb] bg-[#fafbfb] w-[130px]">Order ID</th>
-                <th className="text-left text-[11.5px] font-bold tracking-[0.04em] uppercase text-[#6b7876] py-[10px] px-[20px] border-b border-[#e6e9eb] bg-[#fafbfb]">Item</th>
-                <th className="text-right text-[11.5px] font-bold tracking-[0.04em] uppercase text-[#6b7876] py-[10px] px-[20px] border-b border-[#e6e9eb] bg-[#fafbfb] w-[150px]">Amount</th>
-                <th className="text-left text-[11.5px] font-bold tracking-[0.04em] uppercase text-[#6b7876] py-[10px] px-[20px] border-b border-[#e6e9eb] bg-[#fafbfb] w-[120px]">Status</th>
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-surface-container text-on-surface-variant border-b border-outline-variant text-label-sm font-label-sm">
+                <th className="py-3 px-4 font-medium uppercase tracking-wider">Order ID</th>
+                <th className="py-3 px-4 font-medium uppercase tracking-wider">Item</th>
+                <th className="py-3 px-4 font-medium uppercase tracking-wider text-right">Amount</th>
+                <th className="py-3 px-4 font-medium uppercase tracking-wider">Status</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="font-body-sm text-body-sm">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="py-[12px] px-[20px] border-b border-[#e6e9eb] text-center text-[#6b7876] text-[14px]">Loading orders...</td>
+                  <td colSpan={4} className="py-8 text-center text-on-surface-variant">Loading orders...</td>
                 </tr>
               ) : !orderPage || orderPage.content.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-[12px] px-[20px] border-b border-[#e6e9eb] text-center text-[#6b7876] text-[14px]">No recent orders found.</td>
+                  <td colSpan={4} className="py-8 text-center text-on-surface-variant">No recent orders found.</td>
                 </tr>
               ) : (
                 orderPage.content.map((order, idx) => {
-                  let badgeClass = "bg-[#f4f6f7] text-[#6b7876]";
-                  if (order.status.includes('RECEIVED')) badgeClass = "bg-[#e6f6f4] text-[#0c7d73]";
-                  if (order.status.includes('SHIPPED')) badgeClass = "bg-[#e8f0fe] text-[#2255c7]";
-                  if (order.status.includes('PENDING') || order.status.includes('HOLD')) badgeClass = "bg-[#fdf0e3] text-[#b4650a]";
+                  let badgeClass = "bg-surface-container-high text-on-surface-variant";
+                  if (order.status.includes('RECEIVED')) badgeClass = "bg-primary-container/20 text-primary";
+                  if (order.status.includes('SHIPPED')) badgeClass = "bg-info-container text-on-info-container";
+                  if (order.status.includes('PENDING') || order.status.includes('HOLD')) badgeClass = "bg-tertiary-container/20 text-tertiary";
 
                   return (
-                    <tr key={`${order.orderId}-${idx}`} className="hover:bg-[#fafbfb] transition-colors group cursor-pointer">
-                      <td className="py-[12px] px-[20px] border-b border-[#e6e9eb] align-middle text-[14px]">
-                        <span className="font-mono text-[13px] text-[#6b7876]">{order.displayId}</span>
+                    <tr key={`${order.orderId}-${idx}`} className={`hover:bg-primary-container/5 transition-colors group cursor-pointer border-b border-outline-variant`}>
+                      <td className="py-3 px-4 align-middle text-on-surface-variant font-mono-data text-mono-data">
+                        {order.displayId}
                       </td>
-                      <td className="py-[12px] px-[20px] border-b border-[#e6e9eb] align-middle text-[14px]">
-                        <div className="flex items-center gap-[10px]">
-                          <div className="w-[44px] h-[44px] rounded-[8px] bg-[#eef1f1] flex shrink-0 items-center justify-center overflow-hidden">
+                      <td className="py-3 px-4 align-middle">
+                        <div className="flex items-center gap-3">
+                          <div className="w-11 h-11 rounded bg-surface-container flex shrink-0 items-center justify-center overflow-hidden border border-outline-variant">
                             <img alt={order.itemName} className="w-full h-full object-cover" src={order.itemImage} />
                           </div>
                           <div>
-                            <div className="font-semibold text-[14px] text-[#14201e]">{order.itemName}</div>
-                            <div className="text-[12px] text-[#6b7876] mt-[2px]">Qty {order.quantity || 1}</div>
+                            <div className="font-medium text-on-surface">{order.itemName}</div>
+                            <div className="text-xs text-on-surface-variant mt-0.5">Qty {order.quantity || 1}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="py-[12px] px-[20px] border-b border-[#e6e9eb] align-middle text-[14px] text-right font-semibold tabular-nums text-[#14201e]">
+                      <td className="py-3 px-4 align-middle text-right font-medium font-mono-data text-mono-data text-on-surface">
                         Rp {order.amount.toLocaleString('id-ID')}
                       </td>
-                      <td className="py-[12px] px-[20px] border-b border-[#e6e9eb] align-middle text-[14px]">
-                        <span className={`inline-flex items-center gap-[6px] py-[4px] px-[10px] rounded-full text-[11.5px] font-bold tracking-[0.02em] uppercase ${badgeClass}`}>
-                          <span className="w-[6px] h-[6px] rounded-full bg-current"></span>
+                      <td className="py-3 px-4 align-middle">
+                        <span className={`inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-[11.5px] font-bold tracking-[0.02em] uppercase ${badgeClass}`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
                           {order.status}
                         </span>
                       </td>
@@ -179,27 +177,27 @@ export function RecentOrders() {
             </tbody>
           </table>
         </div>
-        <div className="mt-auto flex items-center justify-between py-[12px] px-[20px] text-[13px] text-[#6b7876] bg-surface-container-low border-t border-[#e6e9eb]">
-          <div>
+        <div className="mt-auto border-t border-outline-variant p-stack-sm flex items-center justify-between bg-surface-container-low shrink-0">
+          <span className="font-label-sm text-label-sm text-on-surface-variant">
             Showing {orderPage?.totalElements === 0 ? 0 : (page - 1) * limit + 1}-{Math.min(page * limit, orderPage?.totalElements || 0)} of {orderPage?.totalElements || 0} orders
-          </div>
-          <div className="flex items-center gap-[6px]">
+          </span>
+          <div className="flex items-center gap-unit">
             <button 
-              className="text-[#6b7876] hover:text-[#14201e] disabled:opacity-50 cursor-pointer text-[18px] bg-transparent border-none" 
+              className="p-2 border border-outline-variant rounded-lg disabled:opacity-50 hover:bg-surface-tint transition-colors" 
               disabled={page <= 1}
               onClick={() => setPage(p => Math.max(1, p - 1))}
             >
-              ‹
+              <span className="material-symbols-outlined text-[18px] text-on-surface">chevron_left</span>
             </button>
-            <div className="w-[26px] h-[26px] rounded-[6px] bg-[#0f9b8e] text-white font-bold text-[12.5px] flex items-center justify-center">
-              {page}
-            </div>
+            <span className="text-body-sm font-body-sm text-on-surface px-2">
+              Page {page} of {orderPage?.totalPages || 1}
+            </span>
             <button 
-              className="text-[#6b7876] hover:text-[#14201e] disabled:opacity-50 cursor-pointer text-[18px] bg-transparent border-none" 
+              className="p-2 border border-outline-variant rounded-lg disabled:opacity-50 hover:bg-surface-tint transition-colors" 
               disabled={!orderPage || page >= orderPage.totalPages}
               onClick={() => setPage(p => p + 1)}
             >
-              ›
+              <span className="material-symbols-outlined text-[18px] text-on-surface">chevron_right</span>
             </button>
           </div>
         </div>

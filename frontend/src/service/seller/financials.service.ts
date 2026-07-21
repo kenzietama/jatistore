@@ -46,9 +46,11 @@ export const financialsService = {
         return response.data.data;
     },
 
-    async getTransactionHistory(type?: string, page: number = 0, size: number = 20): Promise<PageResponse<SellerLedgerTransactionResponse>> {
+    async getTransactionHistory(type?: string, search?: string, page: number = 0, size: number = 20, sort?: string): Promise<PageResponse<SellerLedgerTransactionResponse>> {
         const params = new URLSearchParams();
-        if (type) params.append('type', type);
+        if (type && type !== 'ALL') params.append('type', type);
+        if (search) params.append('search', search);
+        if (sort) params.append('sort', sort);
         params.append('page', page.toString());
         params.append('size', size.toString());
 

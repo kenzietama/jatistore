@@ -57,6 +57,6 @@ public class PaymentGatewayClient {
             );
         }
 
-        return "PAYOUT_MOCK_REF_" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        return "TRF-" + java.util.UUID.randomUUID().toString().substring(0, 12).toUpperCase();
     }
 }

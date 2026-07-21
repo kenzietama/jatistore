@@ -63,21 +63,24 @@ public class SellerFinancialsService {
                 .build();
     }
 
-    public Page<SellerLedgerTransactionResponse> getTransactionHistory(UUID sellerId, String type, int page, int size) throws CoreThrowHandler {
+    public Page<SellerLedgerTransactionResponse> getTransactionHistory(UUID sellerId, String type, String search, int page, int size, String sort) throws CoreThrowHandler {
         Seller seller = getSellerById(sellerId);
-        Pageable pageable = PageRequest.of(page, size);
-        Page<SellerLedger> ledgerPage;
-
-        if (type != null && !type.isBlank()) {
-            try {
-                BalanceType balanceType = BalanceType.valueOf(type.toUpperCase());
-                ledgerPage = sellerLedgerRepository.findBySellerIdAndBalanceTypeOrderByCreatedAtDescAmountDesc(sellerId, balanceType, pageable);
-            } catch (IllegalArgumentException e) {
-                throw new CoreThrowHandler(RestApiError.SLR_0040);
-            }
-        } else {
-            ledgerPage = sellerLedgerRepository.findBySellerIdOrderByCreatedAtDescAmountDesc(sellerId, pageable);
+        
+        org.springframework.data.domain.Sort sortObj = org.springframework.data.domain.Sort.by(
+                org.springframework.data.domain.Sort.Order.desc("createdAt"),
+                org.springframework.data.domain.Sort.Order.desc("amount")
+        );
+        
+        if ("amount_desc".equalsIgnoreCase(sort)) {
+            sortObj = org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "amount");
+        } else if ("amount_asc".equalsIgnoreCase(sort)) {
+            sortObj = org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "amount");
+        } else if ("date_asc".equalsIgnoreCase(sort)) {
+            sortObj = org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "createdAt");
         }
+        
+        Pageable pageable = PageRequest.of(page, size, sortObj);
+        Page<SellerLedger> ledgerPage = sellerLedgerRepository.findTransactionsBySellerId(sellerId, type, search == null ? "" : search, pageable);
 
         return ledgerPage.map(SellerLedgerTransactionResponse::from);
     }

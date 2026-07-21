@@ -58,11 +58,20 @@ public class SellerOrderServiceImpl implements SellerOrderService {
     }
 
     @Override
-    public Page<SellerOrderListResponse> getSellerOrders(UUID sellerId, OrderStatus status, int page, int size) throws CoreThrowHandler {
+    public Page<SellerOrderListResponse> getSellerOrders(UUID sellerId, OrderStatus status, String search, String sortBy, String sortDir, int page, int size) throws CoreThrowHandler {
         Seller seller = getSellerById(sellerId);
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         
-        Page<Order> orders = orderRepository.findOrdersBySellerAndFilters(sellerId, status, pageRequest);
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        String sortProperty = "createdAt";
+        if ("amount".equalsIgnoreCase(sortBy)) {
+            sortProperty = "totalAmount";
+        } else if ("status".equalsIgnoreCase(sortBy)) {
+            sortProperty = "status";
+        }
+        
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(direction, sortProperty));
+        
+        Page<Order> orders = orderRepository.findOrdersBySellerAndFilters(sellerId, status, search, pageRequest);
         
         return orders.map(order -> {
             List<SellerOrderItemDTO> items = mapToOrderItems(order, seller.getId());

@@ -32,10 +32,13 @@ public class SellerOrderController {
     public RestApiResponse<PageData<SellerOrderListResponse>> getOrders(
             Principal principal,
             @RequestParam(required = false) OrderStatus status,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false, defaultValue = "date") String sortBy,
+            @RequestParam(required = false, defaultValue = "desc") String sortDir,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) throws CoreThrowHandler {
             
-        Page<SellerOrderListResponse> orders = sellerOrderService.getSellerOrders(securityHelper.getSellerIdFromPrincipal(principal), status, page, size);
+        Page<SellerOrderListResponse> orders = sellerOrderService.getSellerOrders(securityHelper.getSellerIdFromPrincipal(principal), status, search, sortBy, sortDir, page, size);
         return RestApiResponse.success(PageData.from(orders));
     }
 

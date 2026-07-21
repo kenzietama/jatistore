@@ -39,11 +39,13 @@ public class SellerFinancialsController {
     @GetMapping("/transactions")
     public RestApiResponse<Page<SellerLedgerTransactionResponse>> getTransactionHistory(
             Principal principal,
-            @RequestParam(required = false) String type,
+            @RequestParam(required = false, defaultValue = "ALL") String type,
+            @RequestParam(required = false, defaultValue = "") String search,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String sort
     ) throws CoreThrowHandler {
-        return RestApiResponse.success(financialsService.getTransactionHistory(securityHelper.getSellerIdFromPrincipal(principal), type, page, size));
+        return RestApiResponse.success(financialsService.getTransactionHistory(securityHelper.getSellerIdFromPrincipal(principal), type, search, page, size, sort));
     }
 
     @PostMapping("/withdraw")
