@@ -76,6 +76,7 @@ public class UserOrderService {
                                     .quantity((Integer) itemRow[1])
                                     .pricePerItem((BigDecimal) itemRow[2])
                                     .isFlashSale((Boolean) itemRow[3])
+                                    .imageUrl((String) itemRow[4])
                                     .build())
                             .collect(Collectors.toList());
 

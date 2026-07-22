@@ -26,7 +26,7 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [checkedItemIds, setCheckedItemIds] = useState<string[]>([]);
-  const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const fetchCartData = async () => {
     const token = localStorage.getItem("jatistore_token");

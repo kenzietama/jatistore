@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import api from "../lib/api";
+import { useNavigate } from "react-router-dom";
 
 interface OrderItem {
 	productName: string;
 	quantity: number;
 	pricePerItem: number;
 	isFlashSale: boolean;
+	imageUrl?: string;
 }
 
 interface Order {
@@ -16,30 +18,20 @@ interface Order {
 	items: OrderItem[];
 }
 
-interface OrderHistoryPageProps {
-	onNavigateHome: () => void;
-	onNavigateCart: () => void;
-	cartCount: number;
-}
-
-const OrderHistoryPage: React.FC<OrderHistoryPageProps> = ({
-	onNavigateHome,
-	onNavigateCart,
-	cartCount,
-}) => {
+const OrderHistoryPage: React.FC = () => {
+	const navigate = useNavigate();
 	const [orders, setOrders] = useState<Order[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
-	const [filterPending, setFilterPending] = useState(true);
-	const [filterPaidOnHold, setFilterPaidOnHold] = useState(true);
-	const [filterShipped, setFilterShipped] = useState(true);
-	const [filterReceived, setFilterReceived] = useState(true);
-	const [filterCancelled, setFilterCancelled] = useState(true);
+	const [statusFilter, setStatusFilter] = useState<string>("ALL");
+	const [filterOpen, setFilterOpen] = useState<boolean>(false);
 	const [searchQuery, setSearchQuery] = useState("");
 
 	const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
 	const [showToast, setShowToast] = useState(false);
 	const [toastAnimationClass, setToastAnimationClass] = useState("toast-enter");
 	const [toastMessage, setToastMessage] = useState("");
+	
+	const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
 	useEffect(() => {
 		fetchOrders();
@@ -51,8 +43,7 @@ const OrderHistoryPage: React.FC<OrderHistoryPageProps> = ({
 			const token = localStorage.getItem("jatistore_token");
 
 			if (!token) {
-				console.error("No auth token found");
-				setIsLoading(false);
+				navigate("/auth/login");
 				return;
 			}
 
@@ -77,8 +68,7 @@ const OrderHistoryPage: React.FC<OrderHistoryPageProps> = ({
 			const token = localStorage.getItem("jatistore_token");
 
 			if (!token) {
-				console.error("No auth token found");
-				setProcessingOrderId(null);
+				navigate("/auth/login");
 				return;
 			}
 
@@ -137,13 +127,13 @@ const OrderHistoryPage: React.FC<OrderHistoryPageProps> = ({
 				return {
 					label: "Pending",
 					icon: "hourglass_empty",
-					class: "bg-tertiary-container/20 border-tertiary text-on-tertiary-container",
+					class: "bg-tertiary-container/20 border-tertiary text-tertiary",
 				};
 			case "PAID_ON_HOLD":
 				return {
 					label: "Processing",
 					icon: "schedule",
-					class: "bg-tertiary-container/20 border-tertiary text-on-tertiary-container",
+					class: "bg-tertiary-container/20 border-tertiary text-tertiary",
 				};
 			case "SHIPPED":
 				return {
@@ -173,13 +163,7 @@ const OrderHistoryPage: React.FC<OrderHistoryPageProps> = ({
 	};
 
 	const filteredOrders = orders.filter((order) => {
-		const matchesStatus =
-			(order.status === "PENDING" && filterPending) ||
-			(order.status === "PAID_ON_HOLD" && filterPaidOnHold) ||
-			(order.status === "SHIPPED" && filterShipped) ||
-			(order.status === "RECEIVED" && filterReceived) ||
-			(order.status === "CANCELLED" && filterCancelled);
-
+		const matchesStatus = statusFilter === "ALL" || order.status === statusFilter;
 		const matchesSearch =
 			order.items.some((item) =>
 				item.productName.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -190,237 +174,238 @@ const OrderHistoryPage: React.FC<OrderHistoryPageProps> = ({
 	});
 
 	return (
-		<div className="bg-background text-on-background font-body-md min-h-screen flex flex-col relative overflow-x-hidden">
-			<main className="flex-1 w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-stack-lg">
-				<div className="mb-stack-lg">
-					<h1 className="text-display-lg font-display-lg text-on-background mb-unit">
-						Order History
-					</h1>
-					<p className="text-body-lg font-body-lg text-on-surface-variant">
-						Track, manage, and review your recent purchases.
-					</p>
+		<div className="space-y-gutter relative h-full flex flex-col">
+			{/* Horizontal Filters Section */}
+			<section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-sm shadow-sm flex flex-col sm:flex-row items-center gap-4 justify-between">
+				<div className="w-full sm:w-64 flex items-center relative shrink-0">
+					<span className="material-symbols-outlined absolute left-3 text-on-surface-variant text-[18px]">
+						search
+					</span>
+					<input
+						type="text"
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+						placeholder="Search product or ID..."
+						className="w-full bg-surface border border-outline-variant rounded-full pl-9 pr-4 py-2 text-body-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
+					/>
 				</div>
-
-				<div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
-					<aside className="lg:col-span-3">
-						<div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md sticky top-24">
-							<h3 className="text-headline-md font-headline-md text-on-surface mb-stack-sm border-b border-outline-variant pb-2">
-								Filters
-							</h3>
-							<div className="space-y-4">
-								<div>
-									<label className="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider block mb-2">
-										Status
-									</label>
-									<div className="flex flex-col gap-2">
-										<label className="flex items-center gap-2 cursor-pointer group">
-											<input
-												type="checkbox"
-												checked={filterPending}
-												onChange={(e) => setFilterPending(e.target.checked)}
-												className="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4"
-											/>
-											<span className="text-body-sm font-body-sm text-on-surface group-hover:text-primary transition-colors">
-												Pending
-											</span>
-										</label>
-										<label className="flex items-center gap-2 cursor-pointer group">
-											<input
-												type="checkbox"
-												checked={filterPaidOnHold}
-												onChange={(e) => setFilterPaidOnHold(e.target.checked)}
-												className="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4"
-											/>
-											<span className="text-body-sm font-body-sm text-on-surface group-hover:text-primary transition-colors">
-												Processing
-											</span>
-										</label>
-										<label className="flex items-center gap-2 cursor-pointer group">
-											<input
-												type="checkbox"
-												checked={filterShipped}
-												onChange={(e) => setFilterShipped(e.target.checked)}
-												className="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4"
-											/>
-											<span className="text-body-sm font-body-sm text-on-surface group-hover:text-primary transition-colors">
-												Shipped
-											</span>
-										</label>
-										<label className="flex items-center gap-2 cursor-pointer group">
-											<input
-												type="checkbox"
-												checked={filterReceived}
-												onChange={(e) => setFilterReceived(e.target.checked)}
-												className="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4"
-											/>
-											<span className="text-body-sm font-body-sm text-on-surface group-hover:text-primary transition-colors">
-												Received
-											</span>
-										</label>
-										<label className="flex items-center gap-2 cursor-pointer group">
-											<input
-												type="checkbox"
-												checked={filterCancelled}
-												onChange={(e) => setFilterCancelled(e.target.checked)}
-												className="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4"
-											/>
-											<span className="text-body-sm font-body-sm text-on-surface group-hover:text-primary transition-colors">
-												Cancelled
-											</span>
-										</label>
-									</div>
-								</div>
-
-								<div>
-									<label className="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider block mb-2">
-										Search
-									</label>
-									<input
-										type="text"
-										value={searchQuery}
-										onChange={(e) => setSearchQuery(e.target.value)}
-										placeholder="Product or order ID..."
-										className="w-full border border-outline-variant rounded-lg h-10 px-3 text-body-sm font-body-sm bg-surface-container-lowest text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-									/>
-								</div>
-							</div>
-						</div>
-					</aside>
-
-					<div className="lg:col-span-9">
-						{isLoading ? (
-							<div className="text-center py-12 font-body-md text-on-surface-variant">
-								Loading orders...
-							</div>
-						) : filteredOrders.length > 0 ? (
-							filteredOrders.map((order) => {
-								const statusInfo = getStatusDisplay(order.status);
-								return (
-									<div
-										key={order.orderId}
-										className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md mb-stack-md shadow-sm"
+				
+				<div className="flex-shrink-0 w-full sm:w-auto flex items-center gap-2">
+					<div className="relative">
+						<button 
+							onClick={() => setFilterOpen(!filterOpen)}
+							className="flex items-center gap-2 px-4 py-2 bg-surface border border-outline-variant rounded-lg font-label-md text-on-surface hover:bg-surface-container transition-colors"
+						>
+							<span className="material-symbols-outlined text-[18px]">filter_list</span>
+							Filters {statusFilter !== 'ALL' && <span className="w-2 h-2 rounded-full bg-primary"></span>}
+						</button>
+						
+						{filterOpen && (
+							<div className="absolute right-0 mt-2 w-48 bg-surface border border-outline-variant rounded-lg shadow-lg z-50 py-2">
+								<div className="px-4 py-2 text-label-sm text-on-surface-variant uppercase tracking-wider">Filter Status</div>
+								{['ALL', 'PENDING', 'PAID_ON_HOLD', 'SHIPPED', 'RECEIVED', 'CANCELLED'].map((s) => (
+									<button
+										key={s}
+										className={`w-full text-left px-4 py-2 font-body-sm hover:bg-surface-container transition-colors ${
+											statusFilter === s ? 'text-primary bg-primary-container/10 font-medium' : 'text-on-surface'
+										}`}
+										onClick={() => { setStatusFilter(s); setFilterOpen(false); }}
 									>
-										<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-stack-sm mb-stack-md pb-stack-sm border-b border-outline-variant">
-											<div className="flex items-center gap-3">
-												<span className="material-symbols-outlined text-primary">
-													receipt_long
-												</span>
-												<div>
-													<p className="text-label-md font-label-md text-on-surface font-mono-data">
-														{order.orderId}
-													</p>
-													<p className="text-body-sm text-body-sm text-on-surface-variant">
-														{formatDate(order.orderDate)}
-													</p>
-												</div>
-											</div>
-											<div
-												className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border ${statusInfo.class}`}
-											>
-												<span className="material-symbols-outlined text-[16px]">
-													{statusInfo.icon}
-												</span>
-												<span className="text-label-sm font-label-sm font-semibold">
-													{statusInfo.label}
-												</span>
-											</div>
-										</div>
-
-										<div className="space-y-3 mb-stack-md">
-											{order.items.map((item, idx) => (
-												<div key={idx} className="flex justify-between items-start">
-													<div className="flex-1">
-														<p className="text-body-md font-body-md text-on-surface">
-															{item.productName}
-															{item.isFlashSale && (
-																<span className="ml-2 text-label-sm text-error">
-																	⚡ Flash Sale
-																</span>
-															)}
-														</p>
-														<p className="text-body-sm text-on-surface-variant">
-															Qty: {item.quantity}
-														</p>
-													</div>
-													<p className="text-body-md font-mono-data text-on-surface">
-														Rp {(item.pricePerItem * item.quantity).toLocaleString("id-ID")}
-													</p>
-												</div>
-											))}
-										</div>
-
-										<div className="flex justify-between items-center pt-stack-sm border-t border-outline-variant">
-											<span className="text-label-md font-label-md text-on-surface-variant">
-												Total
-											</span>
-											<span className="text-headline-md font-headline-md text-primary font-bold">
-												Rp {order.totalAmount.toLocaleString("id-ID")}
-											</span>
-										</div>
-
-										<div className="flex gap-2 mt-stack-md">
-											{order.status === "SHIPPED" ? (
-												<button
-													onClick={() => handleReceiveOrder(order.orderId)}
-													disabled={processingOrderId === order.orderId}
-													className="flex-1 bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md py-2.5 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-												>
-													<span className="material-symbols-outlined text-[18px]">
-														{processingOrderId === order.orderId
-															? "progress_activity"
-															: "check_circle"}
-													</span>
-													{processingOrderId === order.orderId
-														? "Processing..."
-														: "Confirm Receipt"}
-												</button>
-											) : null}
-										</div>
-									</div>
-								);
-							})
-						) : (
-							<div className="text-center py-12 bg-surface-container-lowest border border-outline-variant rounded-xl">
-								<span className="material-symbols-outlined text-[48px] text-outline mb-2">
-									order_play
-								</span>
-								<p className="text-on-surface-variant">
-									No orders match your filter criteria.
-								</p>
+										{s === 'ALL' ? 'All Orders' : s === 'PAID_ON_HOLD' ? 'Processing' : s.charAt(0) + s.slice(1).toLowerCase()}
+									</button>
+								))}
 							</div>
 						)}
 					</div>
 				</div>
-			</main>
+			</section>
 
-			<footer className="w-full bg-surface border-t border-outline-variant py-stack-lg mt-auto">
-				<div className="max-w-container-max mx-auto px-margin-desktop text-center">
-					<p className="font-label-sm text-label-sm text-on-surface-variant">
-						© 2026 JatiStore. All rights reserved.
-					</p>
-				</div>
-			</footer>
+			{/* Order List Content */}
+			<div className="flex-1 space-y-stack-md">
+				{isLoading ? (
+					<div className="text-center py-12 font-body-md text-on-surface-variant">
+						Loading orders...
+					</div>
+				) : filteredOrders.length > 0 ? (
+					filteredOrders.map((order) => {
+						const statusInfo = getStatusDisplay(order.status);
+						return (
+							<article
+								key={order.orderId}
+								className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-md transition-shadow duration-300"
+							>
+								<div className="bg-surface-container-low px-stack-md py-stack-sm flex flex-wrap items-center justify-between border-b border-outline-variant gap-4">
+									<div className="flex flex-wrap gap-x-stack-lg gap-y-2">
+										<div>
+											<p className="text-[10px] text-on-surface-variant uppercase font-bold">Order #</p>
+											<p className="font-mono-data text-on-surface">{order.orderId}</p>
+										</div>
+										<div>
+											<p className="text-[10px] text-on-surface-variant uppercase font-bold">Date</p>
+											<p className="font-body-sm text-on-surface">{formatDate(order.orderDate)}</p>
+										</div>
+										<div>
+											<p className="text-[10px] text-on-surface-variant uppercase font-bold">Total</p>
+											<p className="font-body-sm font-semibold text-primary">Rp {order.totalAmount.toLocaleString("id-ID")}</p>
+										</div>
+									</div>
+									<span className={`px-3 py-1 rounded-full text-label-sm font-bold flex items-center gap-1 border ${statusInfo.class}`}>
+										<span className="material-symbols-outlined text-[16px]">{statusInfo.icon}</span>
+										{statusInfo.label.toUpperCase()}
+									</span>
+								</div>
+
+								<div className="p-stack-md space-y-4">
+									{order.items.map((item, idx) => (
+										<div key={idx} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+											<div className="flex items-center gap-4 flex-1">
+												<div className="w-16 h-16 bg-surface-container-high rounded-lg flex items-center justify-center shrink-0 overflow-hidden border border-outline-variant">
+													{item.imageUrl ? (
+														<img src={item.imageUrl} alt={item.productName} className="w-full h-full object-cover" />
+													) : (
+														<span className="material-symbols-outlined text-outline">inventory_2</span>
+													)}
+												</div>
+												<div>
+													<h4 className="font-label-md text-on-surface text-base">
+														{item.productName}
+														{item.isFlashSale && (
+															<span className="ml-2 text-[10px] text-error bg-error-container/30 px-2 py-0.5 rounded-full">
+																⚡ Flash Sale
+															</span>
+														)}
+													</h4>
+													<p className="text-body-sm font-medium mt-1">Qty: {item.quantity}</p>
+												</div>
+											</div>
+											<div className="sm:text-right w-full sm:w-auto flex sm:flex-col justify-between items-center sm:items-end">
+												<p className="text-[10px] text-on-surface-variant uppercase">Subtotal</p>
+												<p className="text-body-md font-mono-data text-on-surface font-semibold">
+													Rp {(item.pricePerItem * item.quantity).toLocaleString("id-ID")}
+												</p>
+											</div>
+										</div>
+									))}
+
+									<div className="flex gap-3 justify-end pt-4 border-t border-outline-variant/50">
+										{order.status === "SHIPPED" ? (
+											<button
+												onClick={() => handleReceiveOrder(order.orderId)}
+												disabled={processingOrderId === order.orderId}
+												className="bg-primary hover:bg-primary/90 text-on-primary font-label-md py-2 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm"
+											>
+												<span className="material-symbols-outlined text-[18px]">
+													{processingOrderId === order.orderId ? "progress_activity" : "check_circle"}
+												</span>
+												{processingOrderId === order.orderId ? "Processing..." : "Confirm Receipt"}
+											</button>
+										) : (
+											<button 
+											    onClick={() => setSelectedOrder(order)}
+											    className="text-on-surface-variant border border-outline-variant font-label-md py-2 px-6 rounded-lg hover:bg-surface-container-high transition-colors"
+											>
+												View Invoice
+											</button>
+										)}
+									</div>
+								</div>
+							</article>
+						);
+					})
+				) : (
+					<div className="text-center py-16 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm">
+						<span className="material-symbols-outlined text-[48px] text-outline mb-3">
+							order_play
+						</span>
+						<p className="text-on-surface-variant font-body-md">
+							No orders match your filter criteria.
+						</p>
+					</div>
+				)}
+			</div>
 
 			{showToast && (
-				<div
-					className="fixed bottom-6 right-6 z-50"
-					id="toast-container"
-				>
-					<div
-						className={`bg-inverse-surface text-inverse-on-surface border border-outline px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 max-w-sm ${toastAnimationClass}`}
-					>
-						<span className="material-symbols-outlined text-primary-fixed">
-							check_circle
-						</span>
-						<p className="font-body-md text-body-md flex-1">{toastMessage}</p>
-						<button
-							onClick={handleCloseToast}
-							className="text-inverse-on-surface hover:text-primary-fixed transition-colors"
-						>
-							<span className="material-symbols-outlined text-[20px]">
-								close
-							</span>
+				<div className="fixed bottom-6 right-6 z-50">
+					<div className={`bg-inverse-surface text-inverse-on-surface border border-outline px-6 py-4 rounded-xl shadow-lg flex items-center gap-3 max-w-sm ${toastAnimationClass}`}>
+						<span className="material-symbols-outlined text-primary-fixed">check_circle</span>
+						<p className="font-body-md flex-1">{toastMessage}</p>
+						<button onClick={handleCloseToast} className="text-inverse-on-surface hover:text-primary-fixed transition-colors">
+							<span className="material-symbols-outlined text-[20px]">close</span>
 						</button>
+					</div>
+				</div>
+			)}
+			
+			{/* Order Detail Modal */}
+			{selectedOrder && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+					<div className="bg-surface w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+						<div className="flex items-center justify-between p-6 border-b border-outline-variant bg-surface-container-lowest">
+							<div>
+								<h2 className="font-headline-md text-on-surface">Invoice Details</h2>
+								<p className="text-body-sm text-on-surface-variant">Order #{selectedOrder.orderId}</p>
+							</div>
+							<button 
+								onClick={() => setSelectedOrder(null)}
+								className="p-2 text-on-surface-variant hover:bg-surface-container rounded-full transition-colors"
+							>
+								<span className="material-symbols-outlined">close</span>
+							</button>
+						</div>
+						
+						<div className="p-6 overflow-y-auto flex-1 space-y-6">
+							<div className="flex flex-wrap justify-between gap-4 p-4 bg-surface-container-low rounded-xl border border-outline-variant/50">
+								<div>
+									<p className="text-label-sm text-on-surface-variant uppercase tracking-wider">Date</p>
+									<p className="font-body-md font-medium text-on-surface">{formatDate(selectedOrder.orderDate)}</p>
+								</div>
+								<div>
+									<p className="text-label-sm text-on-surface-variant uppercase tracking-wider">Status</p>
+									<p className="font-body-md font-medium text-on-surface">{getStatusDisplay(selectedOrder.status).label}</p>
+								</div>
+								<div>
+									<p className="text-label-sm text-on-surface-variant uppercase tracking-wider">Total Amount</p>
+									<p className="font-headline-md text-primary font-bold">Rp {selectedOrder.totalAmount.toLocaleString("id-ID")}</p>
+								</div>
+							</div>
+
+							<div>
+								<h3 className="font-label-md text-on-surface mb-3 uppercase tracking-wider">Order Items</h3>
+								<div className="space-y-3">
+									{selectedOrder.items.map((item, idx) => (
+										<div key={idx} className="flex justify-between items-center p-4 border border-outline-variant rounded-xl bg-surface-container-lowest gap-4">
+											<div className="flex items-center gap-4 flex-1">
+												<div className="w-12 h-12 bg-surface-container-high rounded-md flex items-center justify-center shrink-0 overflow-hidden border border-outline-variant">
+													{item.imageUrl ? (
+														<img src={item.imageUrl} alt={item.productName} className="w-full h-full object-cover" />
+													) : (
+														<span className="material-symbols-outlined text-outline text-[20px]">inventory_2</span>
+													)}
+												</div>
+												<div>
+													<p className="font-label-md text-on-surface text-base">{item.productName}</p>
+													<p className="text-body-sm text-on-surface-variant mt-1">
+														{item.quantity} x Rp {item.pricePerItem.toLocaleString("id-ID")}
+													</p>
+												</div>
+											</div>
+											<p className="font-mono-data font-semibold text-on-surface">
+												Rp {(item.quantity * item.pricePerItem).toLocaleString("id-ID")}
+											</p>
+										</div>
+									))}
+								</div>
+							</div>
+						</div>
+						
+						<div className="p-6 border-t border-outline-variant bg-surface-container-lowest flex justify-end gap-3">
+							<button 
+								onClick={() => setSelectedOrder(null)}
+								className="px-6 py-2 bg-primary text-on-primary rounded-xl font-label-md hover:bg-primary-container transition-colors"
+							>
+								Close
+							</button>
+						</div>
 					</div>
 				</div>
 			)}

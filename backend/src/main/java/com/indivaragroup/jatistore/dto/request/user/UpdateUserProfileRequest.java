@@ -20,4 +20,12 @@ public class UpdateUserProfileRequest {
     @NotBlank(message = "Phone number is required")
     @Size(max = 20, message = "Phone number must be less than 20 characters")
     private String phoneNumber;
+
+    @NotBlank(message = "Email is required")
+    @Size(max = 255, message = "Email must be less than 255 characters")
+    private String email;
+
+    @NotBlank(message = "Username is required")
+    @Size(max = 255, message = "Username must be less than 255 characters")
+    private String username;
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { SellerLayout } from '../../components/layout/seller/SellerLayout';
-import { sellerFlashSaleService, type AvailableFlashSaleResponse, type SellerFlashSaleItemResponse, type SellerFlashSaleItemsWrapperResponse } from '../../service/seller/flash-sale.service';
+import { sellerFlashSaleService, type AvailableFlashSaleResponse, type SellerFlashSaleItemResponse } from '../../service/seller/flash-sale.service';
 import { productService, type Product } from '../../service/seller/product.service';
 
 export default function FlashSaleManager() {

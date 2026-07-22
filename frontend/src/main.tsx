@@ -3,11 +3,13 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import CatalogPage from "./pages/CatalogPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
-import LoginPage from "./pages/LoginPage";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
-import { type Product, type CartItem } from "./data/productsMock";
+import UserProfilePage from "./pages/UserProfilePage";
+import UserFinancialsPage from "./pages/UserFinancialsPage";
+import { UserLayout } from "./components/layout/user/UserLayout";
+
 import api from "./lib/api";
 
 import "./App.css";
@@ -16,6 +18,7 @@ import Dashboard from "./container/seller/Dashboard";
 import ProductManagement from "./container/seller/Product";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import OrderFulfillment from "./container/seller/OrderFulfillment";
+import { Outlet } from "react-router-dom";
 
 import SellerFlashSaleManager from "./container/seller/FlashSaleManager";
 import Financials from "./container/seller/Financials";
@@ -31,7 +34,6 @@ const App = () => {
   const [isCurrentProductFlashSale, setIsCurrentProductFlashSale] = useState<boolean>(false);
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartCount, setCartCount] = useState<number>(0);
   const [pendingProductId, setPendingProductId] = useState<string | null>(
     location.state?.pendingProductId || null
@@ -55,6 +57,7 @@ const App = () => {
     if (!isLoggedIn) {
       navigate("/auth/login", { state: { returnToPage: "cart" } });
     } else {
+      navigate("/");
       setCurrentPage("cart");
     }
   };
@@ -103,6 +106,7 @@ const App = () => {
     }
   };
 
+
   useEffect(() => {
     if (isLoggedIn && pendingProductId) {
       handleAddToCart(pendingProductId, 1).then(() => {
@@ -123,6 +127,7 @@ const App = () => {
               <button
                 onClick={() => {
                   setCatalogSearchQuery("");
+                  navigate("/");
                   setCurrentPage("catalog");
                 }}
                 className="text-headline-md font-headline-lg font-bold text-primary hover:opacity-80 transition-opacity"
@@ -139,7 +144,7 @@ const App = () => {
               {currentPage === "checkout" ? (
                 isLoggedIn && (
                   <button
-                    onClick={() => setCurrentPage("history")}
+                    onClick={() => navigate("/user/profile")}
                     className="flex items-center gap-1 font-label-md text-label-md text-on-surface hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container"
                   >
                     <span className="material-symbols-outlined text-[24px]">account_circle</span>
@@ -169,7 +174,7 @@ const App = () => {
                   ) : (
                     <>
                       <button
-                        onClick={() => setCurrentPage("history")}
+                        onClick={() => navigate("/user/profile")}
                         className="flex items-center gap-1 font-label-md text-label-md text-on-surface hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container"
                       >
                         <span className="material-symbols-outlined text-[24px]">account_circle</span>
@@ -187,8 +192,8 @@ const App = () => {
                           }
                           localStorage.removeItem("jatistore_token");
                           setIsLoggedIn(false);
-                          setCartItems([]);
                           setCartCount(0);
+                          navigate("/");
                           setCurrentPage("catalog");
                         }}
                         className="flex items-center gap-1 font-label-md text-label-md text-error font-medium hover:underline ml-2"
@@ -205,21 +210,19 @@ const App = () => {
         </nav>
 
       {/* RENDER KONTEN HALAMAN */}
-      {currentPage === "catalog" && (
-        <CatalogPage 
-          onProductClick={(productId, isFlashSale = false) => {
+      {location.pathname.startsWith("/user") ? (
+        <Outlet />
+      ) : (
+        <>
+          {currentPage === "catalog" && (
+            <CatalogPage 
+              onProductClick={(productId, isFlashSale = false) => {
             setSelectedProduct(productId);
             setIsCurrentProductFlashSale(isFlashSale);
             setCurrentPage("detail");
           }}
           onCartClick={handleNavigateToCart}
           onAddToCart={handleAddToCart} 
-          isLoggedIn={isLoggedIn}
-          onLoginClick={() => navigate("/auth/login", { state: { returnToPage: currentPage } })}
-          onLogoutClick={() => {
-            setIsLoggedIn(false);
-            setCartItems([]);
-          }}
           searchQuery={catalogSearchQuery}
           onCheckout={async (products) => {
             handleAddToCart(products[0].id, 1);
@@ -281,17 +284,11 @@ const App = () => {
           onPaymentSuccess={() => {
             setSelectedCheckoutItems([]);
             fetchCartCount();
-            setCurrentPage("history");
+            navigate("/user/orders");
           }}
         />
       )}
-
-      {currentPage === "history" && (
-        <OrderHistoryPage 
-          onNavigateHome={() => setCurrentPage("catalog")}
-          onNavigateCart={() => setCurrentPage("cart")}
-          cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
-        />
+        </>
       )}
     </div>
   );
@@ -306,7 +303,17 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route path="/*" element={<App />} />
+        <Route path="/" element={<App />}>
+          <Route path="user" element={<ProtectedRoute allowedRoles={["USER"]} />}>
+            <Route element={<UserLayout />}>
+              <Route path="profile" element={<UserProfilePage />} />
+              <Route path="financials" element={<UserFinancialsPage />} />
+              <Route path="orders" element={<OrderHistoryPage />} />
+            </Route>
+          </Route>
+          <Route path="*" element={<></>} />
+        </Route>
+        
         <Route path="/auth/login" element={<Login />} />
         
         {/* Seller Routes */}

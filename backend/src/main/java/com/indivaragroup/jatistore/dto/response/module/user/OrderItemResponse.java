@@ -16,4 +16,5 @@ public class OrderItemResponse {
     private Integer quantity;
     private BigDecimal pricePerItem;
     private Boolean isFlashSale;
+    private String imageUrl;
 }

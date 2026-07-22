@@ -18,6 +18,7 @@ public enum RestApiError {
     AUT_0008(HttpStatus.UNAUTHORIZED.value(), "Invalid Token"),
     AUT_0009(HttpStatus.UNAUTHORIZED.value(), "Session not found"),
     AUT_0010(HttpStatus.FORBIDDEN.value(), "Account has been suspended or deactivated."),
+    GEN_0007(HttpStatus.CONFLICT.value(), "Email or Username already taken"),
 
     USR_0001(HttpStatus.NOT_FOUND.value(), "Product not found"),
     USR_0003(HttpStatus.BAD_REQUEST.value(), "Insufficient stock"),

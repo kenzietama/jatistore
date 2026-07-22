@@ -46,8 +46,20 @@ public class UserService {
                     return new CoreThrowHandler(RestApiError.GEN_0005);
                 });
 
+        if (!user.getEmail().equals(request.getEmail()) && authRepository.existsByEmail(request.getEmail())) {
+            log.warn("Email {} is already taken", request.getEmail());
+            throw new CoreThrowHandler(RestApiError.GEN_0007);
+        }
+
+        if (!user.getUsername().equals(request.getUsername()) && authRepository.existsByUsername(request.getUsername())) {
+            log.warn("Username {} is already taken", request.getUsername());
+            throw new CoreThrowHandler(RestApiError.GEN_0007); 
+        }
+
         user.setFullName(request.getFullName());
         user.setPhoneNumber(request.getPhoneNumber());
+        user.setEmail(request.getEmail());
+        user.setUsername(request.getUsername());
         authRepository.save(user);
 
         log.info("User profile updated successfully for email: {}", email);
