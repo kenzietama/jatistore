@@ -104,14 +104,13 @@ public class UserCheckoutControllerTest {
     @Test
     void payOrder_Success_WalletPayment() throws Exception {
         RestApiResponse<UserCheckoutResponse> successResponse = RestApiResponse.success(mockResponse);
-        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyList(), anyString()))
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
                 .thenReturn(successResponse);
 
         mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
                         .principal(mockPrincipal)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(walletPayRequest))
-                        .param("cartItemIds", cartItemIds.get(0).toString()))
+                        .content(objectMapper.writeValueAsString(walletPayRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.order_id").value(mockResponse.getOrder_id().toString()))
@@ -123,14 +122,13 @@ public class UserCheckoutControllerTest {
     @Test
     void payOrder_Success_CardPayment() throws Exception {
         RestApiResponse<UserCheckoutResponse> successResponse = RestApiResponse.success(mockResponse);
-        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyList(), anyString()))
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
                 .thenReturn(successResponse);
 
         mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
                         .principal(mockPrincipal)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(cardPayRequest))
-                        .param("cartItemIds", cartItemIds.get(0).toString()))
+                        .content(objectMapper.writeValueAsString(cardPayRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data").exists());
@@ -145,99 +143,91 @@ public class UserCheckoutControllerTest {
         mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
                         .principal(mockPrincipal)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalidRequest))
-                        .param("cartItemIds", cartItemIds.get(0).toString()))
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void payOrder_Fail_OrderNotFound() throws Exception {
-        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyList(), anyString()))
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
                 .thenThrow(new CoreThrowHandler(RestApiError.USR_0015));
 
         mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
                         .principal(mockPrincipal)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(walletPayRequest))
-                        .param("cartItemIds", cartItemIds.get(0).toString()))
+                        .content(objectMapper.writeValueAsString(walletPayRequest)))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void payOrder_Fail_OrderNotPayable() throws Exception {
-        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyList(), anyString()))
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
                 .thenThrow(new CoreThrowHandler(RestApiError.USR_0022));
 
         mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
                         .principal(mockPrincipal)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(walletPayRequest))
-                        .param("cartItemIds", cartItemIds.get(0).toString()))
+                        .content(objectMapper.writeValueAsString(walletPayRequest)))
                 .andExpect(status().isConflict());
     }
 
     @Test
     void payOrder_Fail_AmountChanged() throws Exception {
-        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyList(), anyString()))
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
                 .thenThrow(new CoreThrowHandler(RestApiError.USR_0023));
 
         mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
                         .principal(mockPrincipal)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(walletPayRequest))
-                        .param("cartItemIds", cartItemIds.get(0).toString()))
+                        .content(objectMapper.writeValueAsString(walletPayRequest)))
                 .andExpect(status().isConflict());
     }
 
     @Test
     void payOrder_Fail_InsufficientStock() throws Exception {
-        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyList(), anyString()))
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
                 .thenThrow(new CoreThrowHandler(RestApiError.USR_0011));
 
         mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
                         .principal(mockPrincipal)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(walletPayRequest))
-                        .param("cartItemIds", cartItemIds.get(0).toString()))
+                        .content(objectMapper.writeValueAsString(walletPayRequest)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void payOrder_Fail_PaymentDeclined_Wallet() throws Exception {
-        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyList(), anyString()))
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
                 .thenThrow(new CoreThrowHandler(RestApiError.USR_0013));
 
         mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
                         .principal(mockPrincipal)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(walletPayRequest))
-                        .param("cartItemIds", cartItemIds.get(0).toString()))
+                        .content(objectMapper.writeValueAsString(walletPayRequest)))
                 .andExpect(status().isPaymentRequired());
     }
 
     @Test
     void payOrder_Fail_PaymentDeclined_Card() throws Exception {
-        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyList(), anyString()))
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
                 .thenThrow(new CoreThrowHandler(RestApiError.USR_0013));
 
         mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
                         .principal(mockPrincipal)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(cardPayRequest))
-                        .param("cartItemIds", cartItemIds.get(0).toString()))
+                        .content(objectMapper.writeValueAsString(cardPayRequest)))
                 .andExpect(status().isPaymentRequired());
     }
 
     @Test
     void payOrder_Fail_PaymentTimeout() throws Exception {
-        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyList(), anyString()))
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
                 .thenThrow(new CoreThrowHandler(RestApiError.USR_0017));
 
         mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
                         .principal(mockPrincipal)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(walletPayRequest))
-                        .param("cartItemIds", cartItemIds.get(0).toString()))
+                        .content(objectMapper.writeValueAsString(walletPayRequest)))
                 .andExpect(status().isRequestTimeout());
     }
 }

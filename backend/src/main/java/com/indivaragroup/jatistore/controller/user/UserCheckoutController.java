@@ -27,9 +27,8 @@ public class UserCheckoutController {
     public RestApiResponse<UserCheckoutResponse> payOrder(
             @PathVariable UUID orderId,
             @Valid @RequestBody PayOrderRequest payOrderRequest,
-            @RequestParam List<UUID> cartItemIds,
             Principal principal
     ) throws CoreThrowHandler {
-        return userCheckoutService.payOrder(orderId, payOrderRequest, cartItemIds, principal.getName());
+        return userCheckoutService.payOrder(orderId, payOrderRequest, principal.getName());
     }
 }

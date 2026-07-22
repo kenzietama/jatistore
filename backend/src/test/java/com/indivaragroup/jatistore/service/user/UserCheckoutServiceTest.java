@@ -1,10 +1,12 @@
 package com.indivaragroup.jatistore.service.user;
 
 import com.indivaragroup.jatistore.data.entity.Order;
+import com.indivaragroup.jatistore.data.entity.OrderDetail;
 import com.indivaragroup.jatistore.data.entity.User;
 import com.indivaragroup.jatistore.data.entity.Product;
 import com.indivaragroup.jatistore.data.entity.Store;
 import com.indivaragroup.jatistore.data.entity.Seller;
+import com.indivaragroup.jatistore.data.entity.Cart;
 import com.indivaragroup.jatistore.data.entity.CartItem;
 import com.indivaragroup.jatistore.data.entity.PaymentCard;
 import com.indivaragroup.jatistore.data.entity.Transaction;
@@ -19,7 +21,9 @@ import com.indivaragroup.jatistore.dto.response.module.user.UserCheckoutResponse
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.repository.AuthRepository;
+import com.indivaragroup.jatistore.repository.CartRepository;
 import com.indivaragroup.jatistore.repository.OrderRepository;
+import com.indivaragroup.jatistore.repository.OrderDetailRepository;
 import com.indivaragroup.jatistore.repository.CartItemRepository;
 import com.indivaragroup.jatistore.repository.PaymentCardRepository;
 import com.indivaragroup.jatistore.repository.TransactionRepository;
@@ -54,7 +58,13 @@ class UserCheckoutServiceTest {
     private CartItemRepository cartItemRepository;
 
     @Mock
+    private CartRepository cartRepository;
+
+    @Mock
     private OrderRepository orderRepository;
+
+    @Mock
+    private OrderDetailRepository orderDetailRepository;
 
     @Mock
     private AuthRepository authRepository;
@@ -78,8 +88,10 @@ class UserCheckoutServiceTest {
     private Product mockProduct;
     private Store mockStore;
     private Seller mockSeller;
+    private Cart mockCart;
     private CartItem mockCartItem;
     private Order mockOrder;
+    private OrderDetail mockOrderDetail;
     private Transaction mockTransaction;
     private PaymentCard mockPaymentCard;
     private CreateOrderRequest createOrderRequest;
@@ -115,12 +127,25 @@ class UserCheckoutServiceTest {
         mockCartItem.setProduct(mockProduct);
         mockCartItem.setQuantity(2);
 
+        mockCart = new Cart();
+        mockCart.setId(UUID.randomUUID());
+        mockCart.setUserId(mockUser.getId());
+
+        mockOrderDetail = new OrderDetail();
+        mockOrderDetail.setId(UUID.randomUUID());
+        mockOrderDetail.setProduct(mockProduct);
+        mockOrderDetail.setQuantity(2);
+        mockOrderDetail.setPricePerItem(BigDecimal.valueOf(100));
+        mockOrderDetail.setFlashSale(false);
+
         mockOrder = Order.builder()
                 .id(UUID.randomUUID())
                 .user(mockUser)
                 .totalAmount(BigDecimal.valueOf(200))
                 .status(OrderStatus.PENDING)
                 .build();
+        mockOrder.setOrderDetails(List.of(mockOrderDetail));
+        mockOrderDetail.setOrder(mockOrder);
 
         mockTransaction = Transaction.builder()
                 .id(UUID.randomUUID())
@@ -161,6 +186,7 @@ class UserCheckoutServiceTest {
         when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser));
         when(cartItemRepository.calculateTotalAmount(any())).thenReturn(BigDecimal.valueOf(200));
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
+        when(orderDetailRepository.saveAll(anyList())).thenReturn(List.of());
 
         RestApiResponse<CreateOrderResponse> response = userCheckoutService.createOrder(
                 createOrderRequest, "user@example.com");
@@ -175,6 +201,7 @@ class UserCheckoutServiceTest {
         verify(cartItemRepository).selectDistinctStore(any());
         verify(cartItemRepository).findAllById(anyList());
         verify(orderRepository).save(any(Order.class));
+        verify(orderDetailRepository).saveAll(anyList());
     }
 
     @Test
@@ -220,8 +247,6 @@ class UserCheckoutServiceTest {
 
     @Test
     void payOrder_Success_WalletPayment() throws CoreThrowHandler {
-        List<UUID> cartItemIds = List.of(mockCartItem.getId());
-
         // Mock order with PAID_ON_HOLD status for final read
         Order paidOrder = Order.builder()
                 .id(mockOrder.getId())
@@ -241,7 +266,9 @@ class UserCheckoutServiceTest {
         when(orderRepository.findById(mockOrder.getId()))
                 .thenReturn(Optional.of(mockOrder))
                 .thenReturn(Optional.of(paidOrder));
-        when(cartItemRepository.findAllById(cartItemIds)).thenReturn(List.of(mockCartItem));
+        when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser));
+        when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockCart));
+        when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of(mockCartItem));
         when(cartItemRepository.calculateTotalAmount(any())).thenReturn(BigDecimal.valueOf(200));
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
         when(transactionRepository.findById(mockTransaction.getId())).thenReturn(Optional.of(successTransaction));
@@ -251,7 +278,7 @@ class UserCheckoutServiceTest {
         doNothing().when(checkoutFinalizer).finalizeOrder(any(), anyList());
 
         RestApiResponse<UserCheckoutResponse> response = userCheckoutService.payOrder(
-                mockOrder.getId(), walletPayRequest, cartItemIds, "user@example.com");
+                mockOrder.getId(), walletPayRequest, "user@example.com");
 
         assertNotNull(response);
         assertEquals(200, response.getRestApiResponseHttpCode());
@@ -263,8 +290,6 @@ class UserCheckoutServiceTest {
 
     @Test
     void payOrder_Success_CardPayment() throws CoreThrowHandler {
-        List<UUID> cartItemIds = List.of(mockCartItem.getId());
-
         Order paidOrder = Order.builder()
                 .id(mockOrder.getId())
                 .user(mockUser)
@@ -284,9 +309,10 @@ class UserCheckoutServiceTest {
         when(orderRepository.findById(mockOrder.getId()))
                 .thenReturn(Optional.of(mockOrder))
                 .thenReturn(Optional.of(paidOrder));
-        when(cartItemRepository.findAllById(cartItemIds)).thenReturn(List.of(mockCartItem));
-        when(cartItemRepository.calculateTotalAmount(any())).thenReturn(BigDecimal.valueOf(200));
         when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser));
+        when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockCart));
+        when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of(mockCartItem));
+        when(cartItemRepository.calculateTotalAmount(any())).thenReturn(BigDecimal.valueOf(200));
         when(paymentCardRepository.findByCardNumber(any())).thenReturn(Optional.of(mockPaymentCard));
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
         when(transactionRepository.findById(mockTransaction.getId())).thenReturn(Optional.of(successTransaction));
@@ -296,7 +322,7 @@ class UserCheckoutServiceTest {
         doNothing().when(checkoutFinalizer).finalizeOrder(any(), anyList());
 
         RestApiResponse<UserCheckoutResponse> response = userCheckoutService.payOrder(
-                mockOrder.getId(), cardPayRequest, cartItemIds, "user@example.com");
+                mockOrder.getId(), cardPayRequest, "user@example.com");
 
         assertNotNull(response);
         assertEquals(200, response.getRestApiResponseHttpCode());
@@ -311,7 +337,7 @@ class UserCheckoutServiceTest {
 
         CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
             userCheckoutService.payOrder(
-                    UUID.randomUUID(), walletPayRequest, List.of(mockCartItem.getId()), "user@example.com");
+                    UUID.randomUUID(), walletPayRequest, "user@example.com");
         });
 
         assertEquals(RestApiError.USR_0015.getCode(), exception.getCode());
@@ -328,7 +354,7 @@ class UserCheckoutServiceTest {
 
         CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
             userCheckoutService.payOrder(
-                    mockOrder.getId(), walletPayRequest, List.of(mockCartItem.getId()), "user@example.com");
+                    mockOrder.getId(), walletPayRequest, "user@example.com");
         });
 
         assertEquals(RestApiError.USR_0015.getCode(), exception.getCode());
@@ -341,7 +367,7 @@ class UserCheckoutServiceTest {
 
         CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
             userCheckoutService.payOrder(
-                    mockOrder.getId(), walletPayRequest, List.of(mockCartItem.getId()), "user@example.com");
+                    mockOrder.getId(), walletPayRequest, "user@example.com");
         });
 
         assertEquals(RestApiError.USR_0022.getCode(), exception.getCode());
@@ -350,14 +376,15 @@ class UserCheckoutServiceTest {
     @Test
     void payOrder_Fail_StockChangedAfterOrderCreation() {
         mockProduct.setStock(1);
-        List<UUID> cartItemIds = List.of(mockCartItem.getId());
         when(orderRepository.findById(mockOrder.getId())).thenReturn(Optional.of(mockOrder));
-        when(cartItemRepository.findAllById(cartItemIds)).thenReturn(List.of(mockCartItem));
+        when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser));
+        when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockCart));
+        when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of(mockCartItem));
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
 
         CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
             userCheckoutService.payOrder(
-                    mockOrder.getId(), walletPayRequest, cartItemIds, "user@example.com");
+                    mockOrder.getId(), walletPayRequest, "user@example.com");
         });
 
         assertEquals(RestApiError.USR_0011.getCode(), exception.getCode());
@@ -366,15 +393,16 @@ class UserCheckoutServiceTest {
 
     @Test
     void payOrder_Fail_AmountChangedAfterOrderCreation() {
-        List<UUID> cartItemIds = List.of(mockCartItem.getId());
         when(orderRepository.findById(mockOrder.getId())).thenReturn(Optional.of(mockOrder));
-        when(cartItemRepository.findAllById(cartItemIds)).thenReturn(List.of(mockCartItem));
+        when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser));
+        when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockCart));
+        when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of(mockCartItem));
         when(cartItemRepository.calculateTotalAmount(any())).thenReturn(BigDecimal.valueOf(250));
         when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
 
         CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
             userCheckoutService.payOrder(
-                    mockOrder.getId(), walletPayRequest, cartItemIds, "user@example.com");
+                    mockOrder.getId(), walletPayRequest, "user@example.com");
         });
 
         assertEquals(RestApiError.USR_0023.getCode(), exception.getCode());
@@ -383,9 +411,10 @@ class UserCheckoutServiceTest {
 
     @Test
     void payOrder_Fail_PaymentDeclined_Wallet() {
-        List<UUID> cartItemIds = List.of(mockCartItem.getId());
         when(orderRepository.findById(mockOrder.getId())).thenReturn(Optional.of(mockOrder));
-        when(cartItemRepository.findAllById(cartItemIds)).thenReturn(List.of(mockCartItem));
+        when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser));
+        when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockCart));
+        when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of(mockCartItem));
         when(cartItemRepository.calculateTotalAmount(any())).thenReturn(BigDecimal.valueOf(200));
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
         when(paymentGatewayClient.chargeWallet(any()))
@@ -393,7 +422,7 @@ class UserCheckoutServiceTest {
 
         CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
             userCheckoutService.payOrder(
-                    mockOrder.getId(), walletPayRequest, cartItemIds, "user@example.com");
+                    mockOrder.getId(), walletPayRequest, "user@example.com");
         });
 
         assertEquals(RestApiError.USR_0013.getCode(), exception.getCode());
@@ -401,11 +430,11 @@ class UserCheckoutServiceTest {
 
     @Test
     void payOrder_Fail_PaymentDeclined_Card() {
-        List<UUID> cartItemIds = List.of(mockCartItem.getId());
         when(orderRepository.findById(mockOrder.getId())).thenReturn(Optional.of(mockOrder));
-        when(cartItemRepository.findAllById(cartItemIds)).thenReturn(List.of(mockCartItem));
-        when(cartItemRepository.calculateTotalAmount(any())).thenReturn(BigDecimal.valueOf(200));
         when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser));
+        when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockCart));
+        when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of(mockCartItem));
+        when(cartItemRepository.calculateTotalAmount(any())).thenReturn(BigDecimal.valueOf(200));
         when(paymentCardRepository.findByCardNumber(any())).thenReturn(Optional.of(mockPaymentCard));
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
         when(paymentGatewayClient.chargeCard(any()))
@@ -414,7 +443,7 @@ class UserCheckoutServiceTest {
 
         CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
             userCheckoutService.payOrder(
-                    mockOrder.getId(), cardPayRequest, cartItemIds, "user@example.com");
+                    mockOrder.getId(), cardPayRequest, "user@example.com");
         });
 
         assertEquals(RestApiError.USR_0013.getCode(), exception.getCode());
@@ -422,16 +451,17 @@ class UserCheckoutServiceTest {
 
     @Test
     void payOrder_Fail_PaymentTimeout() {
-        List<UUID> cartItemIds = List.of(mockCartItem.getId());
         when(orderRepository.findById(mockOrder.getId())).thenReturn(Optional.of(mockOrder));
-        when(cartItemRepository.findAllById(cartItemIds)).thenReturn(List.of(mockCartItem));
+        when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser));
+        when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockCart));
+        when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of(mockCartItem));
         when(cartItemRepository.calculateTotalAmount(any())).thenReturn(BigDecimal.valueOf(200));
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
         when(paymentGatewayClient.chargeWallet(any())).thenThrow(new ResourceAccessException("Timeout"));
 
         CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
             userCheckoutService.payOrder(
-                    mockOrder.getId(), walletPayRequest, cartItemIds, "user@example.com");
+                    mockOrder.getId(), walletPayRequest, "user@example.com");
         });
 
         assertEquals(RestApiError.USR_0017.getCode(), exception.getCode());
@@ -439,16 +469,17 @@ class UserCheckoutServiceTest {
 
     @Test
     void payOrder_Fail_PaymentGatewayError() {
-        List<UUID> cartItemIds = List.of(mockCartItem.getId());
         when(orderRepository.findById(mockOrder.getId())).thenReturn(Optional.of(mockOrder));
-        when(cartItemRepository.findAllById(cartItemIds)).thenReturn(List.of(mockCartItem));
+        when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser));
+        when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockCart));
+        when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of(mockCartItem));
         when(cartItemRepository.calculateTotalAmount(any())).thenReturn(BigDecimal.valueOf(200));
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
         when(paymentGatewayClient.chargeWallet(any())).thenThrow(new RestClientException("Gateway error"));
 
         CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
             userCheckoutService.payOrder(
-                    mockOrder.getId(), walletPayRequest, cartItemIds, "user@example.com");
+                    mockOrder.getId(), walletPayRequest, "user@example.com");
         });
 
         assertEquals(RestApiError.USR_0014.getCode(), exception.getCode());

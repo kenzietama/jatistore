@@ -16,6 +16,9 @@ public interface CartItemRepository extends JpaRepository<CartItem, UUID> {
 
     List<CartItem> findByCartId(UUID cartId);
 
+    @Query("SELECT ci FROM CartItem ci WHERE ci.cart = :cart AND ci.product.id IN :productIds")
+    List<CartItem> findByCartAndProductIdIn(@Param("cart") com.indivaragroup.jatistore.data.entity.Cart cart, @Param("productIds") List<UUID> productIds);
+
     @Query(value = "SELECT COUNT(DISTINCT p.store_id) " +
             "FROM trx_cart_items ci " +
             "JOIN mst_products p ON ci.product_id = p.id " +

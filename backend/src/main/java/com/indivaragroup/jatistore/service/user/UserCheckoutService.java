@@ -1,6 +1,8 @@
 package com.indivaragroup.jatistore.service.user;
 
+import com.indivaragroup.jatistore.data.entity.Cart;
 import com.indivaragroup.jatistore.data.entity.Order;
+import com.indivaragroup.jatistore.data.entity.OrderDetail;
 import com.indivaragroup.jatistore.data.entity.User;
 import com.indivaragroup.jatistore.data.entity.PaymentCard;
 import com.indivaragroup.jatistore.data.entity.Transaction;
@@ -18,8 +20,10 @@ import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.audit.Audit;
 import com.indivaragroup.jatistore.repository.AuthRepository;
+import com.indivaragroup.jatistore.repository.CartRepository;
 import com.indivaragroup.jatistore.repository.CartItemRepository;
 import com.indivaragroup.jatistore.repository.OrderRepository;
+import com.indivaragroup.jatistore.repository.OrderDetailRepository;
 import com.indivaragroup.jatistore.repository.PaymentCardRepository;
 import com.indivaragroup.jatistore.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +47,9 @@ import java.util.UUID;
 public class UserCheckoutService {
 
     private final CartItemRepository cartItemRepository;
+    private final CartRepository cartRepository;
     private final OrderRepository orderRepository;
+    private final OrderDetailRepository orderDetailRepository;
     private final AuthRepository authRepository;
     private final TransactionRepository transactionRepository;
     private final PaymentCardRepository paymentCardRepository;
@@ -93,6 +99,19 @@ public class UserCheckoutService {
                 .build();
         order = orderRepository.save(order);
 
+        // 6. Create order details
+        Order finalOrder = order;
+        List<OrderDetail> orderDetails = cartItems.stream().map(cartItem -> {
+            OrderDetail detail = new OrderDetail();
+            detail.setOrder(finalOrder);
+            detail.setProduct(cartItem.getProduct());
+            detail.setQuantity(cartItem.getQuantity());
+            detail.setPricePerItem(cartItem.getProduct().getPrice());
+            detail.setFlashSale(false); // TODO: detect flash sale items
+            return detail;
+        }).toList();
+        orderDetailRepository.saveAll(orderDetails);
+
         return RestApiResponse.success(CreateOrderResponse.builder()
                 .orderId(order.getId())
                 .totalAmount(order.getTotalAmount())
@@ -105,14 +124,13 @@ public class UserCheckoutService {
     public RestApiResponse<UserCheckoutResponse> payOrder(
             UUID orderId,
             PayOrderRequest request,
-            List<UUID> cartItemIds,
             String email
     ) throws CoreThrowHandler {
         // Guard 1 & 2: Ownership and status check (in one transaction)
         Order order = validateOrderForPayment(orderId, email);
 
         // Re-validate stock and amount
-        List<CartItem> cartItems = revalidateStockAndAmount(order, cartItemIds, email);
+        List<CartItem> cartItems = revalidateStockAndAmount(order, email);
 
         // Create transaction and call payment gateway
         Transaction transaction = createPendingTransaction(order, request, email);
@@ -138,8 +156,20 @@ public class UserCheckoutService {
     }
 
     @Transactional
-    protected List<CartItem> revalidateStockAndAmount(Order order, List<UUID> cartItemIds, String email) {
-        List<CartItem> cartItems = cartItemRepository.findAllById(cartItemIds);
+    protected List<CartItem> revalidateStockAndAmount(Order order, String email) {
+        // Get product IDs from order details
+        List<UUID> productIds = order.getOrderDetails().stream()
+                .map(detail -> detail.getProduct().getId())
+                .toList();
+
+        // Find user's cart and get matching cart items
+        User user = authRepository.findByEmail(email)
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.USR_0006));
+
+        Cart cart = cartRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.USR_0009));
+
+        List<CartItem> cartItems = cartItemRepository.findByCartAndProductIdIn(cart, productIds);
 
         if (cartItems.isEmpty()) {
             order.setStatus(OrderStatus.CANCELLED);
@@ -159,8 +189,8 @@ public class UserCheckoutService {
         }
 
         // Recalculate and validate amount
-        UUID[] cartItemIdsArray = cartItemIds.toArray(new UUID[0]);
-        BigDecimal recalculated = cartItemRepository.calculateTotalAmount(cartItemIdsArray);
+        UUID[] cartItemIds = cartItems.stream().map(CartItem::getId).toArray(UUID[]::new);
+        BigDecimal recalculated = cartItemRepository.calculateTotalAmount(cartItemIds);
         if (recalculated.compareTo(order.getTotalAmount()) != 0) {
             order.setStatus(OrderStatus.CANCELLED);
             orderRepository.save(order);
