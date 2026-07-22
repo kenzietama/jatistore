@@ -231,20 +231,51 @@ export const AuditTrails = () => {
 
               <div>
                 <p className="text-[11px] font-semibold text-outline uppercase tracking-wider mb-1">Payload</p>
-                <div className="p-3 bg-surface-container-lowest border border-outline-variant/30 rounded-lg overflow-x-auto max-h-[300px]">
-                  <pre className="font-mono-data text-[12px] text-on-surface whitespace-pre-wrap break-all">
-                    {(() => {
-                      if (!selectedLog.payload) return 'No payload recorded.';
-                      try {
-                        const parsed = typeof selectedLog.payload === 'string' 
-                          ? JSON.parse(selectedLog.payload) 
-                          : selectedLog.payload;
-                        return JSON.stringify(parsed, null, 2);
-                      } catch (e) {
-                        return String(selectedLog.payload);
+                <div className="p-3 bg-surface-container-lowest border border-outline-variant/30 rounded-lg overflow-y-auto max-h-[300px] text-[13px]">
+                  {(() => {
+                    if (!selectedLog.payload) return <span className="text-on-surface-variant italic">No payload recorded.</span>;
+                    try {
+                      const parsed = typeof selectedLog.payload === 'string' 
+                        ? JSON.parse(selectedLog.payload) 
+                        : selectedLog.payload;
+                        
+                      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+                        return (
+                          <div className="flex flex-col gap-2.5">
+                            {Object.entries(parsed).map(([key, value]) => {
+                              // Make camelCase or snake_case readable
+                              const readableKey = key
+                                .replace(/_/g, ' ')
+                                .replace(/([A-Z])/g, ' $1')
+                                .replace(/\s+/g, ' ')
+                                .trim()
+                                .split(' ')
+                                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                                .join(' ');
+                                
+                              return (
+                                <div key={key} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4 border-b border-outline-variant/30 pb-2.5 last:border-0 last:pb-0">
+                                  <div className="w-full sm:w-1/3 font-medium text-on-surface-variant">{readableKey}</div>
+                                  <div className="w-full sm:w-2/3 text-on-surface font-medium break-words">
+                                    {Array.isArray(value) 
+                                      ? value.join(', ')
+                                      : typeof value === 'object' && value !== null
+                                        ? JSON.stringify(value, null, 2) 
+                                        : String(value)
+                                    }
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
                       }
-                    })()}
-                  </pre>
+                      
+                      return <span className="break-words">{String(parsed)}</span>;
+                    } catch (e) {
+                      return <span className="break-words">{String(selectedLog.payload)}</span>;
+                    }
+                  })()}
                 </div>
               </div>
             </div>
