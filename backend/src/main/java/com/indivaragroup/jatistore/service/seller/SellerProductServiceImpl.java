@@ -59,7 +59,7 @@ public class SellerProductServiceImpl implements SellerProductService {
 
         if (!product.getStore().getSeller().getId().equals(seller.getId()) || product.getDeletedAt() != null) {
             log.error("Unauthorized access or product deleted. Product ID: {}, Seller ID: {}", productId, seller.getId());
-            throw new CoreThrowHandler(RestApiError.SLR_0017);
+            throw new CoreThrowHandler(RestApiError.SLR_0016);
         }
         return product;
     }

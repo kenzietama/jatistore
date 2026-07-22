@@ -82,7 +82,7 @@ public class SellerFlashSaleService {
                 });
         if (!product.getStore().getSeller().getId().equals(seller.getId())) {
             log.error("Product {} does not belong to seller {}", productId, seller.getId());
-            throw new CoreThrowHandler(RestApiError.SLR_0017);
+            throw new CoreThrowHandler(RestApiError.SLR_0016);
         }
         return product;
     }
