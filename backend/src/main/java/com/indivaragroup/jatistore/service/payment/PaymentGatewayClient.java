@@ -4,6 +4,7 @@ import com.indivaragroup.jatistore.dto.request.payment.CardChargeRequest;
 import com.indivaragroup.jatistore.dto.request.payment.WalletChargeRequest;
 import com.indivaragroup.jatistore.dto.response.payment.CardChargeResponse;
 import com.indivaragroup.jatistore.dto.response.payment.WalletChargeResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -41,5 +42,21 @@ public class PaymentGatewayClient {
                 .body(request)
                 .retrieve()
                 .body(WalletChargeResponse.class);
+    }
+
+    public String simulatePayout(java.math.BigDecimal amount) {
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        if (Math.random() < 0.01) {
+            throw new org.springframework.web.client.HttpServerErrorException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Mock APIdog Timeout"
+            );
+        }
+
+        return "TRF-" + java.util.UUID.randomUUID().toString().substring(0, 12).toUpperCase();
     }
 }

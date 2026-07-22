@@ -87,9 +87,9 @@ public class SellerOrderServiceImplTest {
         Order order = setupMockOrder(UUID.randomUUID(), sellerId, OrderStatus.SHIPPED);
 
         Page<Order> page = new PageImpl<>(List.of(order));
-        when(orderRepository.findOrdersBySellerAndFilters(eq(sellerId), eq(OrderStatus.SHIPPED), any(Pageable.class))).thenReturn(page);
+        when(orderRepository.findOrdersBySellerAndFilters(eq(sellerId), eq(OrderStatus.SHIPPED), any(), any(Pageable.class))).thenReturn(page);
 
-        Page<SellerOrderListResponse> result = sellerOrderService.getSellerOrders(sellerId, OrderStatus.SHIPPED, 0, 10);
+        Page<SellerOrderListResponse> result = sellerOrderService.getSellerOrders(sellerId, OrderStatus.SHIPPED, null, "date", "desc", 0, 10);
         
         assertEquals(1, result.getTotalElements());
         assertEquals("SHIPPED", result.getContent().get(0).getStatus());
@@ -104,9 +104,9 @@ public class SellerOrderServiceImplTest {
         Order order = setupMockOrder(UUID.randomUUID(), sellerId, OrderStatus.SHIPPED);
 
         Page<Order> page = new PageImpl<>(List.of(order));
-        when(orderRepository.findOrdersBySellerAndFilters(eq(sellerId), eq(null), any(Pageable.class))).thenReturn(page);
+        when(orderRepository.findOrdersBySellerAndFilters(eq(sellerId), eq(null), any(), any(Pageable.class))).thenReturn(page);
 
-        Page<SellerOrderListResponse> resultNull = sellerOrderService.getSellerOrders(sellerId, null, 0, 10);
+        Page<SellerOrderListResponse> resultNull = sellerOrderService.getSellerOrders(sellerId, null, null, "date", "desc", 0, 10);
         
         assertEquals(1, resultNull.getTotalElements());
     }
@@ -115,7 +115,7 @@ public class SellerOrderServiceImplTest {
     void getSellerOrders_sellerNotFound_shouldThrow() {
         UUID sellerId = UUID.randomUUID();
         when(sellerRepository.findById(sellerId)).thenReturn(Optional.empty());
-        assertThrows(CoreThrowHandler.class, () -> sellerOrderService.getSellerOrders(sellerId, OrderStatus.SHIPPED, 0, 10));
+        assertThrows(CoreThrowHandler.class, () -> sellerOrderService.getSellerOrders(sellerId, OrderStatus.SHIPPED, null, "date", "desc", 0, 10));
     }
 
     @Test

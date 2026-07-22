@@ -9,7 +9,7 @@ import org.springframework.data.domain.Page;
 import java.util.UUID;
 
 public interface SellerOrderService {
-    Page<SellerOrderListResponse> getSellerOrders(UUID sellerId, OrderStatus status, int page, int size) throws CoreThrowHandler;
+    Page<SellerOrderListResponse> getSellerOrders(UUID sellerId, OrderStatus status, String search, String sortBy, String sortDir, int page, int size) throws CoreThrowHandler;
     SellerOrderDetailResponse getSellerOrderDetail(UUID sellerId, UUID orderId) throws CoreThrowHandler;
     void markOrderAsShipped(UUID sellerId, UUID orderId) throws CoreThrowHandler;
 }

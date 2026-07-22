@@ -62,7 +62,7 @@ public class SellerOrderControllerTest {
                 .status("PROCESSED")
                 .build();
 
-        when(sellerOrderService.getSellerOrders(eq(sellerId), any(), anyInt(), anyInt()))
+        when(sellerOrderService.getSellerOrders(eq(sellerId), any(), any(), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new PageImpl<>(List.of(response)));
 
         mockMvc.perform(get("/api/v1/seller/orders")

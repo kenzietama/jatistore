@@ -36,9 +36,9 @@ export interface RestApiResponse<T> {
 }
 
 export const orderService = {
-    async getOrders(status: string, page: number, size: number): Promise<PageData<SellerOrder>> {
+    async getOrders(status: string, search: string, sortBy: string, sortDir: string, page: number, size: number): Promise<PageData<SellerOrder>> {
         const response = await api.get<RestApiResponse<PageData<SellerOrder>>>('/api/v1/seller/orders', {
-            params: { status: status || undefined, page, size }
+            params: { status: status || undefined, search: search || undefined, sortBy: sortBy || undefined, sortDir: sortDir || undefined, page, size }
         });
         return response.data.data;
     },

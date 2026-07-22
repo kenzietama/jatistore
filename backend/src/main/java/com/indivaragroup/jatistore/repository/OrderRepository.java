@@ -17,10 +17,15 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     @Query("SELECT DISTINCT o FROM Order o JOIN o.orderDetails od " +
            "WHERE od.product.store.seller.id = :sellerId " +
-           "AND (COALESCE(CAST(:status AS text), '') = '' OR o.status = :status)")
+           "AND (COALESCE(CAST(:status AS text), '') = '' OR o.status = :status) " +
+           "AND (COALESCE(:search, '') = '' OR " +
+           "LOWER(CAST(o.id AS text)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(o.user.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(od.product.name) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Order> findOrdersBySellerAndFilters(
             @Param("sellerId") UUID sellerId,
             @Param("status") OrderStatus status,
+            @Param("search") String search,
             Pageable pageable);
 
     @org.springframework.data.jpa.repository.Modifying

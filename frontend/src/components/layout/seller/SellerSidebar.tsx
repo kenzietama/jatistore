@@ -147,14 +147,19 @@ export function SellerSidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIs
           </NavLink>
         </li>
         <li>
-          <a 
-            className={`flex items-center gap-stack-sm p-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-variant rounded-lg hover:bg-surface-container-highest dark:hover:bg-surface-dim transition-all ${isCollapsed ? 'justify-center' : ''}`} 
-            href="#"
+          <NavLink 
+            to="/seller/financials"
+            onClick={() => setIsMobileOpen(false)}
+            className={({ isActive }) =>
+              isActive
+                ? `flex items-center gap-stack-sm p-2 bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-lg scale-[0.98] transition-all ${isCollapsed ? 'justify-center' : ''}`
+                : `flex items-center gap-stack-sm p-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-variant rounded-lg hover:bg-surface-container-highest dark:hover:bg-surface-dim transition-all ${isCollapsed ? 'justify-center' : ''}`
+            }
             title={isCollapsed ? "Financials" : undefined}
           >
             <span className="material-symbols-outlined shrink-0" data-icon="payments">payments</span>
             <span className={`font-label-md text-label-md whitespace-nowrap ${isCollapsed ? 'hidden' : 'block'}`}>Financials</span>
-          </a>
+          </NavLink>
         </li>
       </ul>
 

@@ -5,7 +5,11 @@ import type { SellerOrder, PageData } from '../../../service/seller/order.servic
 export function OrderTable() {
   const [data, setData] = useState<PageData<SellerOrder> | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('date');
+  const [sortDir, setSortDir] = useState('desc');
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<SellerOrder | null>(null);
@@ -33,7 +37,7 @@ export function OrderTable() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const res = await orderService.getOrders(statusFilter, page, 10);
+      const res = await orderService.getOrders(statusFilter, search, sortBy, sortDir, page, 10);
       setData(res);
     } catch (error) {
       console.error(error);
@@ -43,8 +47,11 @@ export function OrderTable() {
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, [statusFilter, page]);
+    const timer = setTimeout(() => {
+      fetchOrders();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [statusFilter, search, sortBy, sortDir, page]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -107,60 +114,91 @@ export function OrderTable() {
 
   return (
     <>
-      {/* Search and Filters */}
-      <div className="flex items-center gap-stack-md bg-surface-container-lowest p-stack-sm rounded-lg border border-outline-variant shadow-sm w-full mb-stack-lg">
-        <div className="flex-grow flex items-center relative">
-          <span className="material-symbols-outlined absolute left-stack-sm text-on-surface-variant">search</span>
-          <input 
-            className="w-full pl-10 pr-stack-sm py-stack-sm bg-transparent border-none focus:ring-0 font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant" 
-            placeholder="Search orders by ID, buyer, or product..." 
-            type="text" 
-            disabled
-          />
-        </div>
-        <div className="h-6 w-px bg-outline-variant"></div>
-        <div className="relative">
-          <button 
-            className="flex items-center gap-unit px-stack-sm py-stack-sm font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors"
-            onClick={() => setFilterOpen(!filterOpen)}
-          >
-            <span className="material-symbols-outlined text-[18px]">filter_list</span>
-            Filters {statusFilter && <span className="w-2 h-2 rounded-full bg-primary ml-1"></span>}
-          </button>
-          
-          {filterOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-surface border border-outline-variant rounded shadow-lg z-50 py-2">
-              <div className="px-4 py-1 text-label-sm text-on-surface-variant uppercase">Status</div>
-              {['', 'PENDING', 'PAID_ON_HOLD', 'SHIPPED', 'RECEIVED', 'CANCELLED'].map((s) => (
-                <button
-                  key={s}
-                  className={`w-full text-left px-4 py-2 font-body-sm text-body-sm hover:bg-surface-container transition-colors ${statusFilter === s ? 'text-primary bg-primary-container/10 font-medium' : 'text-on-surface'}`}
-                  onClick={() => { setStatusFilter(s); setPage(0); setFilterOpen(false); }}
-                >
-                  {s === '' ? 'All Status' : s.replace(/_/g, ' ')}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <button className="flex items-center gap-unit px-stack-sm py-stack-sm font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors">
-            <span className="material-symbols-outlined text-[18px]">sort</span>
-            Sort
-        </button>
-      </div>
-
       {/* Orders Table */}
-      <div className="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden shadow-sm flex flex-col">
-        <div className="overflow-x-auto">
+      <div className="bg-surface-container-lowest rounded-lg border border-outline-variant shadow-sm overflow-hidden flex-grow flex flex-col">
+        
+        <div className="flex items-center gap-stack-md bg-surface-container-lowest p-stack-sm border-b border-outline-variant w-full shrink-0">
+          <div className="flex-grow flex items-center relative">
+            <span className="material-symbols-outlined absolute left-stack-sm text-on-surface-variant">search</span>
+            <input 
+              className="w-full pl-10 pr-stack-sm py-stack-sm bg-transparent border-none focus:ring-0 font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant transition-all" 
+              placeholder="Search orders..." 
+              type="text" 
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+            />
+          </div>
+          <div className="h-6 w-px bg-outline-variant"></div>
+
+          {/* Filter Dropdown */}
+            <div className="relative">
+              <button 
+                className="flex items-center gap-unit px-2 py-1.5 font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors"
+                onClick={() => { setFilterOpen(!filterOpen); setSortOpen(false); }}
+              >
+                <span className="material-symbols-outlined text-[18px]">filter_list</span>
+                Filters {statusFilter && <span className="w-2 h-2 rounded-full bg-primary ml-1"></span>}
+              </button>
+              
+              {filterOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-surface border border-outline-variant rounded shadow-lg z-50 py-2">
+                  <div className="px-4 py-1 text-label-sm text-on-surface-variant uppercase">Status</div>
+                  {['', 'PENDING', 'PAID_ON_HOLD', 'SHIPPED', 'RECEIVED', 'CANCELLED'].map((s) => (
+                    <button
+                      key={s}
+                      className={`w-full text-left px-4 py-2 font-body-sm text-body-sm hover:bg-surface-container transition-colors ${statusFilter === s ? 'text-primary bg-primary-container/10 font-medium' : 'text-on-surface'}`}
+                      onClick={() => { setStatusFilter(s); setPage(0); setFilterOpen(false); }}
+                    >
+                      {s === '' ? 'All Status' : s.replace(/_/g, ' ')}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Sort Dropdown */}
+            <div className="relative">
+              <button 
+                className="flex items-center gap-unit px-2 py-1.5 font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors"
+                onClick={() => { setSortOpen(!sortOpen); setFilterOpen(false); }}
+              >
+                <span className="material-symbols-outlined text-[18px]">sort</span>
+                Sort
+              </button>
+
+              {sortOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-surface border border-outline-variant rounded shadow-lg z-50 py-2">
+                  <div className="px-4 py-1 text-label-sm text-on-surface-variant uppercase">Sort By</div>
+                  {[
+                    { label: 'Date (Newest)', by: 'date', dir: 'desc' },
+                    { label: 'Date (Oldest)', by: 'date', dir: 'asc' },
+                    { label: 'Amount (Highest)', by: 'amount', dir: 'desc' },
+                    { label: 'Amount (Lowest)', by: 'amount', dir: 'asc' },
+                    { label: 'Status (A-Z)', by: 'status', dir: 'asc' },
+                  ].map((opt, i) => (
+                    <button
+                      key={i}
+                      className={`w-full text-left px-4 py-2 font-body-sm text-body-sm hover:bg-surface-container transition-colors ${sortBy === opt.by && sortDir === opt.dir ? 'text-primary bg-primary-container/10 font-medium' : 'text-on-surface'}`}
+                      onClick={() => { setSortBy(opt.by); setSortDir(opt.dir); setPage(0); setSortOpen(false); }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+        <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-surface-container text-on-surface-variant border-b border-outline-variant">
-                <th className="p-stack-md font-label-md text-label-md uppercase tracking-wider">Order ID</th>
-                <th className="p-stack-md font-label-md text-label-md uppercase tracking-wider">Buyer</th>
-                <th className="p-stack-md font-label-md text-label-md uppercase tracking-wider">Products & Qty</th>
-                <th className="p-stack-md font-label-md text-label-md uppercase tracking-wider text-right">Earnings</th>
-                <th className="p-stack-md font-label-md text-label-md uppercase tracking-wider text-center">Status</th>
-                <th className="p-stack-md font-label-md text-label-md uppercase tracking-wider text-right">Action</th>
+              <tr className="bg-surface-container text-on-surface-variant border-b border-outline-variant text-label-sm font-label-sm">
+                <th className="py-3 px-4 font-medium uppercase tracking-wider">Order ID</th>
+                <th className="py-3 px-4 font-medium uppercase tracking-wider">Buyer</th>
+                <th className="py-3 px-4 font-medium uppercase tracking-wider">Products & Qty</th>
+                <th className="py-3 px-4 font-medium uppercase tracking-wider text-right">Earnings</th>
+                <th className="py-3 px-4 font-medium uppercase tracking-wider text-center">Status</th>
+                <th className="py-3 px-4 font-medium uppercase tracking-wider text-right">Action</th>
               </tr>
             </thead>
             <tbody className="font-body-sm text-body-sm">
@@ -181,10 +219,10 @@ export function OrderTable() {
                   
                   return (
                     <tr key={order.orderId} className={`border-b border-outline-variant ${rowBg} hover:bg-[#f0fdfa] transition-colors group`}>
-                      <td className="p-stack-md font-mono-data text-mono-data text-on-surface">
+                      <td className="py-3 px-4 font-mono-data text-mono-data text-on-surface">
                         #ORD-{shortId}
                       </td>
-                      <td className="p-stack-md text-on-surface-variant">
+                      <td className="py-3 px-4 text-on-surface-variant">
                         <div className="flex items-center gap-stack-sm">
                           <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${getAvatarColor(order.customerName)}`}>
                             {getInitials(order.customerName)}
@@ -192,7 +230,7 @@ export function OrderTable() {
                           <span>{order.customerName}</span>
                         </div>
                       </td>
-                      <td className="p-stack-md text-on-surface-variant">
+                      <td className="py-3 px-4 text-on-surface-variant">
                         {firstItem && (
                           <>
                             {firstItem.productName} (x{firstItem.quantity})<br/>
@@ -203,13 +241,13 @@ export function OrderTable() {
                           <div className="text-xs text-outline mt-1">+{otherItemsCount} other items</div>
                         )}
                       </td>
-                      <td className="p-stack-md font-mono-data text-mono-data text-right text-primary-container font-medium">
+                      <td className="py-3 px-4 font-mono-data text-mono-data text-right text-primary-container font-medium">
                         Rp {order.totalAmount.toLocaleString('id-ID')}
                       </td>
-                      <td className="p-stack-md text-center">
+                      <td className="py-3 px-4 text-center">
                         {getStatusBadge(order.status)}
                       </td>
-                      <td className="p-stack-md text-right">
+                      <td className="py-3 px-4 text-right">
                         <div className="flex justify-end items-center gap-stack-sm">
                           {order.status === 'PAID_ON_HOLD' ? (
                             <button 
@@ -242,39 +280,27 @@ export function OrderTable() {
 
         {/* Pagination Footer */}
         {data && (
-          <div className="mt-auto border-t border-outline-variant p-stack-sm flex items-center justify-between bg-surface-container-low">
+          <div className="mt-auto border-t border-outline-variant p-stack-sm flex items-center justify-between bg-surface-container-low shrink-0">
             <span className="font-label-sm text-label-sm text-on-surface-variant">
               Showing {data.totalElements > 0 ? (page * data.size) + 1 : 0}-{Math.min((page + 1) * data.size, data.totalElements)} of {data.totalElements} orders
             </span>
             <div className="flex items-center gap-unit">
               <button 
-                onClick={() => setPage(Math.max(0, page - 1))}
                 disabled={page === 0}
-                className="p-1 rounded text-on-surface-variant hover:bg-surface-variant disabled:opacity-50 transition-colors"
+                onClick={() => setPage(Math.max(0, page - 1))}
+                className="p-2 border border-outline-variant rounded-lg disabled:opacity-50 hover:bg-surface-tint transition-colors"
               >
-                <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+                <span className="material-symbols-outlined text-[18px] text-on-surface">chevron_left</span>
               </button>
-              
-              {[...Array(data.totalPages)].map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setPage(i)}
-                  className={`w-8 h-8 rounded font-label-md text-label-md flex items-center justify-center transition-colors ${
-                    page === i 
-                      ? 'bg-primary-container text-on-primary-container' 
-                      : 'text-on-surface-variant hover:bg-surface-variant'
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-
+              <span className="text-body-sm font-body-sm text-on-surface px-2">
+                Page {page + 1} of {data.totalPages || 1}
+              </span>
               <button 
-                onClick={() => setPage(page + 1)}
                 disabled={page >= data.totalPages - 1 || data.totalPages === 0}
-                className="p-1 rounded text-on-surface-variant hover:bg-surface-variant disabled:opacity-50 transition-colors"
+                onClick={() => setPage(page + 1)}
+                className="p-2 border border-outline-variant rounded-lg disabled:opacity-50 hover:bg-surface-tint transition-colors"
               >
-                <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+                <span className="material-symbols-outlined text-[18px] text-on-surface">chevron_right</span>
               </button>
             </div>
           </div>

@@ -39,6 +39,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     @Override
     @Transactional(readOnly = true)
     public AdminDashboardResponse getDashboardSummary() {
+        log.info("Fetching admin dashboard summary");
         long totalUsers = authRepository.count();
         long totalSellers = sellerRepository.count();
         long totalProducts = productRepository.countByDeletedAtIsNull();
@@ -55,36 +56,34 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     @Override
     @Transactional(readOnly = true)
     public PageData<AdminSellerResponse> getSellers(int page, int size, String status, String search, String category) {
+        log.info("Fetching sellers with pagination - page: {}, size: {}, status: {}, search: {}", page, size, status, search);
         // Since we need to filter by store name and category (complex joins),
         // we will fetch all and filter in memory for this prototype.
         List<Seller> allSellers = sellerRepository.findAll();
 
-        List<AdminSellerResponse> allResponses = allSellers.stream().map(seller -> {
-            Store store = storeRepository.findBySellerId(seller.getId()).orElse(null);
-            long productCount = productRepository.countActiveProductsBySellerId(seller.getId());
+        List<AdminSellerResponse> filtered = allSellers.stream()
+            .map(seller -> {
+                Store store = storeRepository.findBySellerId(seller.getId()).orElse(null);
+                long productCount = productRepository.countActiveProductsBySellerId(seller.getId());
 
-            return AdminSellerResponse.builder()
-                    .id(seller.getId())
-                    .storeName(store != null ? store.getStoreName() : "Unknown")
-                    .sellerName(seller.getUser().getFullName())
-                    .email(seller.getUser().getEmail())
-                    .productCount(productCount)
-                    .active(seller.getActive())
-                    .joinDate(seller.getUser().getCreatedAt())
-                    .build();
-        }).collect(Collectors.toList());
-
-        // Apply filters
-        List<AdminSellerResponse> filtered = allResponses.stream()
+                return AdminSellerResponse.builder()
+                        .id(seller.getId())
+                        .storeName(store != null ? store.getStoreName() : "Unknown")
+                        .sellerName(seller.getUser().getFullName())
+                        .email(seller.getUser().getEmail())
+                        .productCount(productCount)
+                        .active(seller.getActive())
+                        .joinDate(seller.getUser().getCreatedAt())
+                        .build();
+            })
             .filter(r -> {
                 if (status != null && !status.isEmpty()) {
                     boolean active = "ACTIVE".equalsIgnoreCase(status);
                     if (r.getActive() != active) return false;
                 }
                 if (search != null && !search.isEmpty()) {
-                    if (!r.getStoreName().toLowerCase().contains(search.toLowerCase())) return false;
+                    return r.getStoreName().toLowerCase().contains(search.toLowerCase());
                 }
-
                 return true;
             })
             .collect(Collectors.toList());
@@ -108,16 +107,22 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     @Override
     @Transactional
     public void updateSellerStatus(UUID sellerId, UpdateSellerStatusRequest request) throws CoreThrowHandler {
+        log.info("Updating seller status. sellerId: {}, active: {}", sellerId, request.getActive());
         Seller seller = sellerRepository.findById(sellerId)
-                .orElseThrow(() -> new CoreThrowHandler(RestApiError.ADM_0006));
+                .orElseThrow(() -> {
+                    log.error("Seller {} not found", sellerId);
+                    return new CoreThrowHandler(RestApiError.ADM_0006);
+                });
         
         seller.setActive(request.getActive());
         sellerRepository.save(seller);
+        log.info("Seller {} status updated successfully", sellerId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<AdminCategoryResponse> getCategories() {
+        log.info("Fetching product categories");
         List<ProductCategory> categories = categoryRepository.findAll();
         
         return categories.stream().map(category -> {
@@ -133,51 +138,62 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         }).collect(Collectors.toList());
     }
 
+    private ProductCategory saveCategoryOrThrow(ProductCategory category) throws CoreThrowHandler {
+        try {
+            return categoryRepository.save(category);
+        } catch (Exception e) {
+            log.error("Error saving category: {}", e.getMessage());
+            throw new CoreThrowHandler(RestApiError.ADM_0010);
+        }
+    }
+
     @Override
     @Transactional
     public AdminCategoryResponse createCategory(CategoryRequest request) throws CoreThrowHandler {
-        // Validation could be added here if needed, but unique constraint is DB level
-        try {
-            ProductCategory category = new ProductCategory();
-            category.setName(request.getName());
-            category = categoryRepository.save(category);
-            
-            return AdminCategoryResponse.builder()
-                    .id(category.getId())
-                    .name(category.getName())
-                    .productCount(0)
-                    .sellerCount(0)
-                    .build();
-        } catch (Exception e) {
-            throw new CoreThrowHandler(RestApiError.ADM_0010);
-        }
+        log.info("Creating new category: {}", request.getName());
+        ProductCategory category = new ProductCategory();
+        category.setName(request.getName());
+        category = saveCategoryOrThrow(category);
+        
+        return AdminCategoryResponse.builder()
+                .id(category.getId())
+                .name(category.getName())
+                .productCount(0)
+                .sellerCount(0)
+                .build();
     }
 
     @Override
     @Transactional
     public void updateCategory(UUID categoryId, CategoryRequest request) throws CoreThrowHandler {
+        log.info("Updating category {}. New name: {}", categoryId, request.getName());
         ProductCategory category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new CoreThrowHandler(RestApiError.ADM_0011));
+                .orElseThrow(() -> {
+                    log.error("Category {} not found", categoryId);
+                    return new CoreThrowHandler(RestApiError.ADM_0011);
+                });
         
-        try {
-            category.setName(request.getName());
-            categoryRepository.save(category);
-        } catch (Exception e) {
-            throw new CoreThrowHandler(RestApiError.ADM_0010);
-        }
+        category.setName(request.getName());
+        saveCategoryOrThrow(category);
     }
 
     @Override
     @Transactional
     public void deleteCategory(UUID categoryId) throws CoreThrowHandler {
+        log.info("Deleting category: {}", categoryId);
         ProductCategory category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new CoreThrowHandler(RestApiError.ADM_0011));
+                .orElseThrow(() -> {
+                    log.error("Category {} not found", categoryId);
+                    return new CoreThrowHandler(RestApiError.ADM_0011);
+                });
         
         long activeProducts = productRepository.countByCategoryIdAndDeletedAtIsNull(categoryId);
         if (activeProducts > 0) {
+            log.warn("Cannot delete category {}. It has {} active products.", categoryId, activeProducts);
             throw new CoreThrowHandler(RestApiError.ADM_0012);
         }
         
         categoryRepository.delete(category);
+        log.info("Successfully deleted category: {}", categoryId);
     }
 }
