@@ -14,6 +14,7 @@ import com.indivaragroup.jatistore.repository.SellerRepository;
 import com.indivaragroup.jatistore.repository.StoreRepository;
 import com.indivaragroup.jatistore.service.utility.CloudinaryService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +28,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SellerProductServiceImpl implements SellerProductService {
 
     private final ProductRepository productRepository;
@@ -42,7 +44,24 @@ public class SellerProductServiceImpl implements SellerProductService {
 
     private Store getStoreBySeller(Seller seller) throws CoreThrowHandler {
         return storeRepository.findBySellerId(seller.getId())
-                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0002));
+                .orElseThrow(() -> {
+                    log.error("Store not found for seller ID: {}", seller.getId());
+                    return new CoreThrowHandler(RestApiError.SLR_0002);
+                });
+    }
+
+    private Product getOwnedProductOrThrow(Seller seller, UUID productId) throws CoreThrowHandler {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> {
+                    log.error("Product ID {} not found", productId);
+                    return new CoreThrowHandler(RestApiError.SLR_0016);
+                });
+
+        if (!product.getStore().getSeller().getId().equals(seller.getId()) || product.getDeletedAt() != null) {
+            log.error("Unauthorized access or product deleted. Product ID: {}, Seller ID: {}", productId, seller.getId());
+            throw new CoreThrowHandler(RestApiError.SLR_0017);
+        }
+        return product;
     }
 
     @Override
@@ -81,23 +100,23 @@ public class SellerProductServiceImpl implements SellerProductService {
 
     @Override
     public ProductResponse getProduct(UUID sellerId, UUID id) throws CoreThrowHandler {
+        log.info("Fetching product details for seller: {}, product: {}", sellerId, id);
         Seller seller = getSellerById(sellerId);
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Product not found", null));
-
-        if (!product.getStore().getSeller().getId().equals(seller.getId()) || product.getDeletedAt() != null) {
-            throw new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Product not found", null);
-        }
+        Product product = getOwnedProductOrThrow(seller, id);
         return ProductResponse.fromEntity(product);
     }
 
     @Override
     public ProductResponse createProduct(UUID sellerId, ProductCreateRequest request) throws CoreThrowHandler {
+        log.info("Creating new product for seller: {}", sellerId);
         Seller seller = getSellerById(sellerId);
         Store store = getStoreBySeller(seller);
 
         ProductCategory category = productCategoryRepository.findById(request.getProductCategoryId())
-                .orElseThrow(() -> new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Category not found", null));
+                .orElseThrow(() -> {
+                    log.error("Category ID {} not found during product creation", request.getProductCategoryId());
+                    return new CoreThrowHandler(RestApiError.ADM_0011); 
+                });
 
         Product product = new Product();
         product.setStore(store);
@@ -111,22 +130,22 @@ public class SellerProductServiceImpl implements SellerProductService {
         product.setUpdatedAt(Instant.now());
 
         Product savedProduct = productRepository.save(product);
+        log.info("Successfully created product with ID: {}", savedProduct.getId());
         return ProductResponse.fromEntity(savedProduct);
     }
 
     @Override
     public ProductResponse updateProduct(UUID sellerId, UUID id, ProductUpdateRequest request) throws CoreThrowHandler {
+        log.info("Updating product ID: {} for seller ID: {}", id, sellerId);
         Seller seller = getSellerById(sellerId);
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Product not found", null));
-
-        if (!product.getStore().getSeller().getId().equals(seller.getId()) || product.getDeletedAt() != null) {
-            throw new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Product not found", null);
-        }
+        Product product = getOwnedProductOrThrow(seller, id);
 
         if (request.getProductCategoryId() != null) {
             ProductCategory category = productCategoryRepository.findById(request.getProductCategoryId())
-                    .orElseThrow(() -> new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Category not found", null));
+                    .orElseThrow(() -> {
+                        log.error("Category ID {} not found during product update", request.getProductCategoryId());
+                        return new CoreThrowHandler(RestApiError.ADM_0011);
+                    });
             product.setCategory(category);
         }
 
@@ -149,20 +168,18 @@ public class SellerProductServiceImpl implements SellerProductService {
         product.setUpdatedAt(Instant.now());
 
         Product savedProduct = productRepository.save(product);
+        log.info("Successfully updated product ID: {}", savedProduct.getId());
         return ProductResponse.fromEntity(savedProduct);
     }
 
     @Override
     public void deleteProduct(UUID sellerId, UUID id) throws CoreThrowHandler {
+        log.info("Deleting product ID: {} for seller ID: {}", id, sellerId);
         Seller seller = getSellerById(sellerId);
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Product not found", null));
-
-        if (!product.getStore().getSeller().getId().equals(seller.getId()) || product.getDeletedAt() != null) {
-            throw new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Product not found", null);
-        }
+        Product product = getOwnedProductOrThrow(seller, id);
 
         product.setDeletedAt(Instant.now());
         productRepository.save(product);
+        log.info("Successfully deleted product ID: {}", id);
     }
 }

@@ -10,6 +10,7 @@ import com.indivaragroup.jatistore.dto.response.module.seller.order.SellerOrderL
 import com.indivaragroup.jatistore.repository.OrderRepository;
 import com.indivaragroup.jatistore.repository.SellerRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SellerOrderServiceImpl implements SellerOrderService {
 
     private final OrderRepository orderRepository;
@@ -33,7 +35,10 @@ public class SellerOrderServiceImpl implements SellerOrderService {
 
     private @NonNull Seller getSellerById(UUID sellerId) throws CoreThrowHandler {
         return sellerRepository.findById(sellerId)
-                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0002));
+                .orElseThrow(() -> {
+                    log.error("Seller not found for ID: {}", sellerId);
+                    return new CoreThrowHandler(RestApiError.SLR_0002);
+                });
     }
 
     private List<SellerOrderItemDTO> mapToOrderItems(Order order, UUID sellerId) {
@@ -59,6 +64,7 @@ public class SellerOrderServiceImpl implements SellerOrderService {
 
     @Override
     public Page<SellerOrderListResponse> getSellerOrders(UUID sellerId, OrderStatus status, String search, String sortBy, String sortDir, int page, int size) throws CoreThrowHandler {
+        log.info("Fetching orders for seller ID: {}", sellerId);
         Seller seller = getSellerById(sellerId);
         
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
@@ -88,12 +94,17 @@ public class SellerOrderServiceImpl implements SellerOrderService {
 
     @Override
     public SellerOrderDetailResponse getSellerOrderDetail(UUID sellerId, UUID orderId) throws CoreThrowHandler {
+        log.info("Fetching order detail. sellerId: {}, orderId: {}", sellerId, orderId);
         Seller seller = getSellerById(sellerId);
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Order not found", null));
+                .orElseThrow(() -> {
+                    log.error("Order {} not found", orderId);
+                    return new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Order not found", null);
+                });
                 
         List<SellerOrderItemDTO> items = mapToOrderItems(order, seller.getId());
         if (items.isEmpty()) {
+            log.warn("Order {} has no items for seller {}", orderId, sellerId);
             throw new CoreThrowHandler(RestApiError.SLR_0021);
         }
         
@@ -112,21 +123,28 @@ public class SellerOrderServiceImpl implements SellerOrderService {
     @Override
     @Transactional
     public void markOrderAsShipped(UUID sellerId, UUID orderId) throws CoreThrowHandler {
+        log.info("Marking order {} as shipped for seller {}", orderId, sellerId);
         Seller seller = getSellerById(sellerId);
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Order not found", null));
+                .orElseThrow(() -> {
+                    log.error("Order {} not found", orderId);
+                    return new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Order not found", null);
+                });
                 
         boolean hasSellerProducts = order.getOrderDetails().stream()
                 .anyMatch(od -> od.getProduct().getStore().getSeller().getId().equals(seller.getId()));
                 
         if (!hasSellerProducts) {
+            log.error("Order {} does not contain products belonging to seller {}", orderId, sellerId);
             throw new CoreThrowHandler(RestApiError.SLR_0021);
         }
         
         if (order.getStatus() != OrderStatus.PAID_ON_HOLD) {
+            log.error("Order {} is not in PAID_ON_HOLD status. Current status: {}", orderId, order.getStatus());
             throw new CoreThrowHandler(RestApiError.SLR_0020);
         }
         
         orderRepository.updateOrderStatus(orderId, OrderStatus.SHIPPED.name());
+        log.info("Successfully marked order {} as shipped", orderId);
     }
 }

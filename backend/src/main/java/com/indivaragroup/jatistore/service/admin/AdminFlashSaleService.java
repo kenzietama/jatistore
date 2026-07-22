@@ -8,6 +8,8 @@ import com.indivaragroup.jatistore.repository.FlashSaleItemRepository;
 import com.indivaragroup.jatistore.repository.FlashSaleRepository;
 import lombok.RequiredArgsConstructor;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -19,15 +21,19 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AdminFlashSaleService {
     private final FlashSaleRepository flashSaleRepository;
     private final FlashSaleItemRepository flashSaleItemRepository;
 
     public Page<FlashSaleResponse> getAllFlashSales(int page, int size, String status, String search, String sortBy, String direction) throws CoreThrowHandler {
+        log.info("Admin fetching all flash sales. page={}, size={}, status={}, search={}", page, size, status, search);
         if (page < 0 || size <= 0 || size > 100) {
+            log.warn("Invalid pagination parameters: page={}, size={}", page, size);
             throw new CoreThrowHandler(RestApiError.ADM_0004);
         }
         if (status != null && !status.isEmpty() && !status.equals("UPCOMING") && !status.equals("ACTIVE") && !status.equals("ENDED")) {
+            log.warn("Invalid status filter: {}", status);
             throw new CoreThrowHandler(RestApiError.ADM_0013);
         }
 
@@ -44,7 +50,9 @@ public class AdminFlashSaleService {
 
     @Transactional
     public FlashSaleResponse createFlashSale(FlashSaleRequest request) throws CoreThrowHandler {
+        log.info("Creating new Flash Sale: {}", request.getName());
         if (request.getStartTime().isBefore(Instant.now())) {
+            log.error("Flash Sale start time is in the past: {}", request.getStartTime());
             throw new CoreThrowHandler(RestApiError.ADM_0018);
         }
         validateTime(request.getStartTime(), request.getEndTime());
@@ -56,21 +64,31 @@ public class AdminFlashSaleService {
                 .build();
 
         flashSale = flashSaleRepository.save(flashSale);
+        log.info("Successfully created Flash Sale {}", flashSale.getId());
         return mapToResponse(flashSale);
     }
 
     public FlashSaleResponse getFlashSaleDetail(UUID id) throws CoreThrowHandler {
+        log.info("Fetching Flash Sale detail: {}", id);
         FlashSale flashSale = flashSaleRepository.findById(id)
-                .orElseThrow(() -> new CoreThrowHandler(RestApiError.ADM_0016));
+                .orElseThrow(() -> {
+                    log.error("Flash sale {} not found", id);
+                    return new CoreThrowHandler(RestApiError.ADM_0016);
+                });
         return mapToResponse(flashSale);
     }
 
     @Transactional
     public void updateFlashSale(UUID id, FlashSaleRequest request) throws CoreThrowHandler {
+        log.info("Updating Flash Sale {}", id);
         FlashSale flashSale = flashSaleRepository.findById(id)
-                .orElseThrow(() -> new CoreThrowHandler(RestApiError.ADM_0016));
+                .orElseThrow(() -> {
+                    log.error("Flash sale {} not found", id);
+                    return new CoreThrowHandler(RestApiError.ADM_0016);
+                });
 
         if (!flashSale.getStartTime().equals(request.getStartTime()) && request.getStartTime().isBefore(Instant.now())) {
+            log.error("Updated start time is in the past: {}", request.getStartTime());
             throw new CoreThrowHandler(RestApiError.ADM_0018);
         }
         validateTime(request.getStartTime(), request.getEndTime());
@@ -80,23 +98,31 @@ public class AdminFlashSaleService {
         flashSale.setEndTime(request.getEndTime());
 
         flashSaleRepository.save(flashSale);
+        log.info("Successfully updated Flash Sale {}", id);
     }
 
     @Transactional
     public void deleteFlashSale(UUID id) throws CoreThrowHandler {
+        log.info("Deleting Flash Sale {}", id);
         FlashSale flashSale = flashSaleRepository.findById(id)
-                .orElseThrow(() -> new CoreThrowHandler(RestApiError.ADM_0016));
+                .orElseThrow(() -> {
+                    log.error("Flash sale {} not found", id);
+                    return new CoreThrowHandler(RestApiError.ADM_0016);
+                });
 
         long itemCount = flashSaleItemRepository.countByFlashSaleId(id);
         if (itemCount > 0) {
+            log.warn("Cannot delete Flash Sale {}. It has {} items.", id, itemCount);
             throw new CoreThrowHandler(RestApiError.ADM_0017);
         }
 
         flashSaleRepository.delete(flashSale);
+        log.info("Successfully deleted Flash Sale {}", id);
     }
 
     private void validateTime(Instant startTime, Instant endTime) throws CoreThrowHandler {
         if (endTime.compareTo(startTime) <= 0) {
+            log.error("Invalid time: endTime {} must be after startTime {}", endTime, startTime);
             throw new CoreThrowHandler(RestApiError.ADM_0014);
         }
     }
