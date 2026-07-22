@@ -197,10 +197,10 @@ class UserOrderServiceTest {
         verify(sellerLedgerRepository, times(2)).save(ledgerCaptor.capture());
 
         List<com.indivaragroup.jatistore.data.entity.SellerLedger> savedLedgers = ledgerCaptor.getAllValues();
-        assertEquals(BalanceType.AVAILABLE, savedLedgers.get(0).getBalanceType());
-        assertEquals(BigDecimal.valueOf(200), savedLedgers.get(0).getAmount());
-        assertEquals(BalanceType.ON_HOLD, savedLedgers.get(1).getBalanceType());
-        assertEquals(BigDecimal.valueOf(200).negate(), savedLedgers.get(1).getAmount());
+        assertEquals(BalanceType.ON_HOLD, savedLedgers.get(0).getBalanceType());
+        assertEquals(BigDecimal.valueOf(200).negate(), savedLedgers.get(0).getAmount());
+        assertEquals(BalanceType.AVAILABLE, savedLedgers.get(1).getBalanceType());
+        assertEquals(BigDecimal.valueOf(200), savedLedgers.get(1).getAmount());
     }
 
     @Test
