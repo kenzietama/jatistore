@@ -33,9 +33,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
   const [checkoutResponse, setCheckoutResponse] = useState<any>(null);
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shipping = cartItems.length > 0 ? 12000 : 0;
-  const tax = Math.round(subtotal * 0.11);
-  const total = subtotal + shipping + tax;
+  const total = subtotal;
 
   const remainingBalance = walletBalance - total;
   const isBalanceEnough = remainingBalance >= 0;
@@ -425,19 +423,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
 
               {/* Calculations Total */}
               <div className="space-y-stack-sm border-t border-outline-variant pt-stack-md mb-stack-lg">
-                <div className="flex justify-between font-body-sm text-body-sm text-on-surface-variant">
-                  <span>Subtotal</span>
-                  <span className="font-mono-data">Rp {subtotal.toLocaleString("id-ID")}</span>
-                </div>
-                <div className="flex justify-between font-body-sm text-body-sm text-on-surface-variant">
-                  <span>Shipping (Standard)</span>
-                  <span className="font-mono-data">Rp {shipping.toLocaleString("id-ID")}</span>
-                </div>
-                <div className="flex justify-between font-body-sm text-body-sm text-on-surface-variant">
-                  <span>Tax (PPN 11%)</span>
-                  <span className="font-mono-data">Rp {tax.toLocaleString("id-ID")}</span>
-                </div>
-                <div className="flex justify-between font-headline-md text-headline-md text-on-surface mt-stack-md pt-stack-sm border-t border-outline-variant border-dashed">
+                <div className="flex justify-between font-headline-md text-headline-md text-on-surface">
                   <span className="font-bold">Total</span>
                   <span className="text-primary font-bold text-[20px]">Rp {total.toLocaleString("id-ID")}</span>
                 </div>

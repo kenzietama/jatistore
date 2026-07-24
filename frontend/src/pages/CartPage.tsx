@@ -328,14 +328,6 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
                   <span>Subtotal</span>
                   <span>Rp {subtotal.toLocaleString("id-ID")}</span>
                 </div>
-                <div className="flex justify-between text-on-surface-variant">
-                  <span>Shipping</span>
-                  <span className="text-body-sm italic text-xs text-primary">Calculated at Checkout</span>
-                </div>
-                <div className="flex justify-between text-on-surface-variant">
-                  <span>Tax</span>
-                  <span className="text-body-sm italic text-xs text-primary">Calculated at Checkout</span>
-                </div>
               </div>
               <div className="border-t border-outline-variant pt-stack-sm flex justify-between items-center">
                 <span className="font-headline-md text-on-background font-bold">Grand Total</span>
