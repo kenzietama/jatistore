@@ -18,10 +18,10 @@ public class StaleOrderSweepService {
 
     private final OrderRepository orderRepository;
 
-    @Scheduled(fixedRate = 5 * 60 * 1000) // Every 5 minutes
+    @Scheduled(fixedRate = 1 * 30 * 1000) // Every 5 minutes
     @Transactional
     public void expireStalePendingOrders() {
-        Instant cutoff = Instant.now().minus(Duration.ofMinutes(15));
+        Instant cutoff = Instant.now().minus(Duration.ofMinutes(1));
 
         orderRepository.findByStatusAndCreatedAtBefore(OrderStatus.PENDING, cutoff)
                 .forEach(order -> {

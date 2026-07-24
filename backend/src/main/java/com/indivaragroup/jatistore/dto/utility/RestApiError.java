@@ -38,6 +38,8 @@ public enum RestApiError {
     USR_0021(HttpStatus.BAD_REQUEST.value(),"Invalid cart item ID"),
     USR_0022(HttpStatus.CONFLICT.value(), "Order is not payable"),
     USR_0023(HttpStatus.CONFLICT.value(), "Order total has changed"),
+    USR_0024(HttpStatus.CONFLICT.value(), "Flash sale ended before order completion"),
+    USR_0025(HttpStatus.CONFLICT.value(), "Flash sale quota exhausted"),
     USR_0015(HttpStatus.NOT_FOUND.value(), "Order not found"),
     USR_0016(HttpStatus.BAD_REQUEST.value(), "Order receipt confirmation not allowed"),
 

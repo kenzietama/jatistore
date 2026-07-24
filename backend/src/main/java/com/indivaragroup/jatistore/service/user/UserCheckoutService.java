@@ -1,31 +1,19 @@
 package com.indivaragroup.jatistore.service.user;
 
-import com.indivaragroup.jatistore.data.entity.Cart;
-import com.indivaragroup.jatistore.data.entity.Order;
-import com.indivaragroup.jatistore.data.entity.OrderDetail;
-import com.indivaragroup.jatistore.data.entity.User;
-import com.indivaragroup.jatistore.data.entity.PaymentCard;
-import com.indivaragroup.jatistore.data.entity.Transaction;
-import com.indivaragroup.jatistore.data.entity.CartItem;
+import com.indivaragroup.jatistore.data.entity.*;
 import com.indivaragroup.jatistore.data.utility.constant.OrderStatus;
 import com.indivaragroup.jatistore.data.utility.constant.PaymentMethod;
 import com.indivaragroup.jatistore.data.utility.constant.TransactionStatus;
 import com.indivaragroup.jatistore.dto.request.user.CreateOrderRequest;
 import com.indivaragroup.jatistore.dto.request.user.PayOrderRequest;
-import com.indivaragroup.jatistore.dto.request.user.UserCheckoutRequest;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.user.CreateOrderResponse;
 import com.indivaragroup.jatistore.dto.response.module.user.UserCheckoutResponse;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.audit.Audit;
-import com.indivaragroup.jatistore.repository.AuthRepository;
-import com.indivaragroup.jatistore.repository.CartRepository;
-import com.indivaragroup.jatistore.repository.CartItemRepository;
-import com.indivaragroup.jatistore.repository.OrderRepository;
-import com.indivaragroup.jatistore.repository.OrderDetailRepository;
-import com.indivaragroup.jatistore.repository.PaymentCardRepository;
-import com.indivaragroup.jatistore.repository.TransactionRepository;
+import com.indivaragroup.jatistore.repository.*;
+import com.indivaragroup.jatistore.repository.projection.CheckoutPriceProjection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,6 +27,7 @@ import com.indivaragroup.jatistore.service.payment.PaymentGatewayClient;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -55,6 +44,7 @@ public class UserCheckoutService {
     private final PaymentCardRepository paymentCardRepository;
     private final PaymentGatewayClient paymentGatewayClient;
     private final CheckoutFinalizer checkoutFinalizer;
+    private final FlashSaleItemRepository flashSaleItemRepository;
 
     @Audit(action = "ORDER_CREATE", affectedModule = "ORDERS", description = "User creates pending order")
     @Transactional
@@ -76,11 +66,14 @@ public class UserCheckoutService {
             throw new CoreThrowHandler(RestApiError.USR_0009);
         }
 
-        // 3. Validate stock
+        // 3. Validate stock & active product status
         User user = authRepository.findByEmail(email)
                 .orElseThrow(() -> new CoreThrowHandler(RestApiError.GEN_0005));
 
         for (CartItem item : cartItems) {
+            if (item.getProduct().getDeletedAt() != null) {
+                throw new CoreThrowHandler(RestApiError.USR_0001);
+            }
             if (item.getProduct().getStock() < item.getQuantity()) {
                 String customMessage = RestApiError.USR_0011.getMessage()
                         .replace("{productName}", item.getProduct().getName());
@@ -88,8 +81,29 @@ public class UserCheckoutService {
             }
         }
 
-        // 4. Calculate total amount (backend security)
-        BigDecimal totalAmount = cartItemRepository.calculateTotalAmount(cartItemIdsArray);
+        // 4. Calculate total amount (backend security) & validate active flash sale quota
+        List<CheckoutPriceProjection> priceProjections = cartItemRepository.findCheckoutPrices(cartItemIdsArray);
+
+        for (CartItem cartItem : cartItems) {
+            CheckoutPriceProjection projection = priceProjections.stream()
+                    .filter(p -> p.getCartItemId().equals(cartItem.getId()))
+                    .findFirst()
+                    .orElseThrow();
+
+            if (Boolean.TRUE.equals(projection.getFlashSale())) {
+                FlashSaleItem flashSaleItem = flashSaleItemRepository
+                        .findByProductAndActiveFlashSale(projection.getProductId())
+                        .orElseThrow(() -> new CoreThrowHandler(RestApiError.USR_0024));
+
+                if (flashSaleItem.getRemainingQuota() < cartItem.getQuantity()) {
+                    throw new CoreThrowHandler(RestApiError.USR_0025);
+                }
+            }
+        }
+
+        BigDecimal totalAmount = priceProjections.stream()
+                .map(p -> p.getEffectivePrice().multiply(BigDecimal.valueOf(p.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // 5. Create order (PENDING)
         Order order = Order.builder()
@@ -102,12 +116,17 @@ public class UserCheckoutService {
         // 6. Create order details
         Order finalOrder = order;
         List<OrderDetail> orderDetails = cartItems.stream().map(cartItem -> {
+            CheckoutPriceProjection projection = priceProjections.stream()
+                    .filter(p -> p.getCartItemId().equals(cartItem.getId()))
+                    .findFirst()
+                    .orElseThrow();
+
             OrderDetail detail = new OrderDetail();
             detail.setOrder(finalOrder);
             detail.setProduct(cartItem.getProduct());
             detail.setQuantity(cartItem.getQuantity());
-            detail.setPricePerItem(cartItem.getProduct().getPrice());
-            detail.setFlashSale(false); // TODO: detect flash sale items
+            detail.setPricePerItem(projection.getEffectivePrice());
+            detail.setFlashSale(projection.getFlashSale());
             return detail;
         }).toList();
         orderDetailRepository.saveAll(orderDetails);
@@ -120,7 +139,7 @@ public class UserCheckoutService {
     }
 
     @Audit(action = "ORDER_PAY", affectedModule = "ORDERS", description = "User pays for order")
-    @Transactional
+    @Transactional(noRollbackFor = CoreThrowHandler.class)
     public RestApiResponse<UserCheckoutResponse> payOrder(
             UUID orderId,
             PayOrderRequest request,
@@ -177,8 +196,14 @@ public class UserCheckoutService {
             throw new CoreThrowHandler(RestApiError.USR_0009);
         }
 
-        // Re-validate stock
+        // Re-validate stock & active product status
         for (CartItem item : cartItems) {
+            if (item.getProduct().getDeletedAt() != null) {
+                order.setStatus(OrderStatus.CANCELLED);
+                orderRepository.save(order);
+                throw new CoreThrowHandler(RestApiError.USR_0001);
+            }
+
             if (item.getProduct().getStock() < item.getQuantity()) {
                 order.setStatus(OrderStatus.CANCELLED);
                 orderRepository.save(order);
@@ -188,9 +213,39 @@ public class UserCheckoutService {
             }
         }
 
-        // Recalculate and validate amount
+        // Recalculate and validate amount with fresh flash-sale prices
         UUID[] cartItemIds = cartItems.stream().map(CartItem::getId).toArray(UUID[]::new);
-        BigDecimal recalculated = cartItemRepository.calculateTotalAmount(cartItemIds);
+        List<CheckoutPriceProjection> freshProjections = cartItemRepository.findCheckoutPrices(cartItemIds);
+
+        BigDecimal recalculated = freshProjections.stream()
+                .map(p -> p.getEffectivePrice().multiply(BigDecimal.valueOf(p.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (recalculated.compareTo(order.getTotalAmount()) != 0) {
+            order.setStatus(OrderStatus.CANCELLED);
+            orderRepository.save(order);
+            throw new CoreThrowHandler(RestApiError.USR_0023);
+        }
+
+        // Validate flash sale quota before payment gateway is invoked
+        if (order.getOrderDetails() != null) {
+            for (OrderDetail detail : order.getOrderDetails()) {
+                if (Boolean.TRUE.equals(detail.getFlashSale())) {
+                    Optional<FlashSaleItem> flashSaleItemOpt = flashSaleItemRepository
+                            .findByProductAndActiveFlashSale(detail.getProduct().getId());
+
+                    if (flashSaleItemOpt.isPresent()) {
+                        FlashSaleItem flashSaleItem = flashSaleItemOpt.get();
+                        if (flashSaleItem.getRemainingQuota() < detail.getQuantity()) {
+                            order.setStatus(OrderStatus.CANCELLED);
+                            orderRepository.save(order);
+                            throw new CoreThrowHandler(RestApiError.USR_0025);
+                        }
+                    }
+                }
+            }
+        }
+
         if (recalculated.compareTo(order.getTotalAmount()) != 0) {
             order.setStatus(OrderStatus.CANCELLED);
             orderRepository.save(order);
@@ -232,7 +287,7 @@ public class UserCheckoutService {
                         .build()));
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = CoreThrowHandler.class)
     protected RestApiResponse<UserCheckoutResponse> executePayment(
             Order order,
             Transaction transaction,
@@ -267,7 +322,7 @@ public class UserCheckoutService {
         }
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = CoreThrowHandler.class)
     public RestApiResponse<UserCheckoutResponse> handlePaymentSuccess(
             Order order,
             Transaction transaction,
@@ -282,8 +337,16 @@ public class UserCheckoutService {
         orderRepository.save(order);
         transactionRepository.save(transaction);
 
-        // Finalize order in separate transaction
-        checkoutFinalizer.finalizeOrder(order, cartItems);
+        try {
+            // Finalize order in separate transaction
+            checkoutFinalizer.finalizeOrder(order, cartItems);
+        } catch (CoreThrowHandler ex) {
+            order.setStatus(OrderStatus.CANCELLED);
+            transaction.setStatus(TransactionStatus.FAILED);
+            orderRepository.save(order);
+            transactionRepository.save(transaction);
+            throw ex;
+        }
 
         Order committedOrder = orderRepository.findById(order.getId()).orElseThrow();
         Transaction committedTxn = transactionRepository.findById(transaction.getId()).orElseThrow();
@@ -291,7 +354,7 @@ public class UserCheckoutService {
         return RestApiResponse.success(UserCheckoutResponse.from(committedOrder, committedTxn));
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = CoreThrowHandler.class)
     public RestApiResponse<UserCheckoutResponse> handlePaymentError(
             Order order,
             Transaction transaction,
@@ -311,7 +374,7 @@ public class UserCheckoutService {
         }
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = CoreThrowHandler.class)
     public RestApiResponse<UserCheckoutResponse> handlePaymentTimeout(
             Order order,
             Transaction transaction
@@ -325,7 +388,7 @@ public class UserCheckoutService {
         throw new CoreThrowHandler(RestApiError.USR_0017);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = CoreThrowHandler.class)
     public RestApiResponse<UserCheckoutResponse> handlePaymentFailure(
             Order order,
             Transaction transaction
