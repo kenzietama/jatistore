@@ -22,7 +22,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
                 p.name,
                 s.store_name as storeName,
                 p.description,
-                COALESCE(fsi.flash_price, p.price) as price,
+                COALESCE(CASE WHEN fs.id IS NOT NULL THEN fsi.flash_price ELSE NULL END, p.price) as price,
                 CASE WHEN fsi.flash_price IS NOT NULL THEN p.price ELSE NULL END as originalPrice,
                 p.stock,
                 CASE WHEN fsi.flash_price IS NOT NULL THEN true ELSE false END as isFlashSale,
@@ -37,7 +37,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
             WHERE p.deleted_at IS NULL
                 AND (CAST(:search AS TEXT) IS NULL OR CAST(:search AS TEXT) = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:search AS TEXT), '%')))
                 AND (CAST(:categoryId AS TEXT) IS NULL OR CAST(:categoryId AS TEXT) = '' OR CAST(p.product_category_id AS TEXT) = CAST(:categoryId AS TEXT))
-            ORDER BY p.id, p.created_at DESC
+            ORDER BY p.id, (fs.id IS NULL), fs.end_time DESC, p.created_at DESC
             """,
             countQuery = """
             SELECT COUNT(p.id)
@@ -52,8 +52,8 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     Optional<Product> findByIdAndDeletedAtIsNull(UUID id);
 
     @Query(value = """
-            SELECT 
-                COALESCE(fsi.flash_price, p.price) as price,
+            SELECT
+                COALESCE(CASE WHEN fs.id IS NOT NULL THEN fsi.flash_price ELSE NULL END, p.price) as price,
                 CASE WHEN fsi.flash_price IS NOT NULL THEN p.price ELSE NULL END as originalPrice,
                 CASE WHEN fsi.flash_price IS NOT NULL THEN true ELSE false END as isFlashSale,
                 fs.end_time as flashSaleEndTime
@@ -62,6 +62,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
             LEFT JOIN mst_flash_sales fs ON fs.id = fsi.flash_sale_id
                 AND NOW() BETWEEN fs.start_time AND fs.end_time
             WHERE p.id = :productId
+            ORDER BY (fs.id IS NULL), fs.end_time DESC
             LIMIT 1
             """, nativeQuery = true)
     List<Object[]> getFlashSaleDetailInfo(@Param("productId") UUID productId);
@@ -93,12 +94,13 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     List<Product> findByCategoryId(@Param("categoryId") UUID categoryId);
 
     @Query(value = """
-            SELECT COALESCE(fsi.flash_price, p.price) as current_price
+            SELECT COALESCE(CASE WHEN fs.id IS NOT NULL THEN fsi.flash_price ELSE NULL END, p.price) as current_price
             FROM mst_products p
             LEFT JOIN mst_flash_sale_items fsi ON fsi.product_id = p.id
             LEFT JOIN mst_flash_sales fs ON fs.id = fsi.flash_sale_id
                 AND NOW() BETWEEN fs.start_time AND fs.end_time
             WHERE p.id = :productId
+            ORDER BY (fs.id IS NULL), fs.end_time DESC
             LIMIT 1
             """, nativeQuery = true)
     BigDecimal getCurrentPrice(@Param("productId") UUID productId);
