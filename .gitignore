@@ -9,5 +9,10 @@
 .DS_Store
 Thumbs.db
 
+# MCP server artifacts
+.playwright-mcp/
+
+# Generated/local documentation
+docs/
 graphify-out/
 CLAUDE.md

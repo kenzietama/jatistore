@@ -1,6 +1,6 @@
 package com.indivaragroup.jatistore.controller.user;
 
-import com.indivaragroup.jatistore.dto.request.user.UserCheckoutRequest;
+import com.indivaragroup.jatistore.dto.request.user.PayOrderRequest;
 import com.indivaragroup.jatistore.dto.response.RestApiPath;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.user.UserCheckoutResponse;
@@ -9,26 +9,26 @@ import com.indivaragroup.jatistore.service.user.UserCheckoutService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.security.Principal;
+import java.util.List;
+import java.util.UUID;
 
 @RestController
-@RequestMapping(RestApiPath.BASE_PATH+RestApiPath.USER_CHECKOUT_PATH)
+@RequestMapping(RestApiPath.BASE_PATH + RestApiPath.USER_ORDER_BASE_PATH)
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('USER')")
 public class UserCheckoutController {
 
     private final UserCheckoutService userCheckoutService;
 
-    @PostMapping
-    public RestApiResponse<UserCheckoutResponse> checkout(
-            @Valid  @RequestBody UserCheckoutRequest userCheckoutRequest,
-            @AuthenticationPrincipal UserDetails userDetails
+    @PostMapping(RestApiPath.USER_ORDER_PAY_PATH)
+    public RestApiResponse<UserCheckoutResponse> payOrder(
+            @PathVariable UUID orderId,
+            @Valid @RequestBody PayOrderRequest payOrderRequest,
+            Principal principal
     ) throws CoreThrowHandler {
-        return userCheckoutService.checkout(userCheckoutRequest, userDetails.getUsername());
+        return userCheckoutService.payOrder(orderId, payOrderRequest, principal.getName());
     }
 }

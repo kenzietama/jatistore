@@ -22,6 +22,12 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 class RestControllerAdviceHandlerTest {
 
     private RestControllerAdviceHandler handler;
@@ -422,5 +428,34 @@ class RestControllerAdviceHandlerTest {
         assertNotNull(response);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNull(response.getBody().getRestApiResponseError());
+    }
+
+    @Test
+    void handleAccessDeniedException_Unauthenticated_ShouldReturn401() {
+        SecurityContextHolder.clearContext();
+        AccessDeniedException ex = new AccessDeniedException("Access Denied");
+
+        ResponseEntity<RestApiResponse<Void>> response = handler.handleAccessDeniedException(ex);
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertEquals("UNAUTHORIZED", response.getBody().getRestApiResponseHttpStatus());
+    }
+
+    @Test
+    void handleAccessDeniedException_Authenticated_ShouldReturn403() {
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                "test@user.com", "pass", List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        SecurityContextHolder.getContext().setAuthentication(auth);
+        AccessDeniedException ex = new AccessDeniedException("Access Denied");
+
+        ResponseEntity<RestApiResponse<Void>> response = handler.handleAccessDeniedException(ex);
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertEquals("FORBIDDEN", response.getBody().getRestApiResponseHttpStatus());
+        assertEquals("Access denied: You do not have permission to access this resource", response.getBody().getRestApiResponseMessage());
+
+        SecurityContextHolder.clearContext();
     }
 }

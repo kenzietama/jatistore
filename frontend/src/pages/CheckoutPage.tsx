@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import api from "../lib/api";
 
 interface CheckoutItem {
@@ -32,9 +33,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
   const [checkoutResponse, setCheckoutResponse] = useState<any>(null);
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shipping = cartItems.length > 0 ? 12000 : 0;
-  const tax = Math.round(subtotal * 0.11);
-  const total = subtotal + shipping + tax;
+  const total = subtotal;
 
   const remainingBalance = walletBalance - total;
   const isBalanceEnough = remainingBalance >= 0;
@@ -74,47 +73,98 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
     setError(null);
     setIsLoading(true);
 
+    let paymentStarted = false;
+
     try {
       const token = localStorage.getItem("jatistore_token");
       if (!token) {
         setError("Not authenticated. Please log in.");
-        setIsLoading(false);
         return;
       }
 
-      const selectedCartItemIds = cartItems.map(item => item.cartItemId);
+      if (paymentMethod === "card" && (!cardNumber || !cardHolderName || !expiryDate || !cvc)) {
+        setError("Please fill in all card details.");
+        return;
+      }
 
-      const payload: any = {
-        selected_cart_items_id: selectedCartItemIds,
-        payment_method: paymentMethod.toUpperCase()
+      const selectedCartItemIds = cartItems.map((item) => item.cartItemId);
+      const createOrderResponse = await api.post("/api/v1/orders", {
+        selectedCartItemIds,
+      });
+      const createOrderCode =
+        createOrderResponse.data?.code ??
+        createOrderResponse.data?.restApiResponseHttpCode;
+      const createOrderData =
+        createOrderResponse.data?.data ??
+        createOrderResponse.data?.restApiResponseData;
+      const isCreateOrderSuccessful =
+        createOrderResponse.status === 201 &&
+        (createOrderCode === 200 || createOrderCode === 201);
+
+      if (!isCreateOrderSuccessful || !createOrderData?.orderId) {
+        setError(
+          createOrderResponse.data?.message ||
+            createOrderResponse.data?.restApiResponseMessage ||
+            "Order creation failed. Please try again."
+        );
+        return;
+      }
+
+      const paymentPayload: {
+        paymentMethod: "CARD" | "WALLET";
+        cardNumber?: string;
+        cardHolderName?: string;
+        expiryDate?: string;
+        cvc?: string;
+      } = {
+        paymentMethod: paymentMethod.toUpperCase() as "CARD" | "WALLET",
       };
 
       if (paymentMethod === "card") {
-        if (!cardNumber || !cardHolderName || !expiryDate || !cvc) {
-          setError("Please fill in all card details.");
-          setIsLoading(false);
-          return;
-        }
-        payload.card_number = cardNumber.replace(/\s/g, '');
-        payload.card_holder_name = cardHolderName;
-        payload.expiry_date = expiryDate;
-        payload.cvc = cvc;
+        paymentPayload.cardNumber = cardNumber.replace(/\s/g, "");
+        paymentPayload.cardHolderName = cardHolderName;
+        paymentPayload.expiryDate = expiryDate;
+        paymentPayload.cvc = cvc;
       }
 
-      const response = await api.post("/api/v1/orders/checkout", payload);
+      paymentStarted = true;
+      const paymentResponse = await api.post(
+        `/api/v1/orders/${createOrderData.orderId}/pay`,
+        paymentPayload
+      );
+      const paymentCode =
+        paymentResponse.data?.code ??
+        paymentResponse.data?.restApiResponseHttpCode;
 
-      if (response.data && (response.data.code === 200 || response.data.restApiResponseHttpCode === 200)) {
-        const checkoutData = response.data.data || response.data.restApiResponseData;
-        setCheckoutResponse(checkoutData);
+      if (paymentCode === 200) {
+        const paymentData =
+          paymentResponse.data?.data ??
+          paymentResponse.data?.restApiResponseData;
+        setCheckoutResponse(paymentData);
         setIsSuccessModalOpen(true);
       } else {
-        setError(response.data?.message || response.data?.restApiResponseMessage || "Payment failed. Please try again.");
+        setError(
+          paymentResponse.data?.message ||
+            paymentResponse.data?.restApiResponseMessage ||
+            "Payment failed. Please try again."
+        );
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Checkout failed:", error);
-      const errorMessage = error.response?.data?.restApiResponseMessage ||
-                          error.response?.data?.message ||
-                          "Payment failed. Please try again.";
+      const response = axios.isAxiosError(error) ? error.response : undefined;
+      const responseData = response?.data as
+        | { restApiResponseMessage?: string; message?: string }
+        | undefined;
+      const backendMessage =
+        responseData?.restApiResponseMessage || responseData?.message;
+      const isRestartRequired =
+        paymentStarted && response?.status === 409;
+      const errorMessage = isRestartRequired
+        ? `${backendMessage || "Order is no longer payable."} Please restart checkout and try again.`
+        : backendMessage ||
+          (paymentStarted
+            ? "Payment failed. Please try again."
+            : "Order creation failed. Please try again.");
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -373,19 +423,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
 
               {/* Calculations Total */}
               <div className="space-y-stack-sm border-t border-outline-variant pt-stack-md mb-stack-lg">
-                <div className="flex justify-between font-body-sm text-body-sm text-on-surface-variant">
-                  <span>Subtotal</span>
-                  <span className="font-mono-data">Rp {subtotal.toLocaleString("id-ID")}</span>
-                </div>
-                <div className="flex justify-between font-body-sm text-body-sm text-on-surface-variant">
-                  <span>Shipping (Standard)</span>
-                  <span className="font-mono-data">Rp {shipping.toLocaleString("id-ID")}</span>
-                </div>
-                <div className="flex justify-between font-body-sm text-body-sm text-on-surface-variant">
-                  <span>Tax (PPN 11%)</span>
-                  <span className="font-mono-data">Rp {tax.toLocaleString("id-ID")}</span>
-                </div>
-                <div className="flex justify-between font-headline-md text-headline-md text-on-surface mt-stack-md pt-stack-sm border-t border-outline-variant border-dashed">
+                <div className="flex justify-between font-headline-md text-headline-md text-on-surface">
                   <span className="font-bold">Total</span>
                   <span className="text-primary font-bold text-[20px]">Rp {total.toLocaleString("id-ID")}</span>
                 </div>

@@ -17,10 +17,9 @@ import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -28,17 +27,17 @@ import java.util.UUID;
 @RequestMapping(RestApiPath.BASE_PATH + RestApiPath.CART_BASE_PATH)
 @RequiredArgsConstructor
 @Slf4j
+@PreAuthorize("hasRole('USER')")
 public class CartController {
 
     private final CartService cartService;
     private final AuthRepository authRepository;
 
     @GetMapping
-    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<RestApiResponse<CartResponse>> getCart(
-            @AuthenticationPrincipal UserDetails userDetails) {
+            Principal principal) {
 
-        String email = userDetails.getUsername();
+        String email = principal.getName();
         User user = authRepository.findByEmail(email)
                 .orElseThrow(() -> new CoreThrowHandler(RestApiError.USR_0006));
 
@@ -59,12 +58,11 @@ public class CartController {
     }
 
     @PostMapping(RestApiPath.CART_ADD_ITEM_PATH)
-    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<RestApiResponse<UUID>> addToCart(
-            @AuthenticationPrincipal UserDetails userDetails,
+            Principal principal,
             @RequestBody AddToCartRequest request) {
 
-        String email = userDetails.getUsername();
+        String email = principal.getName();
         User user = authRepository.findByEmail(email)
                 .orElseThrow(() -> new CoreThrowHandler(RestApiError.USR_0006));
 
@@ -83,13 +81,12 @@ public class CartController {
     }
 
     @PatchMapping(RestApiPath.CART_UPDATE_ITEM_PATH)
-    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<RestApiResponse<Void>> updateCartItemQuantity(
-            @AuthenticationPrincipal UserDetails userDetails,
+            Principal principal,
             @PathVariable UUID cartItemId,
             @RequestBody UpdateCartItemQuantityRequest request) {
 
-        String email = userDetails.getUsername();
+        String email = principal.getName();
         User user = authRepository.findByEmail(email)
                 .orElseThrow(() -> new CoreThrowHandler(RestApiError.USR_0006));
 
@@ -108,12 +105,11 @@ public class CartController {
     }
 
     @DeleteMapping(RestApiPath.CART_DELETE_ITEM_PATH)
-    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<RestApiResponse<Void>> removeItem(
-            @AuthenticationPrincipal UserDetails userDetails,
+            Principal principal,
             @PathVariable UUID cartItemId) {
 
-        String email = userDetails.getUsername();
+        String email = principal.getName();
         User user = authRepository.findByEmail(email)
                 .orElseThrow(() -> new CoreThrowHandler(RestApiError.USR_0006));
 

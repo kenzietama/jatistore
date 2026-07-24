@@ -15,6 +15,10 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.Serializable;
 import java.time.Instant;
@@ -170,6 +174,25 @@ public class RestControllerAdviceHandler {
         apiResponse.setRestApiResponseRequestId(MDC.get("requestId"));
 
         return ResponseEntity.status(NOT_FOUND).body(apiResponse);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<RestApiResponse<Void>> handleAccessDeniedException(AccessDeniedException ex) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
+            return handleCoreThrowHandler(new CoreThrowHandler(RestApiError.AUT_0006));
+        }
+
+        RestApiResponse<Void> apiResponse = new RestApiResponse<>();
+        apiResponse.setRestApiResponseHttpCode(FORBIDDEN.value());
+        apiResponse.setRestApiResponseHttpStatus(FORBIDDEN.name());
+        apiResponse.setRestApiResponseMessage("Access denied: You do not have permission to access this resource");
+        apiResponse.setRestApiResponseError(null);
+        apiResponse.setRestApiResponseTimestamp(Instant.now());
+        apiResponse.setRestApiResponseRequestId(MDC.get("requestId"));
+
+        return ResponseEntity.status(FORBIDDEN).body(apiResponse);
     }
 
     @ExceptionHandler(Throwable.class)

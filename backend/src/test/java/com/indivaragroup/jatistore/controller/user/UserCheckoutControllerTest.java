@@ -1,6 +1,6 @@
 package com.indivaragroup.jatistore.controller.user;
 
-import com.indivaragroup.jatistore.dto.request.user.UserCheckoutRequest;
+import com.indivaragroup.jatistore.dto.request.user.PayOrderRequest;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.user.UserCheckoutResponse;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
@@ -8,33 +8,34 @@ import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.service.user.UserCheckoutService;
 import com.indivaragroup.jatistore.service.utility.AuthJWTUtility;
 import com.indivaragroup.jatistore.repository.AuthRepository;
+import com.indivaragroup.jatistore.repository.TokenRepository;
 import com.indivaragroup.jatistore.data.utility.constant.PaymentMethod;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.security.Principal;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import org.springframework.security.test.context.support.WithMockUser;
 
-@SpringBootTest
-@AutoConfigureMockMvc(addFilters = false)
+@WebMvcTest(UserCheckoutController.class)
 public class UserCheckoutControllerTest {
 
     @Autowired
@@ -47,46 +48,50 @@ public class UserCheckoutControllerTest {
     private UserCheckoutService userCheckoutService;
 
     @MockitoBean
-    private AuthJWTUtility authJWTUtility;
-
-    @MockitoBean
-    private AuthRepository authRepository;
-
-    @MockitoBean
-    private org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
+    private com.indivaragroup.jatistore.service.utility.AuthJWTUtility authJWTUtility;
 
     @MockitoBean
     private com.indivaragroup.jatistore.repository.TokenRepository tokenRepository;
 
-    private UserCheckoutRequest walletCheckoutRequest;
-    private UserCheckoutRequest cardCheckoutRequest;
+    @MockitoBean
+    private com.indivaragroup.jatistore.repository.AuthRepository authRepository;
+
+    @MockitoBean
+    private org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
+
+    private PayOrderRequest walletPayRequest;
+    private PayOrderRequest cardPayRequest;
     private UserCheckoutResponse mockResponse;
     private UserDetails testUser;
+    private Principal mockPrincipal;
+    private UUID orderId;
+    private List<UUID> cartItemIds;
 
     @BeforeEach
     void setUp() {
-        // Create proper UserDetails mock
+        mockPrincipal = () -> "user@example.com";
+
         testUser = User.builder()
                 .username("user@example.com")
                 .password("password")
                 .authorities(Collections.emptyList())
                 .build();
 
-        // Wallet checkout request
-        walletCheckoutRequest = new UserCheckoutRequest();
-        walletCheckoutRequest.setUserSelectedCartItemId(new UUID[]{UUID.randomUUID()});
-        walletCheckoutRequest.setUserCheckoutRequestPaymentMethod(PaymentMethod.WALLET);
+        orderId = UUID.randomUUID();
+        cartItemIds = List.of(UUID.randomUUID());
 
-        // Card checkout request
-        cardCheckoutRequest = new UserCheckoutRequest();
-        cardCheckoutRequest.setUserSelectedCartItemId(new UUID[]{UUID.randomUUID()});
-        cardCheckoutRequest.setUserCheckoutRequestPaymentMethod(PaymentMethod.CARD);
-        cardCheckoutRequest.setUserCheckoutRequestCardNumber("4111111111111111");
-        cardCheckoutRequest.setUserCheckoutRequestCardHolderName("John Doe");
-        cardCheckoutRequest.setUserCheckoutRequestExpiryDate("12/25");
-        cardCheckoutRequest.setUserCheckoutRequestCvc("123");
+        walletPayRequest = PayOrderRequest.builder()
+                .paymentMethod(PaymentMethod.WALLET)
+                .build();
 
-        // Mock response
+        cardPayRequest = PayOrderRequest.builder()
+                .paymentMethod(PaymentMethod.CARD)
+                .cardNumber("4111111111111111")
+                .cardHolderName("John Doe")
+                .expiryDate("12/25")
+                .cvc("123")
+                .build();
+
         mockResponse = new UserCheckoutResponse(
                 UUID.randomUUID(),
                 UUID.randomUUID(),
@@ -97,17 +102,15 @@ public class UserCheckoutControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "user@example.com")
-    void checkout_Success_WalletPayment() throws Exception {
-        // Arrange
+    void payOrder_Success_WalletPayment() throws Exception {
         RestApiResponse<UserCheckoutResponse> successResponse = RestApiResponse.success(mockResponse);
-        when(userCheckoutService.checkout(any(UserCheckoutRequest.class), any(String.class)))
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
                 .thenReturn(successResponse);
 
-        // Act & Assert
-        mockMvc.perform(post("/api/v1/orders/checkout")
+        mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
+                        .principal(mockPrincipal)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(walletCheckoutRequest)))
+                        .content(objectMapper.writeValueAsString(walletPayRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.order_id").value(mockResponse.getOrder_id().toString()))
@@ -117,91 +120,114 @@ public class UserCheckoutControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "user@example.com")
-    void checkout_Success_CardPayment() throws Exception {
-        // Arrange
+    void payOrder_Success_CardPayment() throws Exception {
         RestApiResponse<UserCheckoutResponse> successResponse = RestApiResponse.success(mockResponse);
-        when(userCheckoutService.checkout(any(UserCheckoutRequest.class), any(String.class)))
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
                 .thenReturn(successResponse);
 
-        // Act & Assert
-        mockMvc.perform(post("/api/v1/orders/checkout")
+        mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
+                        .principal(mockPrincipal)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(cardCheckoutRequest)))
+                        .content(objectMapper.writeValueAsString(cardPayRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data").exists());
     }
 
     @Test
-    void checkout_Fail_EmptyCartItems() throws Exception {
-        // Arrange
-        UserCheckoutRequest invalidRequest = new UserCheckoutRequest();
-        invalidRequest.setUserSelectedCartItemId(new UUID[]{});
-        invalidRequest.setUserCheckoutRequestPaymentMethod(PaymentMethod.WALLET);
+    void payOrder_Fail_NullPaymentMethod() throws Exception {
+        PayOrderRequest invalidRequest = PayOrderRequest.builder()
+                .paymentMethod(null)
+                .build();
 
-        // Act & Assert
-        mockMvc.perform(post("/api/v1/orders/checkout")
+        mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
+                        .principal(mockPrincipal)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalidRequest))
-                        .principal(() -> "user@example.com"))
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    void checkout_Fail_NullPaymentMethod() throws Exception {
-        // Arrange
-        UserCheckoutRequest invalidRequest = new UserCheckoutRequest();
-        invalidRequest.setUserSelectedCartItemId(new UUID[]{UUID.randomUUID()});
-        invalidRequest.setUserCheckoutRequestPaymentMethod(null);
+    void payOrder_Fail_OrderNotFound() throws Exception {
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
+                .thenThrow(new CoreThrowHandler(RestApiError.USR_0015));
 
-        // Act & Assert
-        mockMvc.perform(post("/api/v1/orders/checkout")
+        mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
+                        .principal(mockPrincipal)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalidRequest))
-                        .principal(() -> "user@example.com"))
-                .andExpect(status().isBadRequest());
+                        .content(objectMapper.writeValueAsString(walletPayRequest)))
+                .andExpect(status().isNotFound());
     }
 
     @Test
-    @WithMockUser(username = "user@example.com")
-    void checkout_Fail_InsufficientStock() throws Exception {
-        // Arrange
-        when(userCheckoutService.checkout(any(UserCheckoutRequest.class), any(String.class)))
+    void payOrder_Fail_OrderNotPayable() throws Exception {
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
+                .thenThrow(new CoreThrowHandler(RestApiError.USR_0022));
+
+        mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
+                        .principal(mockPrincipal)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(walletPayRequest)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void payOrder_Fail_AmountChanged() throws Exception {
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
+                .thenThrow(new CoreThrowHandler(RestApiError.USR_0023));
+
+        mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
+                        .principal(mockPrincipal)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(walletPayRequest)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void payOrder_Fail_InsufficientStock() throws Exception {
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
                 .thenThrow(new CoreThrowHandler(RestApiError.USR_0011));
 
-        // Act & Assert
-        mockMvc.perform(post("/api/v1/orders/checkout")
+        mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
+                        .principal(mockPrincipal)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(walletCheckoutRequest)))
+                        .content(objectMapper.writeValueAsString(walletPayRequest)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    @WithMockUser(username = "user@example.com")
-    void checkout_Fail_MultipleSellerInCart() throws Exception {
-        // Arrange
-        when(userCheckoutService.checkout(any(UserCheckoutRequest.class), any(String.class)))
-                .thenThrow(new CoreThrowHandler(RestApiError.USR_0019));
+    void payOrder_Fail_PaymentDeclined_Wallet() throws Exception {
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
+                .thenThrow(new CoreThrowHandler(RestApiError.USR_0013));
 
-        // Act & Assert
-        mockMvc.perform(post("/api/v1/orders/checkout")
+        mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
+                        .principal(mockPrincipal)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(walletCheckoutRequest)))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    @WithMockUser(username = "user@example.com")
-    void checkout_Fail_PaymentDeclined() throws Exception {
-        // Arrange
-        when(userCheckoutService.checkout(any(UserCheckoutRequest.class), any(String.class)))
-                .thenThrow(new CoreThrowHandler(RestApiError.USR_0012));
-
-        // Act & Assert
-        mockMvc.perform(post("/api/v1/orders/checkout")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(walletCheckoutRequest)))
+                        .content(objectMapper.writeValueAsString(walletPayRequest)))
                 .andExpect(status().isPaymentRequired());
+    }
+
+    @Test
+    void payOrder_Fail_PaymentDeclined_Card() throws Exception {
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
+                .thenThrow(new CoreThrowHandler(RestApiError.USR_0013));
+
+        mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
+                        .principal(mockPrincipal)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(cardPayRequest)))
+                .andExpect(status().isPaymentRequired());
+    }
+
+    @Test
+    void payOrder_Fail_PaymentTimeout() throws Exception {
+        when(userCheckoutService.payOrder(any(UUID.class), any(PayOrderRequest.class), anyString()))
+                .thenThrow(new CoreThrowHandler(RestApiError.USR_0017));
+
+        mockMvc.perform(post("/api/v1/orders/" + orderId + "/pay")
+                        .principal(mockPrincipal)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(walletPayRequest)))
+                .andExpect(status().isRequestTimeout());
     }
 }
