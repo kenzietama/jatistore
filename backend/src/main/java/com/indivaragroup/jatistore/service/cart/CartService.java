@@ -18,10 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -79,30 +79,40 @@ public class CartService {
                     .build();
         }
 
-        List<CartItem> cartItems = cartItemRepository.findByCartId(cart.getId());
-        List<CartItemResponse> itemResponses = new ArrayList<>();
+        List<Object[]> rawItems = cartItemRepository.getCartItemsWithFlashSale(cart.getId());
         BigDecimal totalPrice = BigDecimal.ZERO;
 
-        for (CartItem item : cartItems) {
-            Product product = item.getProduct();
-            BigDecimal currentPrice = product.getPrice();
-            BigDecimal subtotal = currentPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+        List<CartItemResponse> itemResponses = rawItems.stream().map(row -> {
+            UUID cartItemId = (UUID) row[0];
+            UUID productId = (UUID) row[1];
+            String productName = (String) row[2];
+            String productImage = (String) row[3];
+            BigDecimal unitPrice = (BigDecimal) row[4];
+            BigDecimal originalPrice = (BigDecimal) row[5];
+            Integer quantity = (Integer) row[6];
+            Integer maxStock = (Integer) row[7];
+            UUID storeId = (UUID) row[8];
+            String storeName = (String) row[9];
 
-            CartItemResponse response = CartItemResponse.builder()
-                    .id(item.getId())
-                    .productId(product.getId())
-                    .productName(product.getName())
-                    .productImage(product.getImage())
-                    .unitPrice(currentPrice)
-                    .quantity(item.getQuantity())
+            BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
+
+            return CartItemResponse.builder()
+                    .id(cartItemId)
+                    .productId(productId)
+                    .productName(productName)
+                    .productImage(productImage)
+                    .unitPrice(unitPrice)
+                    .originalPrice(originalPrice)
+                    .quantity(quantity)
                     .subtotal(subtotal)
-                    .maxStock(product.getStock())
-                    .storeId(product.getStore() != null ? product.getStore().getId() : null)
-                    .storeName(product.getStore() != null ? product.getStore().getStoreName() : null)
+                    .maxStock(maxStock)
+                    .storeId(storeId)
+                    .storeName(storeName)
                     .build();
+        }).collect(Collectors.toList());
 
-            itemResponses.add(response);
-            totalPrice = totalPrice.add(subtotal);
+        for (CartItemResponse item : itemResponses) {
+            totalPrice = totalPrice.add(item.getSubtotal());
         }
 
         return CartResponse.builder()

@@ -7,11 +7,11 @@
 
 -- Safety check - prevent running in production
 DO $$
-    BEGIN
+BEGIN
         IF current_database() = 'jatistore_production' THEN
             RAISE EXCEPTION 'ABORT: Cannot run seed data in production database!';
-        END IF;
-    END $$;
+END IF;
+END $$;
 
 -- ============================================================
 -- [S1] Users & Roles

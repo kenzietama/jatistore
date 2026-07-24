@@ -41,6 +41,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
 
   useEffect(() => {
     fetchWalletBalance();
+    console.log(cartItems);
   }, []);
 
   const fetchWalletBalance = async () => {

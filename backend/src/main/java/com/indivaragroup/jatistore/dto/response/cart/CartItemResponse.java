@@ -18,6 +18,7 @@ public class CartItemResponse {
     private String productName;
     private String productImage;
     private BigDecimal unitPrice;
+    private BigDecimal originalPrice;
     private Integer quantity;
     private BigDecimal subtotal;
     private Integer maxStock;
