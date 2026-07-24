@@ -23,9 +23,6 @@ interface CatalogPageProps {
   onProductClick: (id: string, isFlashSale?: boolean) => void;
   onCartClick: () => void;
   onAddToCart: (id: string, quantity: number) => void; 
-  isLoggedIn: boolean;
-  onLoginClick: () => void;
-  onLogoutClick: () => void;
   searchQuery: string;
   onCheckout: (checkedItems: any[]) => void;
 }
@@ -40,15 +37,11 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
   onProductClick,
   onCartClick,
   onAddToCart,
-  isLoggedIn,
-  onLoginClick,
-  onLogoutClick,
   searchQuery: initialSearchQuery,
   onCheckout
 }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [cartCount, setCartCount] = useState<number>(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   
@@ -120,24 +113,6 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
     return () => clearInterval(timer);
   }, [flashSaleEvent]);
 
-  const fetchCartCount = async () => {
-    const token = localStorage.getItem("jatistore_token");
-    if (!token) {
-      setCartCount(0);
-      return;
-    }
-    try {
-      const response = await api.get("/api/v1/cart");
-      if (response.data && (response.data.restApiResponseHttpCode === 200 || response.data.code === 200)) {
-        const responseData = response.data.restApiResponseData || response.data.data;
-        const items = responseData?.items || [];
-        const totalQuantity = items.reduce((sum: number, item: any) => sum + item.quantity, 0);
-        setCartCount(totalQuantity);
-      }
-    } catch (error) {
-      console.error("Failed to load cart count:", error);
-    }
-  };
 
   const fetchProducts = async (page: number) => {
     setIsLoading(true);
@@ -194,7 +169,6 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
       })
       .catch((err) => console.error("Failed to load categories:", err));
 
-    fetchCartCount();
   }, []);
 
   const filteredProducts = products.filter((product) => {
@@ -439,7 +413,6 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
                               onClick={async (e) => {
                                 e.stopPropagation();
                                 await onAddToCart(product.id, 1);
-                                await fetchCartCount();
                                 onCartClick();
                               }}
                               className={`w-full py-2 border font-label-sm text-label-sm rounded-md transition-colors ${

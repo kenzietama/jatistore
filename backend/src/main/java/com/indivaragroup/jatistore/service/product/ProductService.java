@@ -47,6 +47,10 @@ public class ProductService {
         Product product = productRepository.findByIdAndDeletedAtIsNull(productId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found or deleted"));
 
+        if (!product.getStore().getSeller().getActive()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found or deleted");
+        }
+
         // Ambil info harga & flash sale tambahan
         List<Object[]> flashInfoList = productRepository.getFlashSaleDetailInfo(productId);
 

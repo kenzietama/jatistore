@@ -58,6 +58,8 @@ public enum RestApiError {
     ADM_0016(HttpStatus.NOT_FOUND.value(), "Flash sale not found"),
     ADM_0017(HttpStatus.CONFLICT.value(), "Cannot delete flash sale with attached products"),
     ADM_0018(HttpStatus.BAD_REQUEST.value(), "Start time cannot be in the past"),
+    ADM_0019(HttpStatus.CONFLICT.value(), "Flash sale time range overlaps with an existing flash sale"),
+    ADM_0020(HttpStatus.BAD_REQUEST.value(), "Cannot edit an ended flash sale event"),
     SLR_0001(HttpStatus.UNAUTHORIZED.value(), "Unauthorized access"),
     SLR_0016(HttpStatus.NOT_FOUND.value(), "Product not found"),
     SLR_0030(HttpStatus.BAD_REQUEST.value(), "Flash price must be less than retail price"),

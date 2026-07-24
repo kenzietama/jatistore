@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SellerSidebar } from './SellerSidebar';
 import { SellerHeader } from './SellerHeader';
+import api from '../../../lib/api';
 
 interface SellerLayoutProps {
   children: React.ReactNode;
@@ -11,6 +12,21 @@ export function SellerLayout({ children }: SellerLayoutProps) {
     return localStorage.getItem('sellerSidebarCollapsed') === 'true';
   });
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    // Check seller active status immediately on mount, then poll every 5 seconds
+    const checkStatus = async () => {
+      try {
+        await api.get("/api/v1/seller/dashboard/profile");
+      } catch (error) {
+        // Interceptor in api.ts will handle 401/403 automatically
+      }
+    };
+    checkStatus();
+
+    const interval = setInterval(checkStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSetCollapsed = (val: boolean) => {
     setIsSidebarCollapsed(val);

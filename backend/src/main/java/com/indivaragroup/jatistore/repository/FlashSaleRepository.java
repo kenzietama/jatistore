@@ -28,4 +28,10 @@ public interface FlashSaleRepository extends JpaRepository<FlashSale, UUID> {
 
     @Query("SELECT f FROM FlashSale f WHERE f.startTime <= :now AND f.endTime >= :now ORDER BY f.startTime DESC")
     Optional<FlashSale> findActiveFlashSale(@Param("now") Instant now);
+
+    @Query("SELECT COUNT(f) > 0 FROM FlashSale f WHERE f.startTime < :endTime AND f.endTime > :startTime")
+    boolean existsOverlappingFlashSale(@Param("startTime") Instant startTime, @Param("endTime") Instant endTime);
+
+    @Query("SELECT COUNT(f) > 0 FROM FlashSale f WHERE f.id <> :excludeId AND f.startTime < :endTime AND f.endTime > :startTime")
+    boolean existsOverlappingFlashSaleExcludeId(@Param("startTime") Instant startTime, @Param("endTime") Instant endTime, @Param("excludeId") UUID excludeId);
 }

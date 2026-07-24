@@ -74,6 +74,9 @@ public class UserCheckoutService {
             if (item.getProduct().getDeletedAt() != null) {
                 throw new CoreThrowHandler(RestApiError.USR_0001);
             }
+            if (!item.getProduct().getStore().getSeller().getActive()) {
+                throw new CoreThrowHandler(RestApiError.USR_0001);
+            }
             if (item.getProduct().getStock() < item.getQuantity()) {
                 String customMessage = RestApiError.USR_0011.getMessage()
                         .replace("{productName}", item.getProduct().getName());
@@ -199,6 +202,12 @@ public class UserCheckoutService {
         // Re-validate stock & active product status
         for (CartItem item : cartItems) {
             if (item.getProduct().getDeletedAt() != null) {
+                order.setStatus(OrderStatus.CANCELLED);
+                orderRepository.save(order);
+                throw new CoreThrowHandler(RestApiError.USR_0001);
+            }
+
+            if (!item.getProduct().getStore().getSeller().getActive()) {
                 order.setStatus(OrderStatus.CANCELLED);
                 orderRepository.save(order);
                 throw new CoreThrowHandler(RestApiError.USR_0001);

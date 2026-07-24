@@ -31,10 +31,12 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
                 CAST(p.product_category_id AS VARCHAR) as categoryId
             FROM mst_products p
             LEFT JOIN mst_stores s ON s.id = p.store_id
+            LEFT JOIN mst_sellers sl ON sl.id = s.seller_id
             LEFT JOIN mst_flash_sale_items fsi ON fsi.product_id = p.id
             LEFT JOIN mst_flash_sales fs ON fs.id = fsi.flash_sale_id
                 AND NOW() BETWEEN fs.start_time AND fs.end_time
             WHERE p.deleted_at IS NULL
+                AND sl.active = true
                 AND (CAST(:search AS TEXT) IS NULL OR CAST(:search AS TEXT) = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:search AS TEXT), '%')))
                 AND (CAST(:categoryId AS TEXT) IS NULL OR CAST(:categoryId AS TEXT) = '' OR CAST(p.product_category_id AS TEXT) = CAST(:categoryId AS TEXT))
             ORDER BY p.id, (fs.id IS NULL), fs.end_time DESC, p.created_at DESC
@@ -42,7 +44,10 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
             countQuery = """
             SELECT COUNT(p.id)
             FROM mst_products p
+            LEFT JOIN mst_stores s ON s.id = p.store_id
+            LEFT JOIN mst_sellers sl ON sl.id = s.seller_id
             WHERE p.deleted_at IS NULL
+                AND sl.active = true
                 AND (CAST(:search AS TEXT) IS NULL OR CAST(:search AS TEXT) = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:search AS TEXT), '%')))
                 AND (CAST(:categoryId AS TEXT) IS NULL OR CAST(:categoryId AS TEXT) = '' OR CAST(p.product_category_id AS TEXT) = CAST(:categoryId AS TEXT))
             """,
@@ -77,7 +82,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     @Query("SELECT COUNT(DISTINCT p.store.id) FROM Product p WHERE p.category.id = :categoryId AND p.deletedAt IS NULL")
     long countDistinctStoresByCategoryId(@Param("categoryId") UUID categoryId);
 
-    @Query("SELECT p FROM Product p WHERE p.store.seller.id = :sellerId AND p.deletedAt IS NULL AND " +
+    @Query("SELECT p FROM Product p WHERE p.store.seller.id = :sellerId AND p.store.seller.active = true AND p.deletedAt IS NULL AND " +
             "(COALESCE(:search, '') = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR CAST(p.id AS string) LIKE CONCAT('%', :search, '%')) AND " +
             "(COALESCE(:category, '') = '' OR p.category.name = :category) AND " +
             "(:minStock IS NULL OR p.stock >= :minStock) AND " +

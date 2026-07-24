@@ -56,37 +56,39 @@ public interface CartItemRepository extends JpaRepository<CartItem, UUID> {
     List<CheckoutPriceProjection> findCheckoutPrices(@Param("cartItemIds") UUID[] cartItemIds);
 
     @Query(value = """
-            SELECT\s
+            SELECT 
                 ci.id as cartItemId,
                 p.id as productId,
                 p.name as productName,
                 p.image as productImage,
                 COALESCE(
-                    (SELECT fsi.flash_price\s
-                     FROM mst_flash_sale_items fsi\s
-                     JOIN mst_flash_sales fs ON fs.id = fsi.flash_sale_id\s
-                     WHERE fsi.product_id = p.id\s
-                       AND NOW() BETWEEN fs.start_time AND fs.end_time\s
-                     LIMIT 1),\s
+                    (SELECT fsi.flash_price 
+                     FROM mst_flash_sale_items fsi 
+                     JOIN mst_flash_sales fs ON fs.id = fsi.flash_sale_id 
+                     WHERE fsi.product_id = p.id 
+                       AND NOW() BETWEEN fs.start_time AND fs.end_time 
+                     LIMIT 1), 
                     p.price
                 ) as unitPrice,
-                CASE\s
-                    WHEN (SELECT fsi.flash_price\s
-                          FROM mst_flash_sale_items fsi\s
-                          JOIN mst_flash_sales fs ON fs.id = fsi.flash_sale_id\s
-                          WHERE fsi.product_id = p.id\s
-                            AND NOW() BETWEEN fs.start_time AND fs.end_time\s
-                          LIMIT 1) IS NOT NULL\s
-                    THEN p.price\s
-                    ELSE NULL\s
+                CASE 
+                    WHEN (SELECT fsi.flash_price 
+                          FROM mst_flash_sale_items fsi 
+                          JOIN mst_flash_sales fs ON fs.id = fsi.flash_sale_id 
+                          WHERE fsi.product_id = p.id 
+                            AND NOW() BETWEEN fs.start_time AND fs.end_time 
+                          LIMIT 1) IS NOT NULL 
+                    THEN p.price 
+                    ELSE NULL 
                 END as originalPrice,
                 ci.quantity,
                 p.stock as maxStock,
                 s.id as storeId,
-                s.store_name as storeName
+                s.store_name as storeName,
+                sl.active as sellerActive
             FROM trx_cart_items ci
             JOIN mst_products p ON p.id = ci.product_id
             LEFT JOIN mst_stores s ON s.id = p.store_id
+            LEFT JOIN mst_sellers sl ON sl.id = s.seller_id
             WHERE ci.cart_id = :cartId AND p.deleted_at IS NULL
             """, nativeQuery = true)
     List<Object[]> getCartItemsWithFlashSale(@Param("cartId") UUID cartId);
