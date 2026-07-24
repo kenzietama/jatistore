@@ -7,6 +7,7 @@ interface CartItem {
   productName: string;
   productImage: string;
   unitPrice: number;
+  originalPrice?: number; // ✅ Ditambahkan untuk menampung harga asli/coret
   quantity: number;
   subtotal: number;
   maxStock: number;
@@ -51,14 +52,12 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
 
         setCartItems(sortedItems);
 
-        // 2. Logika Checked: Jika belum ada it di list.
         if (sortedItems.length > 0) {
           const firstStoreName = sortedItems[0].storeName;
           const firstStoreItems = sortedItems
             .filter(item => item.storeName === firstStoreName)
             .map(item => item.id);
 
-          // Hanya set jika checkedItemIds masih kosong (untuk menjaga pilihan user)
           if (checkedItemIds.length === 0) {
             setCheckedItemIds(firstStoreItems);
           }
@@ -78,13 +77,11 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
   }, []);
 
   const updateQuantity = async (type: "increment" | "decrement", currentQuantity: number, cartItemId: string) => {
-    // 1. Logika Hapus jika kuantitas <= 1
     if (type === "decrement" && currentQuantity <= 1) {
       await removeItem(cartItemId);
       return;
     }
 
-    // 2. Optimistic Update: Perbarui UI segera sebelum API selesai
     setCartItems((prevItems) =>
       prevItems.map((item) =>
         item.id === cartItemId
@@ -93,13 +90,11 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
       )
     );
 
-    // 3. Clear existing debounce timer for this item
     const existingTimer = debounceTimers.current.get(cartItemId);
     if (existingTimer) {
       clearTimeout(existingTimer);
     }
 
-    // 4. Set new debounce timer (500ms delay)
     const timer = setTimeout(async () => {
       try {
         const item = cartItems.find(i => i.id === cartItemId);
@@ -206,7 +201,6 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
   return (
     <main className="flex-1 w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-stack-lg">
       
-      {/* Tombol Kembali Belanja */}
       <button 
         onClick={onBackToCatalog} 
         className="text-primary font-label-md text-label-md hover:underline flex items-center gap-1 mb-4 self-start"
@@ -214,7 +208,6 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
         <span className="material-symbols-outlined text-[18px]">arrow_back</span> Back to Shopping
       </button>
 
-      {/* Header Halaman (Sangat Clean!) */}
       <header className="mb-stack-lg border-b border-outline-variant pb-4">
         <h1 className="font-headline-lg text-headline-lg text-on-background font-bold">Your Cart</h1>
         <p className="font-body-md text-body-md text-on-surface-variant mt-unit">Review your cart items before proceeding to checkout</p>
@@ -231,7 +224,6 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
           
-          {/* Kolom Kiri: Toko & Daftar Barang */}
           <div className="lg:col-span-8 flex flex-col gap-stack-md">
             {stores.map((storeName) => {
               const storeItems = cartItems.filter((item) => item.storeName === storeName);
@@ -239,7 +231,6 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
 
               return (
                 <section key={storeName} className="flex flex-col gap-stack-sm mb-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-sm">
-                  {/* Header Toko */}
                   <div className="flex items-center gap-2 py-2 border-b border-outline-variant mb-2">
                     <input 
                       type="checkbox"
@@ -251,7 +242,6 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
                     <h2 className="font-bold text-primary text-body-lg">{storeName}</h2>
                   </div>
 
-                  {/* Daftar Barang di Toko Tersebut */}
                   {storeItems.map((item) => (
                     <article key={item.id} className="border-b border-outline-variant last:border-none py-4 flex flex-col sm:flex-row gap-gutter relative">
                       <div className="flex items-center justify-center">
@@ -301,10 +291,25 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
                               <span className="material-symbols-outlined text-[18px]">add</span>
                             </button>
                           </div>
+                          
                           <div className="text-right">
-                            <p className="font-headline-md text-[18px] font-bold text-primary">
-                              Rp {((item.unitPrice || 0) * item.quantity).toLocaleString("id-ID")}
-                            </p>
+                            {item.originalPrice ? (
+                              <div className="flex flex-col items-end">
+                                {/* Harga Asli Dicoret */}
+                                <span className="font-body-sm text-body-sm text-on-surface-variant line-through">
+                                  Rp {(item.originalPrice * item.quantity).toLocaleString("id-ID")}
+                                </span>
+                                {/* Harga Flash Sale (Warna Merah) */}
+                                <span className="font-headline-md text-headline-md text-red-600 font-bold">
+                                  Rp {(item.unitPrice * item.quantity).toLocaleString("id-ID")}
+                                </span>
+                              </div>
+                            ) : (
+                              /* Harga Normal (Warna Utama / Hijau) */
+                              <p className="font-headline-md text-headline-md text-primary font-bold">
+                                Rp {(item.unitPrice * item.quantity).toLocaleString("id-ID")}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -315,7 +320,6 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
             })}
           </div>
 
-          {/* Kolom Kanan: Ringkasan & Tombol Checkout */}
           <div className="lg:col-span-4 sticky top-24">
             <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md shadow-sm flex flex-col gap-stack-md">
               <h2 className="font-headline-md text-headline-md text-on-background border-b border-outline-variant pb-stack-sm font-bold">Order Summary</h2>

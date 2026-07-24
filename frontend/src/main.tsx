@@ -26,6 +26,10 @@ const App = () => {
     (location.state?.returnToPage as any) || "catalog"
   );
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  
+  // ⚡ State untuk melacak apakah produk yang diklik berasal dari flash sale
+  const [isCurrentProductFlashSale, setIsCurrentProductFlashSale] = useState<boolean>(false);
+
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartCount, setCartCount] = useState<number>(0);
@@ -99,10 +103,6 @@ const App = () => {
     }
   };
 
-  const handleLoginSuccess = () => {
-    // Legacy mock login success, now unused by real Login
-  };
-
   useEffect(() => {
     if (isLoggedIn && pendingProductId) {
       handleAddToCart(pendingProductId, 1).then(() => {
@@ -115,7 +115,6 @@ const App = () => {
   return (
     <div className="text-on-background bg-background min-h-screen flex flex-col font-sans antialiased">
       
-      {/* 👑 GLOBAL HEADER UTAMA */}
         <nav className="bg-surface border-b border-outline-variant shadow-sm w-full sticky top-0 z-50">
           <div className="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto h-16 gap-4">
 
@@ -132,37 +131,11 @@ const App = () => {
               </button>
             </div>
 
-            {(currentPage === "catalog" || currentPage === "cart") ? (
-
-              <div className="flex-1 max-w-xl mx-4 flex items-center gap-3">
-                <span className="font-label-md text-label-md text-on-surface-variant font-semibold whitespace-nowrap hidden lg:inline">
-                </span>
-                <div className="relative w-full">
-                  <span className="material-symbols-outlined absolute left-3 top-1/4 -translate-y-1/1 text-on-surface-variant text-[20px]">
-                    search
-                  </span>
-                  <input
-                    className="w-full pl-10 pr-4 py-2 bg-surface-container rounded-full border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary-fixed focus:outline-none transition-all font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant"
-                    placeholder={currentPage === "cart" ? "Search products" : "Search items on JatiStore..."}
-                    type="text"
-                    value={catalogSearchQuery}
-                    onChange={(e) => {
-                      setCatalogSearchQuery(e.target.value);
-                      if (currentPage === "cart") {
-                        setCurrentPage("catalog");
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="flex-1"></div>
-            )}
+            {/* Bagian Search Bar Header Telah Dihapus Sesuai Permintaan agar Tidak Membebani BE */}
+            <div className="flex-1"></div>
 
             {/* Sebelah Kanan: Menu Navigasi Kondisional */}
             <div className="flex items-center gap-stack-md flex-shrink-0">
-
-              {/* KONDISI 1: JIKA HALAMAN CHECKOUT (Hanya sisakan profil saja jika login) */}
               {currentPage === "checkout" ? (
                 isLoggedIn && (
                   <button
@@ -174,7 +147,6 @@ const App = () => {
                   </button>
                 )
               ) : currentPage !== "cart" ? (
-                /* KONDISI 2: UNTUK HALAMAN SELAIN CART DAN CHECKOUT (TAMPILKAN PENUH) */
                 <>
                   <button
                     onClick={handleNavigateToCart}
@@ -227,8 +199,7 @@ const App = () => {
                     </>
                   )}
                 </>
-              ) : null /* JIKA HALAMAN CART, SEBELAH KANAN KOSONG TOTAL SESUAI REQUEST SEBELUMNYA */}
-
+              ) : null}
             </div>
           </div>
         </nav>
@@ -236,8 +207,9 @@ const App = () => {
       {/* RENDER KONTEN HALAMAN */}
       {currentPage === "catalog" && (
         <CatalogPage 
-          onProductClick={(productId) => {
+          onProductClick={(productId, isFlashSale = false) => {
             setSelectedProduct(productId);
+            setIsCurrentProductFlashSale(isFlashSale);
             setCurrentPage("detail");
           }}
           onCartClick={handleNavigateToCart}
@@ -249,6 +221,30 @@ const App = () => {
             setCartItems([]);
           }}
           searchQuery={catalogSearchQuery}
+          onCheckout={async (products) => {
+            handleAddToCart(products[0].id, 1);
+            try {
+              const response = await api.get("/api/v1/cart");
+              if (response.data && (response.data.restApiResponseHttpCode === 200 || response.data.code === 200)) {
+                const responseData = response.data.restApiResponseData || response.data.data;
+                const items = responseData?.items || [];
+                const item = items.find((i: any) => i.productId === products[0].id);
+                if (item) {
+                  setSelectedCheckoutItems([{
+                    id: products[0].id,
+                    cartItemId: item.id,
+                    name: products[0].name,
+                    price: products[0].price,
+                    image: products[0].image,
+                    quantity: 1
+                  }]);
+                  setCurrentPage("checkout");
+                }
+              }
+            } catch (error) {
+              console.error("Gagal mengambil jumlah keranjang:", error);
+            }
+          }}
         />
       )}
 
@@ -257,7 +253,8 @@ const App = () => {
           productId={selectedProduct} 
           onBackToCatalog={() => setCurrentPage("catalog")} 
           onAddToCart={handleAddToCart}
-          onCartClick={handleNavigateToCart} 
+          onCartClick={handleNavigateToCart}
+          isFromFlashSale={isCurrentProductFlashSale}
         />
       )}
 
@@ -269,8 +266,9 @@ const App = () => {
             setCurrentPage("checkout");
           }}
           onRefreshCartCount={fetchCartCount}
-          onProductClick={(productId) => {
+          onProductClick={(productId, isFlashSale = false) => {
             setSelectedProduct(productId);
+            setIsCurrentProductFlashSale(isFlashSale);
             setCurrentPage("detail");
           }}
         />
@@ -295,7 +293,6 @@ const App = () => {
           cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
         />
       )}
-
     </div>
   );
 };

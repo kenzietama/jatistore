@@ -53,13 +53,12 @@ public class ProductController {
     }
 
     @GetMapping(RestApiPath.PRODUCT_DETAIL_PATH)
-    public RestApiResponse<Product> getProductById(@PathVariable("id") UUID id) {
-        log.info("Fetching product detail for ID: {}", id);
+    public RestApiResponse<ProductListItemResponse> getProductById(@PathVariable("id") UUID id) {
+        log.info("Fetching product detail with flash sale for ID: {}", id);
 
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        ProductListItemResponse product = productService.getProductDetailWithFlashSale(id);
 
-        return RestApiResponse.<Product>builder()
+        return RestApiResponse.<ProductListItemResponse>builder()
                 .restApiResponseHttpCode(200)
                 .restApiResponseHttpStatus("OK")
                 .restApiResponseMessage("Product detail retrieved successfully.")
@@ -68,6 +67,4 @@ public class ProductController {
                 .restApiResponseRequestId(MDC.get("requestId"))
                 .build();
     }
-
-
 }

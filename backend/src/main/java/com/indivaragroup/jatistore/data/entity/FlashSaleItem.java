@@ -1,5 +1,6 @@
 package com.indivaragroup.jatistore.data.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,6 +24,7 @@ public class FlashSaleItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "flash_sale_id", nullable = false)
+    @JsonBackReference
     private FlashSale flashSale;
 
     @ManyToOne(fetch = FetchType.LAZY)

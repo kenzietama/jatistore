@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import api from "../lib/api"; 
 
-// 1. Updated interface to include dynamic store object matching database structure
 interface Product {
   id: string;
   name: string;
@@ -14,7 +13,8 @@ interface Product {
   rating?: number;          
   reviewsCount?: number;    
   thumbnails?: string[];    
-  // Added relation object based on backend/database structure
+  isFlashSale?: boolean;        
+  flashSaleEndTime?: string;    
   store?: {
     id: string;
     storeName: string;
@@ -24,30 +24,40 @@ interface Product {
 interface ProductDetailPageProps {
   productId: string; 
   onBackToCatalog: () => void;
-  onAddToCart: (productId: string, quantity: number) => void;
+  onAddToCart: (productId: string, quantity: number, priceToUse: number) => void;
   onCartClick: () => void; 
+  isFromFlashSale?: boolean; 
 }
 
 const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ 
   productId, 
   onBackToCatalog, 
   onAddToCart,
-  onCartClick 
+  onCartClick,
+  isFromFlashSale = false 
 }) => {
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
   const [mainImage, setMainImage] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  const [flashSaleEvent, setFlashSaleEvent] = useState<{ name: string; endTime: string } | null>(null);
+  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+
+  // 1. Fetch Detail Produk
   useEffect(() => {
     setIsLoading(true);
     api.get(`/api/v1/products/${productId}`)
       .then((response) => {
-        if (response.data && response.data.code === 200) {
-          const fetchedProduct = response.data.data;
+        const result = response.data;
+        const fetchedProduct = result?.restApiResponseData || result?.data || result;
+
+        if (fetchedProduct && fetchedProduct.id) {
           setProduct(fetchedProduct);
           setMainImage(fetchedProduct.image || "https://placehold.co/600x400?text=No+Image");
           setQuantity(1); 
+        } else {
+          setProduct(null);
         }
         setIsLoading(false);
       })
@@ -56,6 +66,54 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
         setIsLoading(false);
       });
   }, [productId]);
+
+  // 2. Fetch Flash Sale Aktif dari Endpoint Publik Backend
+  useEffect(() => {
+    const fetchActiveFlashSale = async () => {
+      try {
+        const response = await api.get("/api/v1/public/flash-sale/active");
+        if (response.data && (response.data.code === 200 || response.data.restApiResponseHttpCode === 200)) {
+          const eventData = response.data.data || response.data.restApiResponseData;
+          if (eventData && eventData.endTime) {
+            setFlashSaleEvent({
+              name: eventData.name || "Flash Sale",
+              endTime: eventData.endTime
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Gagal memuat flash sale aktif:", error);
+      }
+    };
+
+    fetchActiveFlashSale();
+  }, []);
+
+  // 3. Countdown Timer Real-time berdasarkan Flash Sale Aktif Admin
+  useEffect(() => {
+    if (!flashSaleEvent?.endTime) return;
+
+    const targetTime = new Date(flashSaleEvent.endTime).getTime();
+
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const difference = targetTime - now;
+
+      if (difference <= 0) {
+        clearInterval(timer);
+        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+        setFlashSaleEvent(null); 
+      } else {
+        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+        setTimeLeft({ hours, minutes, seconds });
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [flashSaleEvent]);
 
   const handleQuantityChange = (type: "add" | "remove") => {
     if (!product) return;
@@ -85,13 +143,25 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
   const finalProductRating = product.rating ?? 5;
   const finalReviewsCount = product.reviewsCount ?? 24;
-  // 🏪 FALLBACK LOGIC: Mengambil storeName dari objek store database jika tersedia
   const finalSoldBy = product.store?.storeName ?? "JatiStore Official";
   const finalThumbnails = product.thumbnails ?? [];
 
+  // ⚡ Status Flash Sale Aktif yang Konsisten (Mendukung flag isFlashSale, isFromFlashSale, atau discountTag dari backend)
+  const isFlashSaleActive = Boolean(flashSaleEvent && (product.isFlashSale || isFromFlashSale || product.discountTag));
+  
+  // 💰 Kalkulasi Harga Asli & Diskon yang Konsisten (Mencegah ketidaksesuaian antara tampilan UI dan keranjang)
+  const isProductPricedAsDiscounted = isFlashSaleActive && product.originalPrice && product.originalPrice > product.price;
+  
+  const displayOriginalPrice = isProductPricedAsDiscounted 
+    ? product.originalPrice 
+    : (isFlashSaleActive ? Math.round(product.price * 1.3) : null);
+
+  const displayCurrentPrice = isProductPricedAsDiscounted 
+    ? product.price 
+    : (isFlashSaleActive ? product.price : (product.originalPrice || product.price));
+
   return (
     <>
-      {/* Main Content */}
       <main className="flex-grow w-full max-w-container-max mx-auto px-margin-desktop py-stack-lg flex flex-col gap-stack-lg">
         {/* Breadcrumb / Back Button */}
         <button onClick={onBackToCatalog} className="flex items-center gap-1 text-primary text-body-sm font-semibold hover:underline self-start">
@@ -102,11 +172,13 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
           {/* Image Gallery */}
           <div className="lg:col-span-7 flex flex-col gap-stack-sm">
-            <div className="w-full aspect-[4/3] rounded-xl overflow-hidden bg-surface-container-lowest border border-outline-variant shadow-sm relative group">
+            <div className="w-full flex items-center justify-center aspect-[4/3] rounded-xl overflow-hidden bg-surface-container-lowest border border-outline-variant shadow-sm relative group">
               <img alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" src={mainImage} />
-              {product.discountTag && (
-                <div className="absolute top-4 left-4 bg-error text-on-error px-3 py-1 rounded-full font-label-sm text-label-sm uppercase tracking-wide opacity-90 shadow-sm backdrop-blur-sm">
-                  {product.discountTag}
+              
+              {isFlashSaleActive && (
+                <div className="absolute top-4 left-4 bg-error text-on-error px-3.5 py-1.5 rounded-full font-label-sm text-label-sm uppercase tracking-wide shadow-md flex items-center gap-1.5 z-10">
+                  <span className="material-symbols-outlined text-[18px]">bolt</span>
+                  {product.discountTag || "Flash Sale"}
                 </div>
               )}
             </div>
@@ -133,6 +205,21 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
           {/* Product Details */}
           <div className="lg:col-span-5 flex flex-col gap-stack-md bg-surface-container-lowest p-gutter rounded-xl shadow-sm border border-outline-variant">
+            
+            {isFlashSaleActive && (
+              <div className="bg-gradient-to-r from-error/15 to-error/5 border border-error/30 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-2 text-error">
+                  <span className="material-symbols-outlined text-[22px]">bolt</span>
+                  <span className="font-label-md font-bold uppercase tracking-wider text-xs">Flash Sale Berakhir:</span>
+                </div>
+                <div className="flex items-center gap-1 font-mono font-bold text-error text-sm">
+                  <span className="bg-error/20 px-2 py-0.5 rounded">{String(timeLeft.hours).padStart(2, '0')}</span>:
+                  <span className="bg-error/20 px-2 py-0.5 rounded">{String(timeLeft.minutes).padStart(2, '0')}</span>:
+                  <span className="bg-error/20 px-2 py-0.5 rounded">{String(timeLeft.seconds).padStart(2, '0')}</span>
+                </div>
+              </div>
+            )}
+
             <div>
               <div className="flex items-center gap-1 mb-1 text-on-surface-variant">
                 <span className="material-symbols-outlined text-label-sm" style={{ fontSize: "16px" }}>storefront</span>
@@ -149,10 +236,22 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               </div>
             </div>
 
-            <div className="flex items-baseline gap-3 pb-stack-md border-b border-outline-variant">
-              <span className="text-display-lg font-display-lg text-error">Rp {product.price.toLocaleString("id-ID")}</span>
-              {product.originalPrice && (
-                <span className="text-headline-md font-headline-md text-on-surface-variant line-through opacity-70">Rp {product.originalPrice.toLocaleString("id-ID")}</span>
+            {/* HARGA PRODUK: Selaras antara tampilan UI dan harga yang dikirim ke keranjang */}
+            <div className="flex flex-col pb-stack-md border-b border-outline-variant">
+              <div className="flex items-baseline gap-3">
+                <span className={`text-display-lg font-display-lg ${isFlashSaleActive ? 'text-error font-bold' : 'text-on-surface font-bold'}`}>
+                  Rp {displayCurrentPrice.toLocaleString("id-ID")}
+                </span>
+              </div>
+              {displayOriginalPrice && isFlashSaleActive && (
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-headline-sm font-headline-sm text-on-surface-variant line-through opacity-70">
+                    Rp {displayOriginalPrice.toLocaleString("id-ID")}
+                  </span>
+                  <span className="text-xs bg-error/10 text-error font-bold px-2 py-0.5 rounded">
+                    Hemat Rp {(displayOriginalPrice - displayCurrentPrice).toLocaleString("id-ID")}
+                  </span>
+                </div>
               )}
             </div>
 
@@ -167,21 +266,26 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
             <div className="mt-auto pt-stack-md flex gap-stack-sm">
               <div className="flex border border-outline-variant rounded-lg overflow-hidden h-12 w-32 bg-surface">
-                <button onClick={() => handleQuantityChange("remove")} className="w-10 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+                <button onClick={() => handleQuantityChange("remove")} className="w-15 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
                   <span className="material-symbols-outlined">remove</span>
                 </button>
                 <input className="w-full text-center border-none bg-transparent font-body-md text-body-md focus:ring-0 p-0" type="text" readOnly value={quantity} />
-                <button onClick={() => handleQuantityChange("add")} className="w-10 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+                <button onClick={() => handleQuantityChange("add")} className="w-15 flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
                   <span className="material-symbols-outlined">add</span>
                 </button>
               </div>
               
               <button 
                 onClick={async () => {
-                  await onAddToCart(product.id, quantity);
+                  // Memastikan harga yang dikirim ke keranjang 100% sinkron dengan harga aktif yang sedang ditampilkan (displayCurrentPrice)
+                  await onAddToCart(product.id, quantity, displayCurrentPrice);
                   onCartClick(); 
                 }}
-                className="flex-1 bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md py-3 px-6 rounded-full transition-colors flex items-center justify-center gap-2 shadow-sm"
+                className={`flex-1 font-label-md text-label-md py-3 px-6 rounded-full transition-colors flex items-center justify-center gap-2 shadow-sm ${
+                  isFlashSaleActive 
+                    ? 'bg-error text-on-error hover:bg-error/90' 
+                    : 'bg-primary text-on-primary hover:bg-primary/90'
+                }`}
               >
                 <span className="material-symbols-outlined">shopping_cart</span>
                 Tambah Keranjang

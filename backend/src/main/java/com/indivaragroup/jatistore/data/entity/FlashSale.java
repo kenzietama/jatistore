@@ -1,5 +1,6 @@
 package com.indivaragroup.jatistore.data.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -36,5 +37,6 @@ public class FlashSale {
 
 
     @OneToMany(mappedBy = "flashSale", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<FlashSaleItem> items = new ArrayList<>();
 }
