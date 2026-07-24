@@ -1,5 +1,6 @@
 package com.indivaragroup.jatistore.service.product;
 
+import com.indivaragroup.jatistore.data.entity.Product;
 import com.indivaragroup.jatistore.dto.response.module.product.ProductListItemResponse;
 import com.indivaragroup.jatistore.dto.response.utility.PageData;
 import com.indivaragroup.jatistore.repository.ProductRepository;
@@ -9,6 +10,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -36,6 +39,42 @@ public class ProductService {
                 .size(resultPage.getSize())
                 .totalElements(resultPage.getTotalElements())
                 .totalPages(resultPage.getTotalPages())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public ProductListItemResponse getProductDetailWithFlashSale(UUID productId) {
+        Product product = productRepository.findByIdAndDeletedAtIsNull(productId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found or deleted"));
+
+        // Ambil info harga & flash sale tambahan
+        List<Object[]> flashInfoList = productRepository.getFlashSaleDetailInfo(productId);
+
+        BigDecimal finalPrice = product.getPrice();
+        BigDecimal originalPrice = null;
+        Boolean isFlashSale = false;
+        Instant flashSaleEndTime = null;
+
+        if (!flashInfoList.isEmpty() && flashInfoList.get(0) != null) {
+            Object[] row = flashInfoList.get(0);
+            finalPrice = row[0] != null ? (BigDecimal) row[0] : product.getPrice();
+            originalPrice = (BigDecimal) row[1];
+            isFlashSale = row[2] != null && (Boolean) row[2];
+            flashSaleEndTime = (Instant) row[3];
+        }
+
+        return ProductListItemResponse.builder()
+                .id(product.getId())
+                .name(product.getName())
+                .storeName(product.getStore() != null ? product.getStore().getStoreName() : null)
+                .description(product.getDescription())
+                .price(finalPrice)
+                .originalPrice(originalPrice)
+                .stock(product.getStock())
+                .isFlashSale(isFlashSale)
+                .flashSaleEndTime(flashSaleEndTime)
+                .image(product.getImage())
+                .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
                 .build();
     }
 

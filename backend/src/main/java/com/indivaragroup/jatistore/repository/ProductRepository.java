@@ -1,7 +1,6 @@
 package com.indivaragroup.jatistore.repository;
 
 import com.indivaragroup.jatistore.data.entity.Product;
-import com.indivaragroup.jatistore.dto.response.module.product.ProductListItemResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -26,7 +26,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
                 CASE WHEN fsi.flash_price IS NOT NULL THEN p.price ELSE NULL END as originalPrice,
                 p.stock,
                 CASE WHEN fsi.flash_price IS NOT NULL THEN true ELSE false END as isFlashSale,
-                NULL as flashSaleEndTime,
+                fs.end_time as flashSaleEndTime,
                 p.image,
                 CAST(p.product_category_id AS VARCHAR) as categoryId
             FROM mst_products p
@@ -48,13 +48,28 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
             """,
             nativeQuery = true)
     Page<Object[]> findProductsWithFlashSale(@Param("search") String search, @Param("categoryId") String categoryId, Pageable pageable);
-    
+
+    Optional<Product> findByIdAndDeletedAtIsNull(UUID id);
+
+    @Query(value = """
+            SELECT 
+                COALESCE(fsi.flash_price, p.price) as price,
+                CASE WHEN fsi.flash_price IS NOT NULL THEN p.price ELSE NULL END as originalPrice,
+                CASE WHEN fsi.flash_price IS NOT NULL THEN true ELSE false END as isFlashSale,
+                fs.end_time as flashSaleEndTime
+            FROM mst_products p
+            LEFT JOIN mst_flash_sale_items fsi ON fsi.product_id = p.id
+            LEFT JOIN mst_flash_sales fs ON fs.id = fsi.flash_sale_id
+                AND NOW() BETWEEN fs.start_time AND fs.end_time
+            WHERE p.id = :productId
+            LIMIT 1
+            """, nativeQuery = true)
+    List<Object[]> getFlashSaleDetailInfo(@Param("productId") UUID productId);
+
     @Query("SELECT COUNT(p) FROM Product p WHERE p.store.seller.id = :sellerId AND p.deletedAt IS NULL")
     long countActiveProductsBySellerId(@Param("sellerId") UUID sellerId);
 
     long countByDeletedAtIsNull();
-    
-    java.util.Optional<Product> findByIdAndDeletedAtIsNull(UUID id);
 
     long countByCategoryIdAndDeletedAtIsNull(UUID categoryId);
 
@@ -62,10 +77,10 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     long countDistinctStoresByCategoryId(@Param("categoryId") UUID categoryId);
 
     @Query("SELECT p FROM Product p WHERE p.store.seller.id = :sellerId AND p.deletedAt IS NULL AND " +
-           "(COALESCE(:search, '') = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR CAST(p.id AS string) LIKE CONCAT('%', :search, '%')) AND " +
-           "(COALESCE(:category, '') = '' OR p.category.name = :category) AND " +
-           "(:minStock IS NULL OR p.stock >= :minStock) AND " +
-           "(:maxStock IS NULL OR p.stock <= :maxStock)")
+            "(COALESCE(:search, '') = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) OR CAST(p.id AS string) LIKE CONCAT('%', :search, '%')) AND " +
+            "(COALESCE(:category, '') = '' OR p.category.name = :category) AND " +
+            "(:minStock IS NULL OR p.stock >= :minStock) AND " +
+            "(:maxStock IS NULL OR p.stock <= :maxStock)")
     Page<Product> findProductsBySellerAndFilters(
             @Param("sellerId") UUID sellerId,
             @Param("search") String search,
@@ -87,4 +102,13 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
             LIMIT 1
             """, nativeQuery = true)
     BigDecimal getCurrentPrice(@Param("productId") UUID productId);
+
+    @Query("SELECT p FROM Product p WHERE p.deletedAt IS NULL " +
+            "AND (:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:category IS NULL OR LOWER(p.category) = LOWER(:category))")
+    Page<Product> findProductsWithFilter(
+            @Param("search") String search,
+            @Param("category") String category,
+            Pageable pageable
+    );
 }

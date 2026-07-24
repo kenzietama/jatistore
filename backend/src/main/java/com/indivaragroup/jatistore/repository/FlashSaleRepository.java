@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -24,4 +25,7 @@ public interface FlashSaleRepository extends JpaRepository<FlashSale, UUID> {
 
     @Query("SELECT f FROM FlashSale f WHERE f.startTime > :now ORDER BY f.startTime ASC")
     java.util.List<FlashSale> findAvailableFlashSales(@Param("now") Instant now);
+
+    @Query("SELECT f FROM FlashSale f WHERE f.startTime <= :now AND f.endTime >= :now ORDER BY f.startTime DESC")
+    Optional<FlashSale> findActiveFlashSale(@Param("now") Instant now);
 }

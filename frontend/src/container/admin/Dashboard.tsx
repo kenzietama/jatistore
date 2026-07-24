@@ -3,6 +3,7 @@ import { adminService } from '../../service/admin/admin.service';
 import type { AdminDashboardResponse } from '../../service/admin/admin.service';
 import { SellerManagement } from './SellerManagement';
 import { CategoryManagement } from './CategoryManagement';
+import { FlashSaleManager } from './FlashSaleManager';
 
 export function Dashboard() {
   const [data, setData] = useState<AdminDashboardResponse | null>(null);
@@ -63,6 +64,7 @@ export function Dashboard() {
       {/* Sub-panels rendered as sections */}
       <SellerManagement />
       <CategoryManagement />
+      <FlashSaleManager /> {/* <-- 2. Render Flash Sale Manager di sini */}
     </div>
   );
 }

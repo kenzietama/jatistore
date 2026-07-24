@@ -20,13 +20,14 @@ interface Product {
 }
 
 interface CatalogPageProps {
-  onProductClick: (id: string) => void;
+  onProductClick: (id: string, isFlashSale?: boolean) => void;
   onCartClick: () => void;
   onAddToCart: (id: string, quantity: number) => void; 
   isLoggedIn: boolean;
   onLoginClick: () => void;
   onLogoutClick: () => void;
-  searchQuery: string; // 💡 Menerima kata kunci pencarian dari Header Global main.tsx
+  searchQuery: string;
+  onCheckout: (checkedItems: any[]) => void;
 }
 
 interface Category {
@@ -42,18 +43,82 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
   isLoggedIn,
   onLoginClick,
   onLogoutClick,
-  searchQuery // 💡 Ambil properti pencarian
+  searchQuery: initialSearchQuery,
+  onCheckout
 }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [cartCount, setCartCount] = useState<number>(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [minPrice, setMinPrice] = useState<number>(0);
-  const [maxPrice, setMaxPrice] = useState<number>(100000000);
+  
+  const [localSearchInput, setLocalSearchInput] = useState<string>(initialSearchQuery || "");
+  const [appliedSearchQuery, setAppliedSearchQuery] = useState<string>(initialSearchQuery || "");
+
+  const [minPrice] = useState<number>(0);
+  const [maxPrice] = useState<number>(100000000);
+  
+  // State untuk Pagination
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(0);
+  const [totalElements, setTotalElements] = useState<number>(0);
   const [pageSize] = useState<number>(20);
+  const [isFlashSaleOnly, setIsFlashSaleOnly] = useState<boolean>(false);
+  
+  // State Dinamis untuk Flash Sale dari Admin Backend
+  const [flashSaleEvent, setFlashSaleEvent] = useState<{ name: string; endTime: string } | null>(null);
+  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+
+  // 1. Fetch data flash sale aktif yang diatur admin dari backend
+  useEffect(() => {
+    const fetchActiveFlashSale = async () => {
+      try {
+        const response = await api.get("/api/v1/public/flash-sale/active");
+        
+        if (response.data && (response.data.code === 200 || response.data.restApiResponseHttpCode === 200)) {
+          const eventData = response.data.data || response.data.restApiResponseData;
+          
+          if (eventData && eventData.endTime) {
+            setFlashSaleEvent({
+              name: eventData.name || "Flash Sale",
+              endTime: eventData.endTime
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Gagal memuat flash sale aktif:", error);
+      }
+    };
+
+    fetchActiveFlashSale();
+  }, []);
+
+  // 2. Kalkulasi hitung mundur (Countdown) real-time & reset status jika waktu habis
+  useEffect(() => {
+    if (!flashSaleEvent?.endTime) return;
+
+    const targetTime = new Date(flashSaleEvent.endTime).getTime();
+
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const difference = targetTime - now;
+
+      if (difference <= 0) {
+        clearInterval(timer);
+        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+        setFlashSaleEvent(null); // Menghilangkan bar & mengakhiri flash sale
+        setIsFlashSaleOnly(false); // Reset filter flash sale jika sedang aktif
+      } else {
+        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+        setTimeLeft({ hours, minutes, seconds });
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [flashSaleEvent]);
 
   const fetchCartCount = async () => {
     const token = localStorage.getItem("jatistore_token");
@@ -82,12 +147,17 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
         size: pageSize.toString()
       });
 
-      if (searchQuery) {
-        params.append('search', searchQuery);
+      if (appliedSearchQuery) {
+        params.append('search', appliedSearchQuery);
       }
       
       if (selectedCategoryId) {
         params.append('categoryId', selectedCategoryId);
+      }
+
+      // Hanya kirim parameter flash sale jika event masih aktif
+      if (isFlashSaleOnly && flashSaleEvent) {
+        params.append('isFlashSale', 'true');
       }
 
       const response = await api.get(`/api/v1/products?${params.toString()}`);
@@ -95,6 +165,7 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
         const data = response.data.data;
         setProducts(data.content || []);
         setTotalPages(data.totalPages || 0);
+        setTotalElements(data.totalElements || 0);
       }
     } catch (error) {
       console.error("Failed to load products:", error);
@@ -103,13 +174,18 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
     }
   };
 
+  const handleExecuteSearch = () => {
+    setCurrentPage(0);
+    setAppliedSearchQuery(localSearchInput);
+  };
+
   useEffect(() => {
     setCurrentPage(0);
-  }, [searchQuery, selectedCategoryId]);
+  }, [appliedSearchQuery, selectedCategoryId, isFlashSaleOnly]);
 
   useEffect(() => {
     fetchProducts(currentPage);
-  }, [currentPage, searchQuery, selectedCategoryId]);
+  }, [currentPage, appliedSearchQuery, selectedCategoryId, isFlashSaleOnly, flashSaleEvent]);
 
   useEffect(() => {
     api.get("/api/v1/public/categories")
@@ -123,16 +199,59 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
 
   const filteredProducts = products.filter((product) => {
     const matchesPrice = product.price >= minPrice && product.price <= maxPrice;
-    return matchesPrice;
+    // Jika flash sale event sudah habis (flashSaleEvent == null), paksa status flash sale produk jadi false
+    const activeFlashSaleStatus = flashSaleEvent ? product.isFlashSale : false;
+    const matchesFlashSale = isFlashSaleOnly ? activeFlashSaleStatus === true : true;
+    return matchesPrice && matchesFlashSale;
   });
+
+  const getVisiblePageNumbers = () => {
+    const maxVisible = 5;
+    let startPage = Math.max(0, currentPage - Math.floor(maxVisible / 2));
+    let endPage = startPage + maxVisible;
+
+    if (endPage > totalPages) {
+      endPage = totalPages;
+      startPage = Math.max(0, endPage - maxVisible);
+    }
+
+    const pages = [];
+    for (let i = startPage; i < endPage; i++) {
+      pages.push(i);
+    }
+    return pages;
+  };
 
   return (
     <>
-      {/* 💡 HEADER LAMA SUDAH DIHAPUS BERSIH KARENA SUDAH MEMAKAI HEADER GLOBAL DI main.tsx */}
-
-      {/* Main Content */}
       <main className="w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-stack-lg flex flex-col gap-stack-lg">
         
+        {/* Search Bar dengan Tombol Eksplisit */}
+        <section className="bg-surface rounded-xl p-4 border border-outline-variant shadow-sm flex flex-col sm:flex-row gap-3 items-center">
+          <div className="relative w-full">
+            <span className="material-symbols-outlined absolute left-3 top-1/4 -translate-y-1/1 text-on-surface-variant">search</span>
+            <input 
+              type="text"
+              value={localSearchInput}
+              onChange={(e) => setLocalSearchInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleExecuteSearch();
+                }
+              }}
+              placeholder="Find your needs..."
+              className="w-full pl-10 pr-4 py-2.5 bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:outline-none text-on-surface font-body-sm"
+            />
+          </div>
+          <button 
+            onClick={handleExecuteSearch}
+            className="w-full sm:w-auto px-6 py-2.5 bg-primary text-on-primary font-label-md font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-sm whitespace-nowrap flex items-center justify-center gap-2"
+          >
+            <span className="material-symbols-outlined text-[18px]">search</span>
+            Search
+          </button>
+        </section>
+
         {/* Hero Banner */}
         <section className="w-full rounded-xl overflow-hidden shadow-sm relative group cursor-pointer h-48 md:h-64 lg:h-[320px]">
           <div className="bg-cover bg-center w-full h-full absolute inset-0" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuApbnHv6bPnGLVj4F3I6s4zDl3ut-7ToyWRVdMAgosuZjCt9fwLpO820HDDMYUPysEpTMO5p-OtMAeJm7qVuO99LP6r-Uykmrqbmoh54mYavqdrW6jsPbORPvwwNuUa0YvuzNLK_ru-8mDAncBvuXaG0jd97nZJZfuLHvo3d1nxXTfm5-QRRDANun8bbPnZ9THC5Y9GqFN5a3UmUc8aQIRpEsL8AWhL6ZpA4uXY5TWBFGqW04m29ADOWRiETPB4PyOFKABFB0968ltKY6o")' }}></div>
@@ -146,10 +265,49 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
           </div>
         </section>
 
-        {/* Sidebar + Content Layout */}
-        <div className="flex gap-stack-lg">
+        {/* Flash Sale Bar - Hanya muncul jika flashSaleEvent aktif dan waktu belum habis */}
+        {flashSaleEvent && (
+          <section className="bg-gradient-to-r from-error/10 via-error/5 to-surface border border-error/20 rounded-2xl p-6 shadow-sm">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-error text-on-error p-2 rounded-xl flex items-center justify-center shadow-sm">
+                  <span className="material-symbols-outlined text-[24px]">bolt</span>
+                </div>
+                <div>
+                  <h3 className="font-headline-lg text-headline-lg text-on-surface flex items-center gap-2">
+                    {flashSaleEvent.name} <span className="text-xs bg-error text-on-error px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">HOT</span>
+                  </h3>
+                  <p className="text-body-sm text-on-surface-variant">Penawaran terbatas sesuai jadwal admin, segera amankan produk pilihanmu!</p>
+                </div>
+              </div>
 
-          {/* Left Sidebar - Category Filter */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 bg-surface px-4 py-2 rounded-xl border border-outline-variant shadow-sm">
+                  <span className="text-xs text-on-surface-variant font-medium">End :</span>
+                  <div className="flex items-center gap-1 font-mono font-bold text-error">
+                    <span className="bg-error/10 px-2 py-1 rounded">{String(timeLeft.hours).padStart(2, '0')}</span>:
+                    <span className="bg-error/10 px-2 py-1 rounded">{String(timeLeft.minutes).padStart(2, '0')}</span>:
+                    <span className="bg-error/10 px-2 py-1 rounded">{String(timeLeft.seconds).padStart(2, '0')}</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setIsFlashSaleOnly(true);
+                    setSelectedCategoryId(null);
+                  }}
+                  className="bg-error text-on-error px-4 py-2 rounded-xl text-label-md font-label-md font-bold hover:bg-error/90 transition-colors shadow-sm flex items-center gap-1"
+                >
+                  View All <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Sidebar & Products Layout */}
+        <div className="flex gap-stack-lg">
+          {/* Left Sidebar */}
           <aside className="w-60 flex-shrink-0 hidden md:block">
             <div className="sticky top-20 bg-surface rounded-lg border border-outline-variant p-4 space-y-6">
               <div>
@@ -157,23 +315,38 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
 
                 <div className="flex flex-col gap-2">
                   <button
-                    onClick={() => setSelectedCategoryId(null)}
+                    onClick={() => { setSelectedCategoryId(null); setIsFlashSaleOnly(false); }}
                     className={`flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
-                      selectedCategoryId === null
+                      selectedCategoryId === null && !isFlashSaleOnly
                         ? 'bg-primary text-on-primary'
                         : 'hover:bg-surface-container text-on-surface'
                     }`}
                   >
                     <span className="material-symbols-outlined">apps</span>
-                    <span className="font-label-md">All</span>
+                    <span className="font-label-md">All Products</span>
                   </button>
+
+                  {/* Tombol Flash Sale Only hanya aktif jika flash sale masih berlangsung */}
+                  {flashSaleEvent && (
+                    <button
+                      onClick={() => { setIsFlashSaleOnly(true); setSelectedCategoryId(null); }}
+                      className={`flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
+                        isFlashSaleOnly
+                          ? 'bg-error text-on-error'
+                          : 'hover:bg-surface-container text-error'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined">bolt</span>
+                      <span className="font-label-md font-bold">Flash Sale Only</span>
+                    </button>
+                  )}
 
                   {categories.map((cat) => (
                     <button
                       key={cat.id}
-                      onClick={() => setSelectedCategoryId(cat.id)}
+                      onClick={() => { setSelectedCategoryId(cat.id); setIsFlashSaleOnly(false); }}
                       className={`flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
-                        selectedCategoryId === cat.id
+                        selectedCategoryId === cat.id && !isFlashSaleOnly
                           ? 'bg-primary-container text-on-primary-container border-l-4 border-primary'
                           : 'hover:bg-surface-container text-on-surface'
                       }`}
@@ -184,166 +357,141 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
                   ))}
                 </div>
               </div>
-
-              <div className="pt-4 border-t border-outline-variant">
-                <h3 className="font-headline-sm text-headline-sm text-on-surface mb-4">Price</h3>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1">Min</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={minPrice === 0 ? '' : minPrice}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '') {
-                          setMinPrice(0);
-                        } else {
-                          const num = parseInt(val, 10);
-                          if (!isNaN(num) && num >= 0) {
-                            setMinPrice(num);
-                          }
-                        }
-                      }}
-                      className="w-full border border-outline-variant rounded-lg h-10 px-3 text-body-sm font-body-sm bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                      placeholder="0"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-label-sm text-label-sm text-on-surface-variant mb-1">Max</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={maxPrice === 100000000 ? '' : maxPrice}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '') {
-                          setMaxPrice(100000000);
-                        } else {
-                          const num = parseInt(val, 10);
-                          if (!isNaN(num) && num >= 0) {
-                            setMaxPrice(num);
-                          }
-                        }
-                      }}
-                      className="w-full border border-outline-variant rounded-lg h-10 px-3 text-body-sm font-body-sm bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                      placeholder="100000000"
-                    />
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setMinPrice(0);
-                      setMaxPrice(100000000);
-                    }}
-                    className="w-full py-2 text-label-sm font-label-sm text-primary hover:bg-primary-container/10 rounded-lg transition-colors"
-                  >
-                    Reset Price
-                  </button>
-                </div>
-              </div>
             </div>
           </aside>
 
-          {/* Main Content - Products */}
-          <section className="flex-1 min-w-0">
-            <div className="flex justify-between items-center mb-stack-md">
-              <h3 className="font-headline-md text-headline-md text-on-surface">Best Selling Products</h3>
+          {/* Main Content */}
+          <section className="flex-1 min-w-0 flex flex-col gap-6">
+            <div className="flex justify-between items-center">
+              <h3 className="font-headline-md text-headline-md text-on-surface">
+                {isFlashSaleOnly ? "Flash Sale Product" : "All Product"}
+              </h3>
+              <span className="text-body-sm text-on-surface-variant">
+                Show Page {currentPage + 1} From {totalPages || 1} ({totalElements} Product)
+              </span>
             </div>
 
             {isLoading ? (
-              <div className="text-center py-10 font-label-md text-on-surface-variant">Loading products from database...</div>
+              <div className="text-center py-16 font-label-md text-on-surface-variant">Memuat produk dari server...</div>
             ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-12 bg-surface-container-lowest border border-outline-variant rounded-lg">
+              <div className="text-center py-16 bg-surface-container-lowest border border-outline-variant rounded-lg">
                 <span className="material-symbols-outlined text-[48px] text-on-surface-variant/40">search_off</span>
-                <p className="text-body-lg font-body-lg text-on-surface-variant mt-2">Product "{searchQuery}" not found</p>
+                <p className="text-body-lg font-body-lg text-on-surface-variant mt-2">Produk tidak ditemukan</p>
               </div>
             ) : (
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-stack-sm md:gap-stack-md">
-                  {filteredProducts.map((product) => (
-                    <div
-                      key={product.id}
-                      onClick={() => onProductClick(product.id)}
-                      className="bg-surface rounded-lg border border-outline-variant overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full cursor-pointer"
-                    >
-                      <div className="h-48 w-full bg-surface-container relative overflow-hidden">
-                        <img
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          src={product.image || "https://placehold.co/600x400?text=No+Image"}
-                          alt={product.name}
-                        />
-                      </div>
-                      <div className="p-3 flex flex-col flex-1">
-                        <span className="text-label-sm font-label-sm text-on-surface-variant mb-1 block">
-                          {product.storeName || "Unknown Store"}
-                        </span>
-                        <h4 className="font-body-sm text-body-sm text-on-surface line-clamp-2 mb-2 flex-1">{product.name}</h4>
-                        <span className="font-label-md text-label-md text-primary mb-3 block">Rp {product.price.toLocaleString("id-ID")}</span>
+                  {filteredProducts.map((product) => {
+                    // Status diskon hanya true jika event flash sale masih aktif DAN produk itu bertanda flash sale
+                    const isItemFlashSale = flashSaleEvent ? (isFlashSaleOnly || product.isFlashSale) : false;
 
-                        <button
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              await onAddToCart(product.id, 1);
-                              await fetchCartCount();
-                              onCartClick();
-                            }}
-                            className="w-full py-2 bg-surface border border-primary text-primary font-label-sm text-label-sm rounded-md hover:bg-primary-container/10 transition-colors mt-auto"
-                          >
-                            Add to Cart
-                        </button>
+                    return (
+                      <div
+                        key={product.id}
+                        onClick={() => onProductClick(product.id, isItemFlashSale)}
+                        className="bg-surface rounded-lg border border-outline-variant overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full cursor-pointer relative"
+                      >
+                        {isItemFlashSale && (
+                          <div className="absolute top-2 left-2 z-10 bg-error text-on-error text-[10px] font-bold px-2 py-1 rounded-md shadow">
+                            Discount
+                          </div>
+                        )}
+
+                        <div className="h-48 w-full bg-surface-container relative overflow-hidden">
+                          <img
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            src={product.image || "https://placehold.co/600x400?text=No+Image"}
+                            alt={product.name}
+                          />
+                        </div>
+                        
+                        <div className="p-3 flex flex-col flex-1">
+                          <span className="text-label-sm font-label-sm text-on-surface-variant mb-1 block">
+                            {product.storeName || "Unknown Store"}
+                          </span>
+                          <h4 className="font-body-sm text-body-sm text-on-surface line-clamp-2 mb-2 flex-1">{product.name}</h4>
+                          
+                          <div className="mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className={`font-label-md text-label-md font-bold ${isItemFlashSale ? 'text-error' : 'text-primary'}`}>
+                                Rp {product.price.toLocaleString("id-ID")}
+                              </span>
+                            </div>
+                            {isItemFlashSale && (
+                              <span className="text-xs text-on-surface-variant line-through block">
+                                Rp {(product.originalPrice || Math.round(product.price * 1.3)).toLocaleString("id-ID")}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-row gap-2 mt-auto">
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                onCheckout([product]);
+                              }}
+                              className="w-full py-2 bg-surface border border-primary text-primary font-label-sm text-label-sm rounded-md hover:bg-primary-container/10 transition-colors"
+                            >
+                              Checkout
+                            </button>
+
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                await onAddToCart(product.id, 1);
+                                await fetchCartCount();
+                                onCartClick();
+                              }}
+                              className={`w-full py-2 border font-label-sm text-label-sm rounded-md transition-colors ${
+                                isItemFlashSale 
+                                  ? 'bg-error border-error text-on-error hover:bg-error/90' 
+                                  : 'bg-primary border-primary text-white'
+                              }`}
+                            >
+                              Add to Cart
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
-                {/* Pagination Controls */}
+                {/* Navigasi Pagination UI */}
                 {totalPages > 1 && (
-                  <div className="flex justify-center items-center gap-2 mt-8">
+                  <div className="flex justify-center items-center gap-2 mt-8 flex-wrap">
                     <button
-                      onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 0))}
                       disabled={currentPage === 0}
-                      className="px-4 py-2 border border-outline-variant rounded-lg font-label-sm text-label-sm text-on-surface disabled:opacity-50 disabled:cursor-not-allowed hover:bg-surface-container transition-colors"
+                      className="px-4 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface font-label-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-container transition-colors flex items-center gap-1"
                     >
+                      <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                       Previous
                     </button>
 
-                    <div className="flex gap-2">
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNum = i;
-                        if (totalPages > 5) {
-                          if (currentPage < 3) {
-                            pageNum = i;
-                          } else if (currentPage > totalPages - 3) {
-                            pageNum = totalPages - 5 + i;
-                          } else {
-                            pageNum = currentPage - 2 + i;
-                          }
-                        }
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => setCurrentPage(pageNum)}
-                            className={`w-10 h-10 rounded-lg font-label-sm text-label-sm transition-colors ${
-                              currentPage === pageNum
-                                ? 'bg-primary text-on-primary'
-                                : 'border border-outline-variant text-on-surface hover:bg-surface-container'
-                            }`}
-                          >
-                            {pageNum + 1}
-                          </button>
-                        );
-                      })}
+                    <div className="flex items-center gap-1 overflow-x-auto px-2">
+                      {getVisiblePageNumbers().map((pageIndex) => (
+                        <button
+                          key={pageIndex}
+                          onClick={() => setCurrentPage(pageIndex)}
+                          className={`w-10 h-10 rounded-lg font-label-md transition-colors flex items-center justify-center ${
+                            currentPage === pageIndex
+                              ? 'bg-primary text-on-primary font-bold shadow-sm'
+                              : 'bg-surface border border-outline-variant text-on-surface hover:bg-surface-container'
+                          }`}
+                        >
+                          {pageIndex + 1}
+                        </button>
+                      ))}
                     </div>
 
                     <button
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
-                      disabled={currentPage === totalPages - 1}
-                      className="px-4 py-2 border border-outline-variant rounded-lg font-label-sm text-label-sm text-on-surface disabled:opacity-50 disabled:cursor-not-allowed hover:bg-surface-container transition-colors"
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages - 1))}
+                      disabled={currentPage >= totalPages - 1}
+                      className="px-4 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface font-label-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-container transition-colors flex items-center gap-1"
                     >
                       Next
+                      <span className="material-symbols-outlined text-[18px]">chevron_right</span>
                     </button>
                   </div>
                 )}

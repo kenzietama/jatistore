@@ -89,7 +89,6 @@ export const FlashSaleManager: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Parse as local time (notice the absence of 'Z' at the end)
     const startDateTime = new Date(`${formData.startDate}T${formData.startTime}:00`);
     const endDateTime = new Date(`${formData.endDate}T${formData.endTime}:00`);
 
@@ -338,8 +337,8 @@ export const FlashSaleManager: React.FC = () => {
               <thead className="bg-surface-container-low border-b border-outline-variant">
                 <tr className="font-label-md text-label-md text-on-surface-variant">
                   <th className="p-stack-md cursor-pointer hover:bg-surface-container-highest transition-colors" onClick={() => handleSort('name')}>Event Name {sortBy === 'name' ? (sortDir === 'asc' ? '↑' : '↓') : ''}</th>
-                  <th className="p-stack-md cursor-pointer hover:bg-surface-container-highest transition-colors" onClick={() => handleSort('startTime')}>Start Date (UTC) {sortBy === 'startTime' ? (sortDir === 'asc' ? '↑' : '↓') : ''}</th>
-                  <th className="p-stack-md cursor-pointer hover:bg-surface-container-highest transition-colors" onClick={() => handleSort('endTime')}>End Date (UTC) {sortBy === 'endTime' ? (sortDir === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="p-stack-md cursor-pointer hover:bg-surface-container-highest transition-colors" onClick={() => handleSort('startTime')}>Start Date {sortBy === 'startTime' ? (sortDir === 'asc' ? '↑' : '↓') : ''}</th>
+                  <th className="p-stack-md cursor-pointer hover:bg-surface-container-highest transition-colors" onClick={() => handleSort('endTime')}>End Date {sortBy === 'endTime' ? (sortDir === 'asc' ? '↑' : '↓') : ''}</th>
                   <th className="p-stack-md">Status</th>
                   <th className="p-stack-md text-center">Actions</th>
                 </tr>
@@ -355,8 +354,8 @@ export const FlashSaleManager: React.FC = () => {
                   flashSales.map((fs) => (
                     <tr key={fs.id} className="border-b border-outline-variant/50 hover:bg-surface-container-low transition-colors">
                       <td className="p-stack-md font-bold">{fs.name}</td>
-                      <td className="p-stack-md">{new Date(fs.startTime).toLocaleString("en-GB", { timeZone: "UTC", year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</td>
-                      <td className="p-stack-md">{new Date(fs.endTime).toLocaleString("en-GB", { timeZone: "UTC", year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</td>
+                      <td className="p-stack-md">{new Date(fs.startTime).toLocaleString("en-GB", { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</td>
+                      <td className="p-stack-md">{new Date(fs.endTime).toLocaleString("en-GB", { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</td>
                       <td className="p-stack-md">{getStatusChip(fs.status)}</td>
                       <td className="p-stack-md flex justify-center gap-stack-sm">
                         <button onClick={() => handleEdit(fs)} className="text-on-surface-variant hover:text-primary">
