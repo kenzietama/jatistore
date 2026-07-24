@@ -273,7 +273,7 @@ export const FlashSaleManager: React.FC = () => {
                   </div>
                 </div>
                 <div className="space-y-stack-sm">
-                  <label className="block font-label-md text-label-md text-on-surface" htmlFor="endTime">End Time (UTC)</label>
+                  <label className="block font-label-md text-label-md text-on-surface" htmlFor="endTime">End Time</label>
                   <div className="relative">
                     <input
                       className="w-full h-10 px-3 bg-surface border border-outline rounded text-on-surface font-body-md focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
