@@ -15,7 +15,7 @@ public class RestApiPath {
     public static final String USER_ORDER_PAY_PATH = "/{orderId}/pay";
     public static final String USER_ORDER_CONFIRM_RECEIPT_PATH = "/{orderId}/confirm-receipt";
     public static final String USER_BASE_PATH = "/user";
-    public static final String USER_PROFILE_PATH = "/profile/{id}";
+    public static final String USER_PROFILE_PATH = "/profile";
     public static final String USER_BALANCE_PATH = "/balance";
 
     public static final String PRODUCT_BASE_PATH = "/products";

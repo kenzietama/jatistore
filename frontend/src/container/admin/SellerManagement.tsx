@@ -12,6 +12,19 @@ export function SellerManagement() {
   const [statusFilter, setStatusFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Confirmation Modal
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    sellerId: string;
+    storeName: string;
+    currentStatus: boolean;
+  }>({
+    isOpen: false,
+    sellerId: '',
+    storeName: '',
+    currentStatus: false
+  });
+
   const fetchSellers = async () => {
     setLoading(true);
     try {
@@ -29,10 +42,20 @@ export function SellerManagement() {
     fetchSellers();
   }, [page, statusFilter, searchQuery]);
 
-  const toggleSellerStatus = async (sellerId: string, currentStatus: boolean) => {
+  const handleToggleClick = (sellerId: string, storeName: string, currentStatus: boolean) => {
+    setConfirmModal({
+      isOpen: true,
+      sellerId,
+      storeName,
+      currentStatus
+    });
+  };
+
+  const handleConfirmStatusChange = async () => {
+    const { sellerId, currentStatus } = confirmModal;
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
     try {
       await adminService.updateSellerStatus(sellerId, { active: !currentStatus });
-      // Update local state instead of refetching everything to be faster
       setSellers(sellers.map(s => 
         s.id === sellerId ? { ...s, active: !currentStatus } : s
       ));
@@ -75,7 +98,7 @@ export function SellerManagement() {
           </select>
         </div>
       </header>
-
+ 
       <div className="bg-surface-container-lowest border border-outline-variant rounded overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -121,7 +144,7 @@ export function SellerManagement() {
                     </td>
                     <td className="p-stack-sm text-center">
                       <button
-                        onClick={() => toggleSellerStatus(seller.id, seller.active)}
+                        onClick={() => handleToggleClick(seller.id, seller.storeName, seller.active)}
                         className={`px-3 py-1.5 rounded-sm font-label-sm transition-colors border ${
                           seller.active 
                             ? 'border-error text-error hover:bg-error/10' 
@@ -163,6 +186,55 @@ export function SellerManagement() {
           </div>
         )}
       </div>
+
+      {/* Confirmation Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-outline-variant flex items-center gap-3">
+              <span className={`material-symbols-outlined ${confirmModal.currentStatus ? 'text-error' : 'text-primary'}`}>
+                {confirmModal.currentStatus ? 'block' : 'check_circle'}
+              </span>
+              <h3 className="font-headline-sm text-headline-sm text-on-surface m-0">
+                {confirmModal.currentStatus ? 'Deactivate Seller' : 'Activate Seller'}
+              </h3>
+            </div>
+            
+            <div className="p-6">
+              <p className="font-body-md text-on-surface-variant m-0">
+                Are you sure you want to {confirmModal.currentStatus ? 'deactivate' : 'activate'}{' '}
+                <strong>{confirmModal.storeName}</strong>?
+                {confirmModal.currentStatus && (
+                  <span className="block mt-2 text-error text-[13px] font-medium">
+                    Warning: All products of this seller will be hidden from the catalog and buyers won't be able to checkout items from this seller.
+                  </span>
+                )}
+              </p>
+            </div>
+            
+            <div className="p-4 bg-surface-container-low flex justify-end gap-3 border-t border-outline-variant">
+              <button
+                type="button"
+                className="px-4 py-2 text-label-md font-label-md text-on-surface-variant hover:bg-surface-container-high rounded border border-outline-variant transition-colors"
+                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`px-5 py-2 text-label-md font-label-md rounded shadow-sm transition-colors text-white ${
+                  confirmModal.currentStatus 
+                    ? 'bg-error hover:bg-error/95' 
+                    : 'bg-primary hover:bg-primary/95'
+                }`}
+                onClick={handleConfirmStatusChange}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

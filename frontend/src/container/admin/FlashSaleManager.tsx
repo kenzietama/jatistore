@@ -127,12 +127,17 @@ export const FlashSaleManager: React.FC = () => {
       setIsSaveModalOpen(false);
     } catch (error: any) {
       console.error("Error saving flash sale:", error);
-      setErrorModalMsg(error.response?.data?.message || "Failed to save flash sale");
+      setErrorModalMsg(error.response?.data?.restApiResponseMessage || error.response?.data?.message || "Failed to save flash sale");
       setIsSaveModalOpen(false);
     }
   };
 
   const handleEdit = (fs: FlashSaleResponse) => {
+    if (fs.status === "ENDED") {
+      setErrorModalMsg("Ended flash sale cannot be edited.");
+      return;
+    }
+
     const sd = new Date(fs.startTime);
     const ed = new Date(fs.endTime);
 
@@ -273,7 +278,7 @@ export const FlashSaleManager: React.FC = () => {
                   </div>
                 </div>
                 <div className="space-y-stack-sm">
-                  <label className="block font-label-md text-label-md text-on-surface" htmlFor="endTime">End Time (UTC)</label>
+                  <label className="block font-label-md text-label-md text-on-surface" htmlFor="endTime">End Time</label>
                   <div className="relative">
                     <input
                       className="w-full h-10 px-3 bg-surface border border-outline rounded text-on-surface font-body-md focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
@@ -357,10 +362,16 @@ export const FlashSaleManager: React.FC = () => {
                       <td className="p-stack-md">{new Date(fs.startTime).toLocaleString("en-GB", { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</td>
                       <td className="p-stack-md">{new Date(fs.endTime).toLocaleString("en-GB", { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</td>
                       <td className="p-stack-md">{getStatusChip(fs.status)}</td>
-                      <td className="p-stack-md flex justify-center gap-stack-sm">
-                        <button onClick={() => handleEdit(fs)} className="text-on-surface-variant hover:text-primary">
-                          <span className="material-symbols-outlined text-[20px]">edit</span>
-                        </button>
+                       <td className="p-stack-md flex justify-center gap-stack-sm">
+                        {fs.status !== 'ENDED' ? (
+                          <button onClick={() => handleEdit(fs)} className="text-on-surface-variant hover:text-primary" title="Edit Flash Sale">
+                            <span className="material-symbols-outlined text-[20px]">edit</span>
+                          </button>
+                        ) : (
+                          <button disabled className="text-outline-variant cursor-not-allowed opacity-50" title="Ended flash sale cannot be edited">
+                            <span className="material-symbols-outlined text-[20px]">edit</span>
+                          </button>
+                        )}
                         <button onClick={() => handleDelete(fs.id)} className="text-on-surface-variant hover:text-error">
                           <span className="material-symbols-outlined text-[20px]">delete</span>
                         </button>

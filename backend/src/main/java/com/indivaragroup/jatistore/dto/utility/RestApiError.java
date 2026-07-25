@@ -18,6 +18,7 @@ public enum RestApiError {
     AUT_0008(HttpStatus.UNAUTHORIZED.value(), "Invalid Token"),
     AUT_0009(HttpStatus.UNAUTHORIZED.value(), "Session not found"),
     AUT_0010(HttpStatus.FORBIDDEN.value(), "Account has been suspended or deactivated."),
+    GEN_0007(HttpStatus.CONFLICT.value(), "Email or Username already taken"),
 
     USR_0001(HttpStatus.NOT_FOUND.value(), "Product not found"),
     USR_0003(HttpStatus.BAD_REQUEST.value(), "Insufficient stock"),
@@ -57,6 +58,8 @@ public enum RestApiError {
     ADM_0016(HttpStatus.NOT_FOUND.value(), "Flash sale not found"),
     ADM_0017(HttpStatus.CONFLICT.value(), "Cannot delete flash sale with attached products"),
     ADM_0018(HttpStatus.BAD_REQUEST.value(), "Start time cannot be in the past"),
+    ADM_0019(HttpStatus.CONFLICT.value(), "Flash sale time range overlaps with an existing flash sale"),
+    ADM_0020(HttpStatus.BAD_REQUEST.value(), "Cannot edit an ended flash sale event"),
     SLR_0001(HttpStatus.UNAUTHORIZED.value(), "Unauthorized access"),
     SLR_0016(HttpStatus.NOT_FOUND.value(), "Product not found"),
     SLR_0030(HttpStatus.BAD_REQUEST.value(), "Flash price must be less than retail price"),

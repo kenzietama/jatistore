@@ -57,6 +57,11 @@ public class AdminFlashSaleService {
         }
         validateTime(request.getStartTime(), request.getEndTime());
 
+        if (flashSaleRepository.existsOverlappingFlashSale(request.getStartTime(), request.getEndTime())) {
+            log.error("Flash Sale overlaps with another flash sale: {} - {}", request.getStartTime(), request.getEndTime());
+            throw new CoreThrowHandler(RestApiError.ADM_0019);
+        }
+
         FlashSale flashSale = FlashSale.builder()
                 .name(request.getName())
                 .startTime(request.getStartTime())
@@ -87,11 +92,21 @@ public class AdminFlashSaleService {
                     return new CoreThrowHandler(RestApiError.ADM_0016);
                 });
 
+        if (flashSale.getEndTime().isBefore(Instant.now())) {
+            log.error("Cannot edit ended Flash Sale {}", id);
+            throw new CoreThrowHandler(RestApiError.ADM_0020);
+        }
+
         if (!flashSale.getStartTime().equals(request.getStartTime()) && request.getStartTime().isBefore(Instant.now())) {
             log.error("Updated start time is in the past: {}", request.getStartTime());
             throw new CoreThrowHandler(RestApiError.ADM_0018);
         }
         validateTime(request.getStartTime(), request.getEndTime());
+
+        if (flashSaleRepository.existsOverlappingFlashSaleExcludeId(request.getStartTime(), request.getEndTime(), id)) {
+            log.error("Updated Flash Sale overlaps with another flash sale: {} - {}", request.getStartTime(), request.getEndTime());
+            throw new CoreThrowHandler(RestApiError.ADM_0019);
+        }
 
         flashSale.setName(request.getName());
         flashSale.setStartTime(request.getStartTime());

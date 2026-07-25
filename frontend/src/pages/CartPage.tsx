@@ -13,6 +13,7 @@ interface CartItem {
   maxStock: number;
   storeId: string;
   storeName: string;
+  sellerActive?: boolean; // ✅ Flag status keaktifan seller
 }
 
 interface CartPageProps {
@@ -26,7 +27,7 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [checkedItemIds, setCheckedItemIds] = useState<string[]>([]);
-  const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const fetchCartData = async () => {
     const token = localStorage.getItem("jatistore_token");
@@ -52,9 +53,10 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
 
         setCartItems(sortedItems);
 
-        if (sortedItems.length > 0) {
-          const firstStoreName = sortedItems[0].storeName;
-          const firstStoreItems = sortedItems
+        const activeSortedItems = sortedItems.filter(item => item.sellerActive !== false);
+        if (activeSortedItems.length > 0) {
+          const firstStoreName = activeSortedItems[0].storeName;
+          const firstStoreItems = activeSortedItems
             .filter(item => item.storeName === firstStoreName)
             .map(item => item.id);
 
@@ -136,7 +138,7 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
 
   const handleToggleCheck = (cartItemId: string) => {
     const itemToToggle = cartItems.find(item => item.id === cartItemId);
-    if (!itemToToggle) return;
+    if (!itemToToggle || itemToToggle.sellerActive === false) return;
 
     const currentStoreId = itemToToggle.storeId;
 
@@ -162,7 +164,7 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
 
   const handleToggleStoreCheck = (storeName: string, isChecked: boolean) => {
     const storeItemIds = cartItems
-      .filter((item) => item.storeName === storeName)
+      .filter((item) => item.storeName === storeName && item.sellerActive !== false)
       .map((item) => item.id);
 
     if (isChecked) {
@@ -179,13 +181,16 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
       return acc + (harga * item.quantity);
     }, 0);
 
-  const stores = Array.from(
-    new Set(cartItems.map((item) => item.storeName).filter(Boolean))
+  const activeItems = cartItems.filter(item => item.sellerActive !== false);
+  const inactiveItems = cartItems.filter(item => item.sellerActive === false);
+
+  const activeStores = Array.from(
+    new Set(activeItems.map((item) => item.storeName).filter(Boolean))
   );
 
   const handleProceedToCheckout = () => {
     const itemsToCheckout = cartItems
-      .filter(item => checkedItemIds.includes(item.id))
+      .filter(item => checkedItemIds.includes(item.id) && item.sellerActive !== false)
       .map(item => ({
         id: item.productId,
         cartItemId: item.id,
@@ -225,8 +230,8 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
           
           <div className="lg:col-span-8 flex flex-col gap-stack-md">
-            {stores.map((storeName) => {
-              const storeItems = cartItems.filter((item) => item.storeName === storeName);
+            {activeStores.map((storeName) => {
+              const storeItems = activeItems.filter((item) => item.storeName === storeName);
               const isAllStoreItemsChecked = storeItems.every(item => checkedItemIds.includes(item.id));
 
               return (
@@ -318,6 +323,67 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
                 </section>
               );
             })}
+
+            {/* Inactive Items Section */}
+            {inactiveItems.length > 0 && (
+              <section className="flex flex-col gap-stack-sm mb-6 bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-sm">
+                <div className="flex items-center gap-2 py-2 border-b border-outline-variant mb-2 text-error">
+                  <span className="material-symbols-outlined">storefront</span>
+                  <h2 className="font-bold text-body-lg">Inactive Store Items (Cannot be processed)</h2>
+                </div>
+
+                {inactiveItems.map((item) => (
+                  <article key={item.id} className="border-b border-outline-variant last:border-none py-4 flex flex-col sm:flex-row gap-gutter relative bg-surface-container-low/30 px-3 rounded-lg mb-2 opacity-70">
+                    <div className="flex items-center justify-center">
+                      <input 
+                        type="checkbox" 
+                        disabled
+                        checked={false}
+                        className="w-5 h-5 rounded border-outline-variant text-primary cursor-not-allowed opacity-30" 
+                      />
+                    </div>
+                    <div
+                      className="w-full sm:w-32 h-32 flex-shrink-0 rounded bg-surface-container-low overflow-hidden border border-outline-variant opacity-50"
+                    >
+                      <img alt={item.productName} className="w-full h-full object-cover grayscale" src={item.productImage || "https://placehold.co/150"} />
+                    </div>
+                    <div className="flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-start gap-stack-sm">
+                          <h3
+                            className="font-headline-md text-body-lg text-on-surface-variant font-bold cursor-not-allowed"
+                          >
+                            {item.productName}
+                          </h3>
+                          <button onClick={() => removeItem(item.id)} className="text-on-surface-variant hover:text-error transition-colors p-1">
+                            <span className="material-symbols-outlined text-[20px]">close</span>
+                          </button>
+                        </div>
+                        <p className="text-error text-[12px] font-medium mt-1">This store is currently inactive. You can delete this item from your cart.</p>
+                      </div>
+
+                      <div className="flex flex-wrap items-end justify-between mt-4 gap-stack-md">
+                        <div className="flex items-center border border-outline-variant rounded bg-surface-container-low h-10 w-32 opacity-50 cursor-not-allowed">
+                          <button disabled className="w-10 h-full flex items-center justify-center text-on-surface-variant/40">
+                            <span className="material-symbols-outlined text-[18px]">remove</span>
+                          </button>
+                          <input readOnly disabled className="w-12 h-full text-center border-none bg-transparent font-mono-data text-mono-data p-0 text-on-surface-variant/40" type="text" value={item.quantity} />
+                          <button disabled className="w-10 h-full flex items-center justify-center text-on-surface-variant/40">
+                            <span className="material-symbols-outlined text-[18px]">add</span>
+                          </button>
+                        </div>
+                        
+                        <div className="text-right opacity-50">
+                          <p className="font-headline-md text-headline-md text-on-surface-variant font-bold">
+                            Rp {(item.unitPrice * item.quantity).toLocaleString("id-ID")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </section>
+            )}
           </div>
 
           <div className="lg:col-span-4 sticky top-24">

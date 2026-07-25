@@ -24,4 +24,5 @@ public class CartItemResponse {
     private Integer maxStock;
     private UUID storeId;
     private String storeName;
+    private Boolean sellerActive;
 }

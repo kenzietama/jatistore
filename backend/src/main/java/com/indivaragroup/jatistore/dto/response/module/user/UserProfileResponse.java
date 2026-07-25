@@ -5,16 +5,16 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderItemResponse {
-    private String productName;
-    private Integer quantity;
-    private BigDecimal pricePerItem;
-    private Boolean isFlashSale;
-    private String imageUrl;
+public class UserProfileResponse {
+    private UUID id;
+    private String username;
+    private String email;
+    private String fullName;
+    private String phoneNumber;
 }

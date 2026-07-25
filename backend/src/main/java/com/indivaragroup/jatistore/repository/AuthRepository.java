@@ -13,6 +13,10 @@ import java.util.UUID;
 public interface AuthRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByEmail(String email);
+    
+    boolean existsByEmail(String email);
+    boolean existsByUsername(String username);
+
 
     @Query(value = "SELECT CASE " +
             "  WHEN (SELECT COUNT(*) FROM mst_admins WHERE user_id = :userId) > 0 THEN 'ADMIN' " +

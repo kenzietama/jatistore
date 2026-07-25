@@ -48,7 +48,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
                                              @Param("status") String status,
                                              Pageable pageable);
 
-    @Query(value = "SELECT p.name, od.quantity, od.price_per_item, od.flash_sale " +
+    @Query(value = "SELECT p.name, od.quantity, od.price_per_item, od.flash_sale, p.image " +
                    "FROM trx_order_details od " +
                    "JOIN mst_products p ON od.product_id = p.id " +
                    "WHERE od.order_id = :orderId",

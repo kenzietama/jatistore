@@ -37,6 +37,10 @@ public class CartService {
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new CoreThrowHandler(RestApiError.USR_0001));
 
+        if (!product.getStore().getSeller().getActive()) {
+            throw new CoreThrowHandler(RestApiError.USR_0001);
+        }
+
         if (product.getStock() < request.getQuantity()) {
             throw new CoreThrowHandler(RestApiError.USR_0003);
         }
@@ -93,6 +97,7 @@ public class CartService {
             Integer maxStock = (Integer) row[7];
             UUID storeId = (UUID) row[8];
             String storeName = (String) row[9];
+            Boolean sellerActive = (Boolean) row[10];
 
             BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
 
@@ -108,6 +113,7 @@ public class CartService {
                     .maxStock(maxStock)
                     .storeId(storeId)
                     .storeName(storeName)
+                    .sellerActive(sellerActive)
                     .build();
         }).collect(Collectors.toList());
 
