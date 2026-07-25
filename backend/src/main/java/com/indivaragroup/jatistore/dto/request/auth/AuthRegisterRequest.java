@@ -14,13 +14,13 @@ public class AuthRegisterRequest {
 
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
-    @Size(max = 255, message = "Email must not exceed 255 characters")
+    @Size(max = 100, message = "Email must not exceed 100 characters")
     private String email;
 
     @NotBlank(message = "Password is required")
     @Pattern(
-        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]{8,}$",
-        message = "Password must be at least 8 characters with 1 uppercase, 1 lowercase, 1 digit"
+        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$",
+        message = "Password must be at least 8 characters with 1 uppercase, 1 lowercase, and 1 digit"
     )
     private String password;
 

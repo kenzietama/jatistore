@@ -6,7 +6,6 @@ import com.indivaragroup.jatistore.dto.request.auth.AuthLoginRequest;
 import com.indivaragroup.jatistore.dto.request.auth.AuthRegisterRequest;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.auth.AuthLoginResponse;
-import com.indivaragroup.jatistore.dto.response.module.auth.AuthRegisterResponse;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.dto.utility.RestApiSuccess;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
@@ -126,26 +125,21 @@ public class AuthService {
     }
 
     @Transactional
-    public RestApiResponse<AuthRegisterResponse> register(AuthRegisterRequest request) throws CoreThrowHandler {
-        // Check email uniqueness
+    public RestApiResponse<Void> register(AuthRegisterRequest request) throws CoreThrowHandler {
         if (authRepository.existsByEmail(request.getEmail())) {
             throw new CoreThrowHandler(RestApiError.AUT_0017);
         }
 
-        // Check username uniqueness
         if (authRepository.existsByUsername(request.getUsername())) {
             throw new CoreThrowHandler(RestApiError.AUT_0018);
         }
 
-        // Check phone number uniqueness
         if (authRepository.existsByPhoneNumber(request.getPhoneNumber())) {
             throw new CoreThrowHandler(RestApiError.AUT_0019);
         }
 
-        // Hash password
         String hashedPassword = passwordEncoder.encode(request.getPassword());
 
-        // Build User entity
         User user = User.builder()
                 .email(request.getEmail())
                 .passwordHash(hashedPassword)
@@ -155,7 +149,6 @@ public class AuthService {
                 .dateOfBirth(request.getDateOfBirth())
                 .build();
 
-        // Save user
         try {
             authRepository.save(user);
         } catch (DataIntegrityViolationException e) {
@@ -170,15 +163,11 @@ public class AuthService {
             throw new CoreThrowHandler(RestApiError.AUT_0005);
         }
 
-        AuthRegisterResponse responseData = AuthRegisterResponse.builder()
-                .message("Registration successful. Please login.")
-                .build();
-
-        return RestApiResponse.<AuthRegisterResponse>builder()
+        return RestApiResponse.<Void>builder()
                 .restApiResponseHttpCode(HttpStatus.OK.value())
                 .restApiResponseHttpStatus("SUCCESS")
-                .restApiResponseMessage("Registration successful. Please login.")
-                .restApiResponseData(responseData)
+                .restApiResponseMessage(RestApiSuccess.REGISTER_SUCCESS.getMessage())
+                .restApiResponseData(null)
                 .restApiResponseTimestamp(Instant.now())
                 .restApiResponseRequestId(MDC.get("requestId"))
                 .build();

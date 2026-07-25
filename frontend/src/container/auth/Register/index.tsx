@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { register } from "../../../services/authService";
+import { authService } from "../../../service/auth/authService";
 
 interface FormData {
 	email: string;
@@ -37,7 +37,7 @@ const Register: React.FC = () => {
 	const [errors, setErrors] = useState<FormErrors>({});
 	const [touched, setTouched] = useState<Record<string, boolean>>({});
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [apiError, setApiError] = useState<string>('');
+	const [apiError, setApiError] = useState<string>("");
 	const timeoutRef = useRef<number>();
 
 	useEffect(() => {
@@ -52,8 +52,10 @@ const Register: React.FC = () => {
 		switch (name) {
 			case "email": {
 				if (!value) return "Email is required";
-				if (value.length > 255) return "Email must not exceed 255 characters";
-				const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+				if (value.length > 255)
+					return "Email must not exceed 255 characters";
+				const emailRegex =
+					/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 				if (!emailRegex.test(value)) return "Invalid email format";
 				break;
 			}
@@ -79,7 +81,8 @@ const Register: React.FC = () => {
 			}
 			case "password": {
 				if (!value) return "Password is required";
-				const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
+				const passwordRegex =
+					/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 				if (!passwordRegex.test(value))
 					return "Password must be at least 8 characters with 1 uppercase, 1 lowercase, and 1 digit";
 				break;
@@ -114,7 +117,10 @@ const Register: React.FC = () => {
 		}
 		// Re-validate confirmPassword when password changes
 		if (name === "password" && touched.confirmPassword) {
-			if (formData.confirmPassword && formData.confirmPassword !== value) {
+			if (
+				formData.confirmPassword &&
+				formData.confirmPassword !== value
+			) {
 				setErrors((prev) => ({
 					...prev,
 					confirmPassword: "Passwords do not match",
@@ -145,7 +151,7 @@ const Register: React.FC = () => {
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		setApiError('');
+		setApiError("");
 
 		// Validate all fields on submit
 		const newErrors: FormErrors = {};
@@ -178,22 +184,25 @@ const Register: React.FC = () => {
 				dateOfBirth: formData.dateOfBirth || undefined,
 			};
 
-			const result = await register(registerData);
+			const result = await authService.register(registerData);
 
 			// Show success message
 			alert(`${result.message} Redirecting to login...`);
 
 			// Redirect to login after 2 seconds
 			timeoutRef.current = window.setTimeout(() => {
-				navigate('/auth/login');
+				navigate("/auth/login");
 			}, 2000);
 		} catch (error: any) {
-			if (error.response?.status === 409) {
-				setApiError(error.response.data.message || 'Email, username, or phone already registered');
-			} else if (error.response?.status === 400) {
-				setApiError(error.response.data.message || 'Validation error');
+			if (error.result?.status === 409) {
+				setApiError(
+					error.result.data.message ||
+						"Email, username, or phone already registered",
+				);
+			} else if (error.result?.status === 400) {
+				setApiError(error.result.data.message || "Validation error");
 			} else {
-				setApiError('Registration failed. Please try again.');
+				setApiError("Registration failed. Please try again.");
 			}
 		} finally {
 			setIsSubmitting(false);
@@ -240,9 +249,6 @@ const Register: React.FC = () => {
 						<h1 className="font-headline-lg text-headline-lg text-on-surface mb-unit">
 							Create Account
 						</h1>
-						<p className="font-body-sm text-body-sm text-on-surface-variant">
-							Join JatiStore as a buyer or seller today.
-						</p>
 					</div>
 
 					{apiError && (
@@ -250,7 +256,9 @@ const Register: React.FC = () => {
 							<span className="material-symbols-outlined text-[20px] flex-shrink-0">
 								error
 							</span>
-							<span className="font-body-sm text-body-sm">{apiError}</span>
+							<span className="font-body-sm text-body-sm">
+								{apiError}
+							</span>
 						</div>
 					)}
 
@@ -456,7 +464,9 @@ const Register: React.FC = () => {
 									type="button"
 								>
 									<span className="material-symbols-outlined text-[20px]">
-										{showPassword ? "visibility_off" : "visibility"}
+										{showPassword
+											? "visibility_off"
+											: "visibility"}
 									</span>
 								</button>
 							</div>
@@ -489,7 +499,11 @@ const Register: React.FC = () => {
 									id="confirmPassword"
 									name="confirmPassword"
 									placeholder="Re-enter password"
-									type={showConfirmPassword ? "text" : "password"}
+									type={
+										showConfirmPassword
+											? "text"
+											: "password"
+									}
 									required
 									value={formData.confirmPassword}
 									onChange={handleChange}
@@ -501,18 +515,21 @@ const Register: React.FC = () => {
 									type="button"
 								>
 									<span className="material-symbols-outlined text-[20px]">
-										{showConfirmPassword ? "visibility_off" : "visibility"}
+										{showConfirmPassword
+											? "visibility_off"
+											: "visibility"}
 									</span>
 								</button>
 							</div>
-							{touched.confirmPassword && errors.confirmPassword && (
-								<p className="text-error text-label-sm font-label-sm mt-1 flex items-center gap-1">
-									<span className="material-symbols-outlined text-[16px]">
-										error
-									</span>
-									<span>{errors.confirmPassword}</span>
-								</p>
-							)}
+							{touched.confirmPassword &&
+								errors.confirmPassword && (
+									<p className="text-error text-label-sm font-label-sm mt-1 flex items-center gap-1">
+										<span className="material-symbols-outlined text-[16px]">
+											error
+										</span>
+										<span>{errors.confirmPassword}</span>
+									</p>
+								)}
 						</div>
 
 						{/* Submit Button */}
@@ -521,7 +538,11 @@ const Register: React.FC = () => {
 							type="submit"
 							disabled={!isFormValid() || isSubmitting}
 						>
-							<span>{isSubmitting ? 'Registering...' : 'Create Account'}</span>
+							<span>
+								{isSubmitting
+									? "Registering..."
+									: "Create Account"}
+							</span>
 							<span className="material-symbols-outlined text-[18px]">
 								arrow_forward
 							</span>

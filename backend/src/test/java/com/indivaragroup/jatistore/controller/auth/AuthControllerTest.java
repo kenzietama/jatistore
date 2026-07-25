@@ -6,7 +6,6 @@ import com.indivaragroup.jatistore.dto.request.auth.AuthRegisterRequest;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.auth.AuthLoginResponse;
-import com.indivaragroup.jatistore.dto.response.module.auth.AuthRegisterResponse;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.service.auth.AuthService;
 import com.indivaragroup.jatistore.service.utility.AuthJWTUtility;
@@ -156,11 +155,7 @@ class AuthControllerTest {
             LocalDate.of(1990, 1, 1)
         );
 
-        AuthRegisterResponse responseData = AuthRegisterResponse.builder()
-            .message("Registration successful. Please login.")
-            .build();
-
-        RestApiResponse<AuthRegisterResponse> response = RestApiResponse.<AuthRegisterResponse>builder()
+        RestApiResponse<Void> response = RestApiResponse.<Void>builder()
             .restApiResponseHttpCode(200)
             .restApiResponseHttpStatus("SUCCESS")
             .restApiResponseMessage("Registration successful. Please login.")

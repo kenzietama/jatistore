@@ -6,7 +6,6 @@ import com.indivaragroup.jatistore.dto.request.auth.AuthLoginRequest;
 import com.indivaragroup.jatistore.dto.request.auth.AuthRegisterRequest;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.auth.AuthLoginResponse;
-import com.indivaragroup.jatistore.dto.response.module.auth.AuthRegisterResponse;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.repository.AuthRepository;
@@ -251,7 +250,7 @@ class AuthServiceTest {
         when(passwordEncoder.encode(anyString())).thenReturn("$2a$10$hashedpassword");
         when(authRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        RestApiResponse<AuthRegisterResponse> response = authService.register(validRequest);
+        RestApiResponse<Void> response = authService.register(validRequest);
 
         assertNotNull(response);
         assertEquals("Registration successful. Please login.", response.getRestApiResponseMessage());
