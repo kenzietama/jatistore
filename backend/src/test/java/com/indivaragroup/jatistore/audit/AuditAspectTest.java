@@ -458,6 +458,74 @@ public class AuditAspectTest {
         assertNotNull(captor.getValue().getPayload());
         assertNull(captor.getValue().getUserId());
     }
+    
+    @Test
+    void logAuditActivity_orderCreateAction() {
+        when(auditAnnotation.action()).thenReturn("ORDER_CREATE");
+        
+        when(request.getHeader("X-Forwarded-For")).thenReturn("192.168.1.1");
+        webUtilsMock.when(() -> WebUtils.getNativeRequest(request, ContentCachingRequestWrapper.class)).thenReturn(wrapper);
+        when(wrapper.getContentAsByteArray()).thenReturn("{}".getBytes());
+        
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(userDetails);
+        when(userDetails.getUsername()).thenReturn("user@test.com");
+        
+        GrantedAuthority auth = () -> "ROLE_USER";
+        doReturn(List.of(auth)).when(userDetails).getAuthorities();
+
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        when(authRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+
+        auditAspect.logAuditActivity(joinPoint, auditAnnotation, null);
+
+        // One for normal activity, one for ORDER_PAID
+        verify(auditTrailRepository, times(2)).save(any(AuditTrail.class));
+    }
+    
+    @Test
+    void logAuditFailure_orderCreateAction() {
+        when(auditAnnotation.action()).thenReturn("ORDER_CREATE");
+        when(request.getHeader("X-Forwarded-For")).thenReturn("192.168.1.1");
+        webUtilsMock.when(() -> WebUtils.getNativeRequest(request, ContentCachingRequestWrapper.class)).thenReturn(wrapper);
+        when(wrapper.getContentAsByteArray()).thenReturn("{}".getBytes());
+
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(userDetails);
+        when(userDetails.getUsername()).thenReturn("user@test.com");
+        
+        GrantedAuthority auth = () -> "ROLE_USER";
+        doReturn(List.of(auth)).when(userDetails).getAuthorities();
+
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        when(authRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+
+        CoreThrowHandler ex = mock(CoreThrowHandler.class);
+        com.indivaragroup.jatistore.dto.utility.RestApiError error = com.indivaragroup.jatistore.dto.utility.RestApiError.GEN_0001;
+        when(ex.getRestApiError()).thenReturn(error);
+
+        auditAspect.logAuditFailure(joinPoint, auditAnnotation, ex);
+
+        verify(auditTrailRepository, times(1)).save(any(AuditTrail.class));
+    }
+    
+    @Test
+    void logAuditFailure_orderCreateAction_customMessage() {
+        when(auditAnnotation.action()).thenReturn("ORDER_CREATE");
+        when(request.getHeader("X-Forwarded-For")).thenReturn("192.168.1.1");
+        webUtilsMock.when(() -> WebUtils.getNativeRequest(request, ContentCachingRequestWrapper.class)).thenReturn(wrapper);
+        when(wrapper.getContentAsByteArray()).thenReturn("{}".getBytes());
+
+        CoreThrowHandler ex = mock(CoreThrowHandler.class);
+        when(ex.getRestApiError()).thenReturn(null);
+        when(ex.getCustomMessage()).thenReturn("Custom error message");
+
+        auditAspect.logAuditFailure(joinPoint, auditAnnotation, ex);
+
+        verify(auditTrailRepository, times(1)).save(any(AuditTrail.class));
+    }
 
     @Test
     void logAuditActivity_ipAddressEmpty() {

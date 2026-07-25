@@ -101,7 +101,8 @@ class UserOrderServiceTest {
                 "Test Product",
                 2,
                 BigDecimal.valueOf(100),
-                false
+                false,
+                "test.jpg"
         };
 
         List<Object[]> orderList = new java.util.ArrayList<>();

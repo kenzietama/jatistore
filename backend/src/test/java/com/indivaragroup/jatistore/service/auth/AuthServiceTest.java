@@ -42,6 +42,12 @@ class AuthServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private com.indivaragroup.jatistore.repository.SellerRepository sellerRepository;
+
+    @Mock
+    private com.indivaragroup.jatistore.repository.AuditTrailRepository auditTrailRepository;
+
     @InjectMocks
     private AuthService authService;
 
@@ -166,11 +172,45 @@ class AuthServiceTest {
         when(passwordEncoder.matches(request.getAuthLoginRequestPassword(), user.getPasswordHash())).thenReturn(true);
         when(authRepository.findUserRole(user.getId())).thenReturn("SELLER");
         when(authRepository.isSellerActive(user.getEmail())).thenReturn(false);
+        when(sellerRepository.findByUserId(user.getId())).thenReturn(Optional.empty());
 
         // Act & Assert
         CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> authService.login(request));
         assertEquals(RestApiError.AUT_0010.getCode(), exception.getCode());
         verify(tokenRepository, never()).save(any());
+    }
+
+    @Test
+    void login_SuspendedSeller_ShouldExtractReasonFromAuditTrail() {
+        // Arrange
+        AuthLoginRequest request = new AuthLoginRequest();
+        request.setAuthLoginRequestEmail("seller.tech@example.com");
+        request.setAuthLoginRequestPassword("password123");
+
+        User user = User.builder()
+                .id(UUID.randomUUID())
+                .email("seller.tech@example.com")
+                .passwordHash("hashed_password")
+                .build();
+                
+        com.indivaragroup.jatistore.data.entity.Seller seller = new com.indivaragroup.jatistore.data.entity.Seller();
+        seller.setId(UUID.randomUUID());
+
+        com.indivaragroup.jatistore.data.entity.AuditTrail auditTrail = new com.indivaragroup.jatistore.data.entity.AuditTrail();
+        auditTrail.setPayload("{\"deactivationReason\":\"Violation of terms\"}");
+
+        when(authRepository.findByEmail(request.getAuthLoginRequestEmail())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(request.getAuthLoginRequestPassword(), user.getPasswordHash())).thenReturn(true);
+        when(authRepository.findUserRole(user.getId())).thenReturn("SELLER");
+        when(authRepository.isSellerActive(user.getEmail())).thenReturn(false);
+        when(sellerRepository.findByUserId(user.getId())).thenReturn(Optional.of(seller));
+        when(auditTrailRepository.findFirstByEntityIdAndActionOrderByCreatedAtDesc(seller.getId(), "SELLER_UPDATE_STATUS"))
+                .thenReturn(Optional.of(auditTrail));
+
+        // Act & Assert
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> authService.login(request));
+        assertEquals(403, exception.getCode());
+        assertEquals("Violation of terms", exception.getCustomMessage());
     }
 
     @Test

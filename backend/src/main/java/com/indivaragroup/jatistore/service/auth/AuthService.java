@@ -130,7 +130,7 @@ public class AuthService {
                 .build();
     }
 
-    @Audit(action = "LOGOUT", affectedModule = "AUTH", description = "User logout")
+
     @Transactional
     public RestApiResponse<Void> logout(String authorizationHeader) throws CoreThrowHandler {
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
