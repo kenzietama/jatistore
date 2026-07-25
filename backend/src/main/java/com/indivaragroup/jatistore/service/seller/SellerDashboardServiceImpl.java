@@ -22,8 +22,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SellerDashboardServiceImpl implements SellerDashboardService {
 
     private final SellerRepository sellerRepository;
@@ -31,12 +34,24 @@ public class SellerDashboardServiceImpl implements SellerDashboardService {
     private final OrderDetailRepository orderDetailRepository;
     private final StoreRepository storeRepository;
 
+    private Seller getSellerById(UUID sellerId) throws CoreThrowHandler {
+        return sellerRepository.findById(sellerId)
+                .orElseThrow(() -> {
+                    log.error("Seller not found for ID: {}", sellerId);
+                    return new CoreThrowHandler(RestApiError.SLR_0002);
+                });
+    }
+
     @Override
     public SellerProfileResponse getProfile(UUID sellerId) throws CoreThrowHandler {
-        Seller seller = sellerRepository.findById(sellerId)
-                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0002));
+        log.info("Fetching profile for seller ID: {}", sellerId);
+        Seller seller = getSellerById(sellerId);
         Store store = storeRepository.findBySellerId(sellerId)
-                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0002));
+                .orElseThrow(() -> {
+                    log.error("Store not found for seller ID: {}", sellerId);
+                    return new CoreThrowHandler(RestApiError.SLR_0002);
+                });
+                
         return SellerProfileResponse.builder()
                 .storeName(store.getStoreName())
                 .storeImage(store.getImage())
@@ -46,8 +61,8 @@ public class SellerDashboardServiceImpl implements SellerDashboardService {
 
     @Override
     public DashboardStatsResponse getDashboardStats(UUID sellerId) throws CoreThrowHandler {
-        Seller seller = sellerRepository.findById(sellerId)
-                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0002));
+        log.info("Fetching dashboard stats for seller ID: {}", sellerId);
+        Seller seller = getSellerById(sellerId);
         long totalProducts = productRepository.countActiveProductsBySellerId(sellerId);
         long totalOrders = orderDetailRepository.countDistinctOrdersBySellerId(sellerId);
         
@@ -60,8 +75,8 @@ public class SellerDashboardServiceImpl implements SellerDashboardService {
 
     @Override
     public FinancialOverviewResponse getFinancialOverview(UUID sellerId) throws CoreThrowHandler {
-        Seller seller = sellerRepository.findById(sellerId)
-                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0002));
+        log.info("Fetching financial overview for seller ID: {}", sellerId);
+        Seller seller = getSellerById(sellerId);
 
         return FinancialOverviewResponse.builder()
                 .availableBalance(seller.getCachedAvailableBalance())
@@ -71,6 +86,7 @@ public class SellerDashboardServiceImpl implements SellerDashboardService {
 
     @Override
     public Page<RecentOrderResponse> getRecentOrders(UUID sellerId, String search, OrderStatus status, String sortBy, String sortDir, int page, int limit) {
+        log.info("Fetching recent orders for seller ID: {}", sellerId);
         Sort.Direction direction = sortDir != null && sortDir.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
         String sortProperty = sortBy != null && !sortBy.isEmpty() ? sortBy : "createdAt";
         if (sortProperty.equals("createdAt")) sortProperty = "order.createdAt";

@@ -52,8 +52,12 @@ public class UserOrderService {
             OrderStatus status,
             Pageable pageable
     ) throws CoreThrowHandler {
+        log.info("Fetching order history for user email: {}, status: {}", email, status);
         User user = authRepository.findByEmail(email)
-                .orElseThrow(() -> new CoreThrowHandler(RestApiError.GEN_0005));
+                .orElseThrow(() -> {
+                    log.error("User with email {} not found", email);
+                    return new CoreThrowHandler(RestApiError.GEN_0005);
+                });
 
         Page<Object[]> orderPage = orderRepository.findOrderHistoryByUserId(
                 user.getId(),
@@ -68,9 +72,7 @@ public class UserOrderService {
                     BigDecimal totalAmount = (BigDecimal) row[2];
                     OrderStatus orderStatus = OrderStatus.valueOf(row[3].toString());
 
-                    List<Object[]> itemRows = orderRepository.findOrderItemsByOrderId(orderId);
-
-                    List<OrderItemResponse> items = itemRows.stream()
+                    List<OrderItemResponse> items = orderRepository.findOrderItemsByOrderId(orderId).stream()
                             .map(itemRow -> OrderItemResponse.builder()
                                     .productName((String) itemRow[0])
                                     .quantity((Integer) itemRow[1])
@@ -78,7 +80,7 @@ public class UserOrderService {
                                     .isFlashSale((Boolean) itemRow[3])
                                     .imageUrl((String) itemRow[4])
                                     .build())
-                            .collect(Collectors.toList());
+                            .toList();
 
                     return OrderHistoryItemResponse.builder()
                             .orderId(orderId)
@@ -88,10 +90,11 @@ public class UserOrderService {
                             .items(items)
                             .build();
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         Page<OrderHistoryItemResponse> page = new PageImpl<>(content, pageable, orderPage.getTotalElements());
 
+        log.info("Successfully fetched {} order history items for user email: {}", content.size(), email);
         return RestApiResponse.<Page<OrderHistoryItemResponse>>builder()
                 .restApiResponseHttpCode(HttpStatus.OK.value())
                 .restApiResponseHttpStatus("SUCCESS")
