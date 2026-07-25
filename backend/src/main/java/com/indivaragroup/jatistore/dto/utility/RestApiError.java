@@ -29,6 +29,7 @@ public enum RestApiError {
     AUT_0017(HttpStatus.CONFLICT.value(), "Email already registered"),
     AUT_0018(HttpStatus.CONFLICT.value(), "Username already taken"),
     AUT_0019(HttpStatus.CONFLICT.value(), "Phone number already registered"),
+    AUT_0005(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Registration failed due to unexpected error"),
     GEN_0007(HttpStatus.CONFLICT.value(), "Email or Username already taken"),
 
     USR_0001(HttpStatus.NOT_FOUND.value(), "Product not found"),

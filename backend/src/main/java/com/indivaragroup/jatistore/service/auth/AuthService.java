@@ -3,8 +3,10 @@ package com.indivaragroup.jatistore.service.auth;
 import com.indivaragroup.jatistore.data.entity.Token;
 import com.indivaragroup.jatistore.data.entity.User;
 import com.indivaragroup.jatistore.dto.request.auth.AuthLoginRequest;
+import com.indivaragroup.jatistore.dto.request.auth.AuthRegisterRequest;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.auth.AuthLoginResponse;
+import com.indivaragroup.jatistore.dto.response.module.auth.AuthRegisterResponse;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.dto.utility.RestApiSuccess;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
@@ -15,6 +17,7 @@ import com.indivaragroup.jatistore.repository.AuthRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -116,6 +119,61 @@ public class AuthService {
                 .restApiResponseHttpCode(HttpStatus.OK.value())
                 .restApiResponseHttpStatus("SUCCESS")
                 .restApiResponseMessage(RestApiSuccess.LOGOUT_SUCCESS.getMessage())
+                .restApiResponseData(null)
+                .restApiResponseTimestamp(Instant.now())
+                .restApiResponseRequestId(MDC.get("requestId"))
+                .build();
+    }
+
+    @Transactional
+    public RestApiResponse<AuthRegisterResponse> register(AuthRegisterRequest request) throws CoreThrowHandler {
+        // Check email uniqueness
+        if (authRepository.existsByEmail(request.getEmail())) {
+            throw new CoreThrowHandler(RestApiError.AUT_0017);
+        }
+
+        // Check username uniqueness
+        if (authRepository.existsByUsername(request.getUsername())) {
+            throw new CoreThrowHandler(RestApiError.AUT_0018);
+        }
+
+        // Check phone number uniqueness
+        if (authRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new CoreThrowHandler(RestApiError.AUT_0019);
+        }
+
+        // Hash password
+        String hashedPassword = passwordEncoder.encode(request.getPassword());
+
+        // Build User entity
+        User user = User.builder()
+                .email(request.getEmail())
+                .passwordHash(hashedPassword)
+                .username(request.getUsername())
+                .phoneNumber(request.getPhoneNumber())
+                .fullName(request.getFullName())
+                .dateOfBirth(request.getDateOfBirth())
+                .build();
+
+        // Save user
+        try {
+            authRepository.save(user);
+        } catch (DataIntegrityViolationException e) {
+            // Race condition safety: DB constraint caught duplicate
+            if (e.getMessage().contains("email")) {
+                throw new CoreThrowHandler(RestApiError.AUT_0017);
+            } else if (e.getMessage().contains("username")) {
+                throw new CoreThrowHandler(RestApiError.AUT_0018);
+            } else if (e.getMessage().contains("phone")) {
+                throw new CoreThrowHandler(RestApiError.AUT_0019);
+            }
+            throw new CoreThrowHandler(RestApiError.AUT_0005);
+        }
+
+        return RestApiResponse.<AuthRegisterResponse>builder()
+                .restApiResponseHttpCode(HttpStatus.OK.value())
+                .restApiResponseHttpStatus("SUCCESS")
+                .restApiResponseMessage("Registration successful. Please login.")
                 .restApiResponseData(null)
                 .restApiResponseTimestamp(Instant.now())
                 .restApiResponseRequestId(MDC.get("requestId"))
