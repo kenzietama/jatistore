@@ -20,8 +20,6 @@ public enum RestApiError {
     AUT_0010(HttpStatus.FORBIDDEN.value(), "Account has been suspended or deactivated."),
 
     // Registration validation errors (400)
-    AUT_0011(HttpStatus.BAD_REQUEST.value(), "Invalid data type for property {}"),
-    AUT_0012(HttpStatus.BAD_REQUEST.value(), "Maximum length for property {} is {}"),
     AUT_0013(HttpStatus.BAD_REQUEST.value(), "Invalid email format"),
     AUT_0014(HttpStatus.BAD_REQUEST.value(), "Password must be at least 8 characters with 1 uppercase, 1 lowercase, 1 digit"),
     AUT_0015(HttpStatus.BAD_REQUEST.value(), "Username must be 4-20 characters, alphanumeric with underscore/dash only"),
