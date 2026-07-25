@@ -11,6 +11,15 @@ interface FormData {
 	confirmPassword: string;
 }
 
+interface FormErrors {
+	email?: string;
+	username?: string;
+	fullName?: string;
+	phoneNumber?: string;
+	password?: string;
+	confirmPassword?: string;
+}
+
 const Register: React.FC = () => {
 	const navigate = useNavigate();
 	const [formData, setFormData] = useState<FormData>({
@@ -24,6 +33,61 @@ const Register: React.FC = () => {
 	});
 	const [showPassword, setShowPassword] = useState(false);
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+	const [errors, setErrors] = useState<FormErrors>({});
+	const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+	const validateField = (name: string, value: string): string | undefined => {
+		switch (name) {
+			case "email": {
+				if (!value) return "Email is required";
+				if (value.length > 255) return "Email must not exceed 255 characters";
+				const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+				if (!emailRegex.test(value)) return "Invalid email format";
+				break;
+			}
+			case "username": {
+				if (!value) return "Username is required";
+				const usernameRegex = /^[a-zA-Z0-9_-]{4,20}$/;
+				if (!usernameRegex.test(value))
+					return "Username must be 4-20 characters, alphanumeric with underscore or dash only";
+				break;
+			}
+			case "fullName": {
+				if (!value) return "Full name is required";
+				if (value.length < 2 || value.length > 100)
+					return "Full name must be 2-100 characters";
+				break;
+			}
+			case "phoneNumber": {
+				if (!value) return "Phone number is required";
+				const phoneRegex = /^\d{10,20}$/;
+				if (!phoneRegex.test(value))
+					return "Phone number must be 10-20 digits only";
+				break;
+			}
+			case "password": {
+				if (!value) return "Password is required";
+				const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+				if (!passwordRegex.test(value))
+					return "Password must be at least 8 characters with 1 uppercase, 1 lowercase, and 1 digit";
+				break;
+			}
+			case "confirmPassword": {
+				if (!value) return "Please confirm your password";
+				if (value !== formData.password)
+					return "Passwords do not match";
+				break;
+			}
+		}
+		return undefined;
+	};
+
+	const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+		const { name, value } = e.target;
+		setTouched((prev) => ({ ...prev, [name]: true }));
+		const error = validateField(name, value);
+		setErrors((prev) => ({ ...prev, [name]: error }));
+	};
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const { name, value } = e.target;
@@ -31,6 +95,29 @@ const Register: React.FC = () => {
 			...prev,
 			[name]: value,
 		}));
+		// Revalidate if field has been touched
+		if (touched[name]) {
+			const error = validateField(name, value);
+			setErrors((prev) => ({ ...prev, [name]: error }));
+		}
+	};
+
+	const isFormValid = (): boolean => {
+		const requiredFields = [
+			"email",
+			"username",
+			"fullName",
+			"phoneNumber",
+			"password",
+			"confirmPassword",
+		];
+		const allFilled = requiredFields.every(
+			(field) => formData[field as keyof FormData],
+		);
+		const noErrors = Object.keys(errors).every(
+			(key) => !errors[key as keyof FormErrors],
+		);
+		return allFilled && noErrors;
 	};
 
 	const handleSubmit = (e: React.FormEvent) => {
@@ -108,8 +195,17 @@ const Register: React.FC = () => {
 									required
 									value={formData.email}
 									onChange={handleChange}
+									onBlur={handleBlur}
 								/>
 							</div>
+							{touched.email && errors.email && (
+								<p className="text-error text-label-sm font-label-sm mt-1 flex items-center gap-1">
+									<span className="material-symbols-outlined text-[16px]">
+										error
+									</span>
+									<span>{errors.email}</span>
+								</p>
+							)}
 						</div>
 
 						{/* Username Field */}
@@ -135,8 +231,17 @@ const Register: React.FC = () => {
 									required
 									value={formData.username}
 									onChange={handleChange}
+									onBlur={handleBlur}
 								/>
 							</div>
+							{touched.username && errors.username && (
+								<p className="text-error text-label-sm font-label-sm mt-1 flex items-center gap-1">
+									<span className="material-symbols-outlined text-[16px]">
+										error
+									</span>
+									<span>{errors.username}</span>
+								</p>
+							)}
 						</div>
 
 						{/* Full Name Field */}
@@ -162,8 +267,17 @@ const Register: React.FC = () => {
 									required
 									value={formData.fullName}
 									onChange={handleChange}
+									onBlur={handleBlur}
 								/>
 							</div>
+							{touched.fullName && errors.fullName && (
+								<p className="text-error text-label-sm font-label-sm mt-1 flex items-center gap-1">
+									<span className="material-symbols-outlined text-[16px]">
+										error
+									</span>
+									<span>{errors.fullName}</span>
+								</p>
+							)}
 						</div>
 
 						{/* Phone Number Field */}
@@ -189,8 +303,17 @@ const Register: React.FC = () => {
 									required
 									value={formData.phoneNumber}
 									onChange={handleChange}
+									onBlur={handleBlur}
 								/>
 							</div>
+							{touched.phoneNumber && errors.phoneNumber && (
+								<p className="text-error text-label-sm font-label-sm mt-1 flex items-center gap-1">
+									<span className="material-symbols-outlined text-[16px]">
+										error
+									</span>
+									<span>{errors.phoneNumber}</span>
+								</p>
+							)}
 						</div>
 
 						{/* Date of Birth Field */}
@@ -214,6 +337,7 @@ const Register: React.FC = () => {
 									type="date"
 									value={formData.dateOfBirth}
 									onChange={handleChange}
+									onBlur={handleBlur}
 								/>
 							</div>
 						</div>
@@ -241,6 +365,7 @@ const Register: React.FC = () => {
 									required
 									value={formData.password}
 									onChange={handleChange}
+									onBlur={handleBlur}
 								/>
 								<button
 									className="absolute inset-y-0 right-0 pr-3 flex items-center text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
@@ -252,6 +377,14 @@ const Register: React.FC = () => {
 									</span>
 								</button>
 							</div>
+							{touched.password && errors.password && (
+								<p className="text-error text-label-sm font-label-sm mt-1 flex items-center gap-1">
+									<span className="material-symbols-outlined text-[16px]">
+										error
+									</span>
+									<span>{errors.password}</span>
+								</p>
+							)}
 						</div>
 
 						{/* Confirm Password Field */}
@@ -277,6 +410,7 @@ const Register: React.FC = () => {
 									required
 									value={formData.confirmPassword}
 									onChange={handleChange}
+									onBlur={handleBlur}
 								/>
 								<button
 									className="absolute inset-y-0 right-0 pr-3 flex items-center text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
@@ -288,12 +422,21 @@ const Register: React.FC = () => {
 									</span>
 								</button>
 							</div>
+							{touched.confirmPassword && errors.confirmPassword && (
+								<p className="text-error text-label-sm font-label-sm mt-1 flex items-center gap-1">
+									<span className="material-symbols-outlined text-[16px]">
+										error
+									</span>
+									<span>{errors.confirmPassword}</span>
+								</p>
+							)}
 						</div>
 
 						{/* Submit Button */}
 						<button
-							className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm font-label-md text-label-md text-on-primary bg-primary hover:bg-primary-container-variant focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 active:scale-[0.98] h-[40px] gap-2 mt-stack-lg cursor-pointer"
+							className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm font-label-md text-label-md text-on-primary bg-primary hover:bg-primary-container-variant focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 active:scale-[0.98] h-[40px] gap-2 mt-stack-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 							type="submit"
+							disabled={!isFormValid()}
 						>
 							<span>Create Account</span>
 							<span className="material-symbols-outlined text-[18px]">
