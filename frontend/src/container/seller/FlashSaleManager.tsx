@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { SellerLayout } from '../../components/layout/seller/SellerLayout';
 import { sellerFlashSaleService, type AvailableFlashSaleResponse, type SellerFlashSaleItemResponse } from '../../service/seller/flash-sale.service';
 import { productService, type Product } from '../../service/seller/product.service';
+import { useAuthStore } from '../../store/auth/useAuthStore';
 
 export default function FlashSaleManager() {
     const [events, setEvents] = useState<AvailableFlashSaleResponse[]>([]);
@@ -31,6 +32,16 @@ export default function FlashSaleManager() {
         try {
             const fetchedEvents = await sellerFlashSaleService.getAvailableFlashSales();
             setEvents(fetchedEvents);
+            
+            const upcomingIds = fetchedEvents.filter(f => f.status === 'upcoming').map(f => f.id);
+            const user = useAuthStore.getState().user;
+            if (upcomingIds.length > 0 && user?.userId) {
+                const storageKey = `seenFlashSaleIds_${user.userId}`;
+                const seenIds = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                const newSeenIds = Array.from(new Set([...seenIds, ...upcomingIds]));
+                localStorage.setItem(storageKey, JSON.stringify(newSeenIds));
+            }
+
             const fetchedProducts = await productService.getProducts(undefined, undefined, undefined, undefined, undefined, 0, 100);
             setProducts(fetchedProducts.content);
         } catch (error: any) {
@@ -61,6 +72,20 @@ export default function FlashSaleManager() {
     const handleEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedEventId(e.target.value);
         setErrorMsg('');
+    };
+
+    const handleFlashPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        if (!/^\d*$/.test(val)) return; // only numbers
+        if (val.length > 15) return; // max 15 digits
+        setFlashPrice(val);
+    };
+
+    const handlePromoStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        if (!/^\d*$/.test(val)) return; // only numbers
+        if (val.length > 7) return; // max 7 digits
+        setPromoStock(val);
     };
 
     const handleProductChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -235,14 +260,14 @@ export default function FlashSaleManager() {
                                 <div className="flex flex-col gap-unit">
                                     <label className="text-label-md font-label-md text-on-surface-variant" htmlFor="flashPrice">Flash Price</label>
                                     <div className="relative">
-                                        <span className="material-symbols-outlined absolute left-3 top-2 text-on-surface-variant pointer-events-none text-[20px]">payments</span>
+                                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-on-surface-variant font-label-md">Rp</span>
                                         <input 
-                                            type="number"
+                                            type="text"
                                             id="flashPrice"
-                                            className="w-full h-10 pl-9 pr-3 bg-surface border border-outline-variant rounded-md text-body-md font-body-md focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                            className="w-full h-10 pl-10 pr-3 bg-surface border border-outline-variant rounded-md text-body-md font-body-md focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
                                             placeholder="0"
                                             value={flashPrice}
-                                            onChange={e => setFlashPrice(e.target.value)}
+                                            onChange={handleFlashPriceChange}
                                             disabled={!selectedProductId}
                                         />
                                     </div>
@@ -255,12 +280,12 @@ export default function FlashSaleManager() {
                                 <div className="flex flex-col gap-unit mb-stack-sm">
                                     <label className="text-label-md font-label-md text-on-surface-variant" htmlFor="promoStock">Promo Stock Quantity</label>
                                     <input 
-                                        type="number"
+                                        type="text"
                                         id="promoStock"
                                         className="w-full h-10 px-3 bg-surface border border-outline-variant rounded-md text-body-md font-body-md focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
                                         placeholder="Enter quantity"
                                         value={promoStock}
-                                        onChange={e => setPromoStock(e.target.value)}
+                                        onChange={handlePromoStockChange}
                                         disabled={!selectedProductId}
                                     />
                                     <span className="text-label-sm font-label-sm text-outline">

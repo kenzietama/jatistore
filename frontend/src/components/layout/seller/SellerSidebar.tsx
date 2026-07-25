@@ -18,11 +18,30 @@ export function SellerSidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIs
 
   const [profile, setProfile] = useState<SellerProfile | null>(null);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [hasNewFlashSale, setHasNewFlashSale] = useState(false);
   const navigate = useNavigate();
   const logoutStore = useAuthStore((state) => state.logout);
 
   useEffect(() => {
     dashboardService.getProfile().then(setProfile).catch(console.error);
+    
+    const checkFlashSales = async () => {
+      try {
+        const { sellerFlashSaleService } = await import('../../../service/seller/flash-sale.service');
+        const available = await sellerFlashSaleService.getAvailableFlashSales();
+        const upcomingIds = available.filter(f => f.status === 'upcoming').map(f => f.id);
+        const user = useAuthStore.getState().user;
+        if (upcomingIds.length > 0 && user?.userId) {
+          const storageKey = `seenFlashSaleIds_${user.userId}`;
+          const seenIds = JSON.parse(localStorage.getItem(storageKey) || '[]');
+          const hasNew = upcomingIds.some(id => !seenIds.includes(id));
+          setHasNewFlashSale(hasNew);
+        }
+      } catch (err) {
+        console.error('Failed to check flash sales', err);
+      }
+    };
+    checkFlashSales();
   }, []);
 
   const handleLogout = async () => {
@@ -134,16 +153,28 @@ export function SellerSidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIs
         <li>
           <NavLink 
             to="/seller/flash-sales"
-            onClick={() => setIsMobileOpen(false)}
+            onClick={() => {
+              setIsMobileOpen(false);
+              setHasNewFlashSale(false);
+            }}
             className={({ isActive }) =>
-              isActive
+              `relative ${isActive
                 ? `flex items-center gap-stack-sm p-2 bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-lg scale-[0.98] transition-all ${isCollapsed ? 'justify-center' : ''}`
                 : `flex items-center gap-stack-sm p-2 text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-variant rounded-lg hover:bg-surface-container-highest dark:hover:bg-surface-dim transition-all ${isCollapsed ? 'justify-center' : ''}`
+              }`
             }
             title={isCollapsed ? "Flash Sale" : undefined}
           >
             <span className="material-symbols-outlined shrink-0" data-icon="bolt">bolt</span>
-            <span className={`font-label-md text-label-md whitespace-nowrap ${isCollapsed ? 'hidden' : 'block'}`}>Flash Sale</span>
+            <span className={`font-label-md text-label-md whitespace-nowrap flex-1 flex items-center justify-between ${isCollapsed ? 'hidden' : 'flex'}`}>
+              Flash Sale
+              {hasNewFlashSale && (
+                <span className="text-[10px] font-bold bg-error text-on-error px-1.5 py-0.5 rounded uppercase">New</span>
+              )}
+            </span>
+            {isCollapsed && hasNewFlashSale && (
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-error"></span>
+            )}
           </NavLink>
         </li>
         <li>
