@@ -169,6 +169,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess, initialData }: Add
                     type="text" 
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    maxLength={50}
                   />
                 </div>
 
