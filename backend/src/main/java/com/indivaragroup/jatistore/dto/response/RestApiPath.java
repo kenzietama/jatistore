@@ -10,6 +10,7 @@ public class RestApiPath {
     public static final String AUTH_BASE_PATH = "/auth";
     public static final String AUTH_LOGIN_PATH = "/login";
     public static final String AUTH_LOGOUT_PATH = "/logout";
+    public static final String AUTH_REGISTER_PATH = "/register";
 
     public static final String USER_ORDER_BASE_PATH = "/orders";
     public static final String USER_ORDER_PAY_PATH = "/{orderId}/pay";
