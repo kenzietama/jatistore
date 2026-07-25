@@ -102,11 +102,14 @@ const Register: React.FC = () => {
 		}
 		// Re-validate confirmPassword when password changes
 		if (name === "password" && touched.confirmPassword) {
-			const confirmError = validateField(
-				"confirmPassword",
-				formData.confirmPassword,
-			);
-			setErrors((prev) => ({ ...prev, confirmPassword: confirmError }));
+			if (formData.confirmPassword && formData.confirmPassword !== value) {
+				setErrors((prev) => ({
+					...prev,
+					confirmPassword: "Passwords do not match",
+				}));
+			} else {
+				setErrors((prev) => ({ ...prev, confirmPassword: undefined }));
+			}
 		}
 	};
 
