@@ -170,11 +170,15 @@ public class AuthService {
             throw new CoreThrowHandler(RestApiError.AUT_0005);
         }
 
+        AuthRegisterResponse responseData = AuthRegisterResponse.builder()
+                .message("Registration successful. Please login.")
+                .build();
+
         return RestApiResponse.<AuthRegisterResponse>builder()
                 .restApiResponseHttpCode(HttpStatus.OK.value())
                 .restApiResponseHttpStatus("SUCCESS")
                 .restApiResponseMessage("Registration successful. Please login.")
-                .restApiResponseData(null)
+                .restApiResponseData(responseData)
                 .restApiResponseTimestamp(Instant.now())
                 .restApiResponseRequestId(MDC.get("requestId"))
                 .build();
