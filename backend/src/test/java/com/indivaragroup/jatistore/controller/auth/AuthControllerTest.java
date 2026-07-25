@@ -2,12 +2,18 @@ package com.indivaragroup.jatistore.controller.auth;
 
 import tools.jackson.databind.ObjectMapper;
 import com.indivaragroup.jatistore.dto.request.auth.AuthLoginRequest;
+import com.indivaragroup.jatistore.dto.request.auth.AuthRegisterRequest;
+import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.auth.AuthLoginResponse;
+import com.indivaragroup.jatistore.dto.response.module.auth.AuthRegisterResponse;
+import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.service.auth.AuthService;
 import com.indivaragroup.jatistore.service.utility.AuthJWTUtility;
 import com.indivaragroup.jatistore.repository.AuthRepository;
 import org.junit.jupiter.api.Test;
+
+import java.time.LocalDate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -137,5 +143,78 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(authService, times(1)).logout(token);
+    }
+
+    @Test
+    void testRegisterSuccess() throws Exception {
+        AuthRegisterRequest request = new AuthRegisterRequest(
+            "test@example.com",
+            "Password123",
+            "testuser",
+            "08123456789",
+            "Test User",
+            LocalDate.of(1990, 1, 1)
+        );
+
+        AuthRegisterResponse responseData = AuthRegisterResponse.builder()
+            .message("Registration successful. Please login.")
+            .build();
+
+        RestApiResponse<AuthRegisterResponse> response = RestApiResponse.<AuthRegisterResponse>builder()
+            .restApiResponseHttpCode(200)
+            .restApiResponseHttpStatus("SUCCESS")
+            .restApiResponseMessage("Registration successful. Please login.")
+            .restApiResponseData(null)
+            .build();
+
+        when(authService.register(any(AuthRegisterRequest.class))).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                .header("X-Request-ID", "test-request-id")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value("200"))
+            .andExpect(jsonPath("$.status").value("SUCCESS"))
+            .andExpect(jsonPath("$.message").value("Registration successful. Please login."));
+    }
+
+    @Test
+    void testRegisterMissingEmail() throws Exception {
+        AuthRegisterRequest request = new AuthRegisterRequest(
+            null,
+            "Password123",
+            "testuser",
+            "08123456789",
+            "Test User",
+            null
+        );
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                .header("X-Request-ID", "test-request-id")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testRegisterDuplicateEmail() throws Exception {
+        AuthRegisterRequest request = new AuthRegisterRequest(
+            "test@example.com",
+            "Password123",
+            "testuser",
+            "08123456789",
+            "Test User",
+            null
+        );
+
+        when(authService.register(any(AuthRegisterRequest.class)))
+            .thenThrow(new CoreThrowHandler(RestApiError.AUT_0017));
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                .header("X-Request-ID", "test-request-id")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isConflict());
     }
 }
