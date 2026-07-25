@@ -61,17 +61,44 @@ export function AddProductModal({ isOpen, onClose, onSuccess, initialData }: Add
     setIsDragging(false);
   };
 
+  const validateAndSetImage = (file: File) => {
+    setError('');
+    if (!file.type.startsWith('image/')) {
+      setError('Selected file must be an image.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB.');
+      return;
+    }
+    setImage(file);
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setImage(e.dataTransfer.files[0]);
+      validateAndSetImage(e.dataTransfer.files[0]);
     }
+  };
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (!/^\d*$/.test(val)) return;
+    if (val.length > 15) return;
+    setPrice(val);
+  };
+
+  const handleStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (!/^\d*$/.test(val)) return;
+    if (val.length > 7) return;
+    setStock(val);
   };
 
   const handleSubmit = async () => {
     setError('');
-    if (!name || !price || !stock || !category) {
+    if (!name || !price || !stock || !category || !description || (!image && !isEdit)) {
       setError('Please fill in all required fields');
       return;
     }
@@ -153,11 +180,10 @@ export function AddProductModal({ isOpen, onClose, onSuccess, initialData }: Add
                       <input 
                         className="w-full h-10 pl-10 pr-3 border border-outline-variant rounded-lg bg-surface focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary-container/20 font-body-md text-body-md text-on-surface transition-all" 
                         id="product-price" 
-                        min="0" 
                         placeholder="0" 
-                        type="number"
+                        type="text"
                         value={price}
-                        onChange={(e) => setPrice(e.target.value)}
+                        onChange={handlePriceChange}
                       />
                     </div>
                   </div>
@@ -166,11 +192,10 @@ export function AddProductModal({ isOpen, onClose, onSuccess, initialData }: Add
                     <input 
                       className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary-container/20 font-body-md text-body-md text-on-surface transition-all" 
                       id="product-stock" 
-                      min="0" 
                       placeholder="0" 
-                      type="number" 
+                      type="text" 
                       value={stock}
-                      onChange={(e) => setStock(e.target.value)}
+                      onChange={handleStockChange}
                     />
                   </div>
                 </div>
@@ -191,7 +216,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess, initialData }: Add
                 </div>
 
                 <div className="space-y-unit">
-                  <label className="font-label-md text-label-md text-on-surface-variant" htmlFor="product-desc">Product Description</label>
+                  <label className="font-label-md text-label-md text-on-surface-variant" htmlFor="product-desc">Product Description *</label>
                   <textarea 
                     className="w-full p-3 border border-outline-variant rounded-lg bg-surface focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary-container/20 font-body-md text-body-md text-on-surface transition-all resize-none" 
                     id="product-desc" 
@@ -203,7 +228,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess, initialData }: Add
               </div>
 
               <div className="space-y-stack-md flex flex-col relative">
-                <label className="block font-label-md text-label-md text-on-surface mb-unit">Product Image</label>
+                <label className="block font-label-md text-label-md text-on-surface mb-unit">Product Image *</label>
                 <div 
                   className={`border-2 border-dashed rounded-xl p-stack-md text-center transition-colors cursor-pointer relative ${isDragging ? 'border-primary bg-primary-container/10' : 'border-outline-variant hover:bg-surface-tint'}`}
                   onDragOver={handleDragOver}
@@ -219,7 +244,10 @@ export function AddProductModal({ isOpen, onClose, onSuccess, initialData }: Add
                       <div className="font-body-sm text-body-sm text-on-surface-variant mt-1">PNG, JPG up to 5MB</div>
                     </>
                   )}
-                  <input type="file" accept="image/*" className="hidden" id="image-upload" onChange={(e) => setImage(e.target.files?.[0] || null)} />
+                  <input type="file" accept="image/*" className="hidden" id="image-upload" onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) validateAndSetImage(file);
+                  }} />
                   <label htmlFor="image-upload" className="absolute inset-0 cursor-pointer"></label>
                 </div>
                 {isEdit && initialData?.image && !image && (
