@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { register } from "../../../services/authService";
 
 interface FormData {
 	email: string;
@@ -35,6 +36,8 @@ const Register: React.FC = () => {
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 	const [errors, setErrors] = useState<FormErrors>({});
 	const [touched, setTouched] = useState<Record<string, boolean>>({});
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [apiError, setApiError] = useState<string>('');
 
 	const validateField = (name: string, value: string): string | undefined => {
 		switch (name) {
@@ -131,8 +134,9 @@ const Register: React.FC = () => {
 		return allFilled && noErrors;
 	};
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+		setApiError('');
 
 		// Validate all fields on submit
 		const newErrors: FormErrors = {};
@@ -153,8 +157,38 @@ const Register: React.FC = () => {
 
 		if (Object.keys(newErrors).length > 0) return;
 
-		// API integration will be added in Task 12
-		console.log("Form submitted:", formData);
+		setIsSubmitting(true);
+
+		try {
+			const registerData = {
+				email: formData.email,
+				username: formData.username,
+				fullName: formData.fullName,
+				phoneNumber: formData.phoneNumber,
+				password: formData.password,
+				dateOfBirth: formData.dateOfBirth || undefined,
+			};
+
+			await register(registerData);
+
+			// Show success message
+			alert('Registration successful! Redirecting to login...');
+
+			// Redirect to login after 2 seconds
+			setTimeout(() => {
+				navigate('/auth/login');
+			}, 2000);
+		} catch (error: any) {
+			if (error.response?.status === 409) {
+				setApiError(error.response.data.message || 'Email, username, or phone already registered');
+			} else if (error.response?.status === 400) {
+				setApiError(error.response.data.message || 'Validation error');
+			} else {
+				setApiError('Registration failed. Please try again.');
+			}
+		} finally {
+			setIsSubmitting(false);
+		}
 	};
 
 	const togglePasswordVisibility = () => {
@@ -201,6 +235,15 @@ const Register: React.FC = () => {
 							Join JatiStore as a buyer or seller today.
 						</p>
 					</div>
+
+					{apiError && (
+						<div className="mb-stack-md p-3 bg-error-container text-on-error-container rounded-lg border border-error flex items-start gap-2">
+							<span className="material-symbols-outlined text-[20px] flex-shrink-0">
+								error
+							</span>
+							<span className="font-body-sm text-body-sm">{apiError}</span>
+						</div>
+					)}
 
 					<form className="space-y-stack-md" onSubmit={handleSubmit}>
 						{/* Email Field */}
@@ -467,9 +510,9 @@ const Register: React.FC = () => {
 						<button
 							className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm font-label-md text-label-md text-on-primary bg-primary hover:bg-primary-container-variant focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 active:scale-[0.98] h-[40px] gap-2 mt-stack-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 							type="submit"
-							disabled={!isFormValid()}
+							disabled={!isFormValid() || isSubmitting}
 						>
-							<span>Create Account</span>
+							<span>{isSubmitting ? 'Registering...' : 'Create Account'}</span>
 							<span className="material-symbols-outlined text-[18px]">
 								arrow_forward
 							</span>
