@@ -233,7 +233,14 @@ export function OrderTable() {
                       <td className="py-3 px-4 text-on-surface-variant">
                         {firstItem && (
                           <>
-                            {firstItem.productName} (x{firstItem.quantity})<br/>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <span>{firstItem.productName} (x{firstItem.quantity})</span>
+                              {firstItem.flashSale && (
+                                <span className="text-[10px] text-error bg-error-container/30 px-2 py-0.5 rounded-full">
+                                  ⚡ Flash Sale
+                                </span>
+                              )}
+                            </div>
                             <span className="text-xs text-outline">SKU: {firstItem.productId.substring(0,8).toUpperCase()}</span>
                           </>
                         )}
@@ -398,8 +405,8 @@ export function OrderTable() {
                                     <div className="flex items-center gap-2 mt-0.5">
                                       <span className="text-[10px] text-on-surface-variant font-mono-data">SKU: {item.productId.substring(0,8).toUpperCase()}</span>
                                       {item.flashSale && (
-                                        <span className="inline-flex items-center text-[10px] bg-tertiary/10 text-tertiary px-1.5 py-0.5 rounded uppercase font-bold">
-                                          <span className="material-symbols-outlined text-[10px] mr-0.5">bolt</span> Flash
+                                        <span className="text-[10px] text-error bg-error-container/30 px-2 py-0.5 rounded-full">
+                                          ⚡ Flash Sale
                                         </span>
                                       )}
                                     </div>
