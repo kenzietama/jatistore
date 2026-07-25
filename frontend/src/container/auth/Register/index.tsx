@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { register } from "../../../services/authService";
 
@@ -38,6 +38,15 @@ const Register: React.FC = () => {
 	const [touched, setTouched] = useState<Record<string, boolean>>({});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [apiError, setApiError] = useState<string>('');
+	const timeoutRef = useRef<number>();
+
+	useEffect(() => {
+		return () => {
+			if (timeoutRef.current) {
+				clearTimeout(timeoutRef.current);
+			}
+		};
+	}, []);
 
 	const validateField = (name: string, value: string): string | undefined => {
 		switch (name) {
@@ -169,13 +178,13 @@ const Register: React.FC = () => {
 				dateOfBirth: formData.dateOfBirth || undefined,
 			};
 
-			await register(registerData);
+			const result = await register(registerData);
 
 			// Show success message
-			alert('Registration successful! Redirecting to login...');
+			alert(`${result.message} Redirecting to login...`);
 
 			// Redirect to login after 2 seconds
-			setTimeout(() => {
+			timeoutRef.current = window.setTimeout(() => {
 				navigate('/auth/login');
 			}, 2000);
 		} catch (error: any) {

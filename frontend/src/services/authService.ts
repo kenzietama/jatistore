@@ -12,15 +12,23 @@ export interface RegisterRequest {
 }
 
 export interface RegisterResponse {
-  code: string;
-  status: string;
-  message: string;
-  data: null;
-  timestamp: string;
-  requestId: string;
+  // Format 1
+  code?: string;
+  status?: string;
+  message?: string;
+  data?: null;
+  timestamp?: string;
+  requestId?: string;
+  // Format 2
+  restApiResponseHttpCode?: number;
+  restApiResponseHttpStatus?: string;
+  restApiResponseMessage?: string;
+  restApiResponseData?: null;
+  restApiResponseTimestamp?: string;
+  restApiResponseRequestId?: string;
 }
 
-export const register = async (data: RegisterRequest): Promise<RegisterResponse> => {
+export const register = async (data: RegisterRequest): Promise<{ message: string }> => {
   const response = await axios.post<RegisterResponse>(
     `${API_BASE_URL}/auth/register`,
     data,
@@ -31,5 +39,8 @@ export const register = async (data: RegisterRequest): Promise<RegisterResponse>
       },
     }
   );
-  return response.data;
+
+  // Normalize to consistent format
+  const message = response.data.message || response.data.restApiResponseMessage || 'Registration successful';
+  return { message };
 };
