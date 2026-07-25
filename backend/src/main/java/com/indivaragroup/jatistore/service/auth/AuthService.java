@@ -11,7 +11,11 @@ import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.repository.TokenRepository;
 import com.indivaragroup.jatistore.service.utility.AuthJWTUtility;
 import com.indivaragroup.jatistore.audit.Audit;
+import com.indivaragroup.jatistore.data.entity.AuditTrail;
+import com.indivaragroup.jatistore.repository.AuditTrailRepository;
 import com.indivaragroup.jatistore.repository.AuthRepository;
+import com.indivaragroup.jatistore.repository.SellerRepository;
+import com.indivaragroup.jatistore.data.entity.Seller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,6 +27,7 @@ import org.slf4j.MDC;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Optional;
 
 @Service
@@ -34,6 +39,8 @@ public class AuthService {
     private final AuthRepository authRepository;
     private final TokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditTrailRepository auditTrailRepository;
+    private final SellerRepository sellerRepository;
 
     @Value("${jwt.expiration-seconds.user:600}")
     private int jwtUserExpirationSeconds;
@@ -62,7 +69,33 @@ public class AuthService {
 
         if (role.equals("SELLER")) {
             if (!authRepository.isSellerActive(user.get().getEmail())) {
-                throw new CoreThrowHandler(RestApiError.AUT_0010);
+                String reason = RestApiError.AUT_0010.getMessage();
+                Optional<Seller> seller = sellerRepository.findByUserId(user.get().getId());
+                log.info("Checking seller deactivation reason for userId: {}, sellerId: {}", user.get().getId(), seller.isPresent() ? seller.get().getId() : "null");
+                if (seller.isPresent()) {
+                    Optional<AuditTrail> audit = auditTrailRepository.findFirstByEntityIdAndActionOrderByCreatedAtDesc(seller.get().getId(), "SELLER_UPDATE_STATUS");
+                    log.info("Found audit trail: {}", audit.isPresent());
+                    if (audit.isPresent() && audit.get().getPayload() != null) {
+                        String payload = audit.get().getPayload();
+                        log.info("Audit payload: {}", payload);
+                        String key = "\"deactivationReason\"";
+                        int keyIdx = payload.indexOf(key);
+                        if (keyIdx != -1) {
+                            int colonIdx = payload.indexOf(":", keyIdx);
+                            if (colonIdx != -1) {
+                                int quoteStart = payload.indexOf("\"", colonIdx);
+                                if (quoteStart != -1) {
+                                    int quoteEnd = payload.indexOf("\"", quoteStart + 1);
+                                    if (quoteEnd != -1) {
+                                        reason = payload.substring(quoteStart + 1, quoteEnd);
+                                        log.info("Extracted reason: {}", reason);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                throw new CoreThrowHandler(HttpStatus.FORBIDDEN.value(), reason, Collections.emptyMap());
             }
         }
 

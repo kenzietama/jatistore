@@ -7,4 +7,6 @@ import lombok.Data;
 public class UpdateSellerStatusRequest {
     @NotNull(message = "Active status is mandatory")
     private Boolean active;
+
+    private String deactivationReason;
 }
