@@ -41,7 +41,7 @@ const Register: React.FC = () => {
 			case "email": {
 				if (!value) return "Email is required";
 				if (value.length > 255) return "Email must not exceed 255 characters";
-				const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+				const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 				if (!emailRegex.test(value)) return "Invalid email format";
 				break;
 			}
@@ -67,7 +67,7 @@ const Register: React.FC = () => {
 			}
 			case "password": {
 				if (!value) return "Password is required";
-				const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+				const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
 				if (!passwordRegex.test(value))
 					return "Password must be at least 8 characters with 1 uppercase, 1 lowercase, and 1 digit";
 				break;
@@ -100,6 +100,14 @@ const Register: React.FC = () => {
 			const error = validateField(name, value);
 			setErrors((prev) => ({ ...prev, [name]: error }));
 		}
+		// Re-validate confirmPassword when password changes
+		if (name === "password" && touched.confirmPassword) {
+			const confirmError = validateField(
+				"confirmPassword",
+				formData.confirmPassword,
+			);
+			setErrors((prev) => ({ ...prev, confirmPassword: confirmError }));
+		}
 	};
 
 	const isFormValid = (): boolean => {
@@ -122,6 +130,26 @@ const Register: React.FC = () => {
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
+
+		// Validate all fields on submit
+		const newErrors: FormErrors = {};
+		Object.keys(formData).forEach((key) => {
+			const error = validateField(key, formData[key as keyof FormData]);
+			if (error) newErrors[key as keyof FormErrors] = error;
+		});
+
+		setErrors(newErrors);
+		setTouched({
+			email: true,
+			username: true,
+			fullName: true,
+			phoneNumber: true,
+			password: true,
+			confirmPassword: true,
+		});
+
+		if (Object.keys(newErrors).length > 0) return;
+
 		// API integration will be added in Task 12
 		console.log("Form submitted:", formData);
 	};
