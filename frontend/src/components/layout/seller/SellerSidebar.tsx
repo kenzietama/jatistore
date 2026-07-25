@@ -28,13 +28,20 @@ export function SellerSidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIs
   const handleLogout = async () => {
     try {
       await authService.logout();
-    } catch (error) {
-      console.error("Logout failed at server", error);
-    } finally {
       logoutStore();
       localStorage.removeItem('sellerProducts');
       setIsLogoutModalOpen(false);
       navigate('/auth/login');
+    } catch (error: any) {
+      console.error("Logout failed at server", error);
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        logoutStore();
+        localStorage.removeItem('sellerProducts');
+        setIsLogoutModalOpen(false);
+        navigate('/auth/login');
+      } else {
+        alert("Logout failed due to a server or network error. Please try again.");
+      }
     }
   };
 

@@ -38,7 +38,7 @@ const Register: React.FC = () => {
 	const [touched, setTouched] = useState<Record<string, boolean>>({});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [apiError, setApiError] = useState<string>("");
-	const timeoutRef = useRef<number>();
+	const timeoutRef = useRef<number | null>(null);
 
 	useEffect(() => {
 		return () => {
@@ -81,8 +81,7 @@ const Register: React.FC = () => {
 			}
 			case "password": {
 				if (!value) return "Password is required";
-				const passwordRegex =
-					/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+				const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 				if (!passwordRegex.test(value))
 					return "Password must be at least 8 characters with 1 uppercase, 1 lowercase, and 1 digit";
 				break;
@@ -184,25 +183,39 @@ const Register: React.FC = () => {
 				dateOfBirth: formData.dateOfBirth || undefined,
 			};
 
-			const result = await authService.register(registerData);
+			const response = await authService.register(registerData);
 
 			// Show success message
-			alert(`${result.message} Redirecting to login...`);
+			alert(`${response.message} Redirecting to login...`);
 
 			// Redirect to login after 2 seconds
 			timeoutRef.current = window.setTimeout(() => {
 				navigate("/auth/login");
 			}, 2000);
 		} catch (error: any) {
-			if (error.result?.status === 409) {
-				setApiError(
-					error.result.data.message ||
-						"Email, username, or phone already registered",
-				);
-			} else if (error.result?.status === 400) {
-				setApiError(error.result.data.message || "Validation error");
+			if (error.response?.data) {
+				const responseData = error.response.data;
+				const httpStatus = error.response.status || responseData.code;
+
+				if (
+					responseData.error &&
+					Object.keys(responseData.error).length > 0
+				) {
+					const fieldErrors = Object.entries(responseData.error)
+						.map(([field, msg]) => `${field}: ${msg}`)
+						.join(" | ");
+					setApiError(fieldErrors);
+				} else if (responseData.message) {
+					setApiError(responseData.message);
+				} else if (httpStatus === 409) {
+					setApiError(
+						"Email, username, or phone number is already registered.",
+					);
+				} else {
+					setApiError("Registration failed. Please try again.");
+				}
 			} else {
-				setApiError("Registration failed. Please try again.");
+				setApiError("Network error. Please try again later.");
 			}
 		} finally {
 			setIsSubmitting(false);

@@ -11,6 +11,8 @@ import UserFinancialsPage from "./pages/UserFinancialsPage";
 import { UserLayout } from "./components/layout/user/UserLayout";
 
 import api from "./lib/api";
+import { authService } from "./service/auth/authService";
+import { useAuthStore } from "./store/auth/useAuthStore";
 
 import "./App.css";
 import Login from "./container/auth/Login";
@@ -183,19 +185,25 @@ const App = () => {
                       </button>
                       <button
                         onClick={async () => {
-                          const token = localStorage.getItem("jatistore_token");
-                          if (token) {
-                            try {
-                              await api.post("/api/v1/auth/logout");
-                            } catch (error) {
-                              console.error("Logout endpoint error:", error);
+                          try {
+                            await authService.logout();
+                            useAuthStore.getState().logout();
+                            setIsLoggedIn(false);
+                            setCartCount(0);
+                            navigate("/");
+                            setCurrentPage("catalog");
+                          } catch (error: any) {
+                            console.error("Logout error:", error);
+                            if (error.response?.status === 401 || error.response?.status === 403) {
+                              useAuthStore.getState().logout();
+                              setIsLoggedIn(false);
+                              setCartCount(0);
+                              navigate("/");
+                              setCurrentPage("catalog");
+                            } else {
+                              alert("Logout failed due to a network or server error. Please try again.");
                             }
                           }
-                          localStorage.removeItem("jatistore_token");
-                          setIsLoggedIn(false);
-                          setCartCount(0);
-                          navigate("/");
-                          setCurrentPage("catalog");
                         }}
                         className="flex items-center gap-1 font-label-md text-label-md text-error font-medium hover:underline ml-2"
                       >
