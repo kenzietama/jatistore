@@ -1,8 +1,51 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+interface FormData {
+	email: string;
+	username: string;
+	fullName: string;
+	phoneNumber: string;
+	dateOfBirth: string;
+	password: string;
+	confirmPassword: string;
+}
 
 const Register: React.FC = () => {
 	const navigate = useNavigate();
+	const [formData, setFormData] = useState<FormData>({
+		email: "",
+		username: "",
+		fullName: "",
+		phoneNumber: "",
+		dateOfBirth: "",
+		password: "",
+		confirmPassword: "",
+	});
+	const [showPassword, setShowPassword] = useState(false);
+	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const { name, value } = e.target;
+		setFormData((prev) => ({
+			...prev,
+			[name]: value,
+		}));
+	};
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		// API integration will be added in Task 12
+		console.log("Form submitted:", formData);
+	};
+
+	const togglePasswordVisibility = () => {
+		setShowPassword(!showPassword);
+	};
+
+	const toggleConfirmPasswordVisibility = () => {
+		setShowConfirmPassword(!showConfirmPassword);
+	};
 
 	return (
 		<div className="bg-surface-container-low min-h-screen flex flex-col font-body-md text-on-surface">
@@ -41,29 +84,223 @@ const Register: React.FC = () => {
 						</p>
 					</div>
 
-					{/* Registration form placeholder - will be added in Task 10 */}
-					<div className="space-y-stack-md">
-						<div className="bg-surface-container border border-outline-variant rounded-lg p-stack-md text-center">
-							<span className="material-symbols-outlined text-on-surface-variant text-[48px] mb-2">
-								edit_document
-							</span>
-							<p className="font-body-md text-body-md text-on-surface-variant">
-								Registration form will be added in Task 10
-							</p>
+					<form className="space-y-stack-md" onSubmit={handleSubmit}>
+						{/* Email Field */}
+						<div className="space-y-unit">
+							<label
+								className="block font-label-md text-label-md text-on-surface"
+								htmlFor="email"
+							>
+								Email Address *
+							</label>
+							<div className="relative">
+								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+									<span className="material-symbols-outlined text-on-surface-variant text-[20px]">
+										mail
+									</span>
+								</div>
+								<input
+									className="block w-full pl-10 pr-3 py-2 border border-outline rounded-lg text-on-surface bg-surface focus:ring-2 focus:ring-primary focus:border-primary transition-shadow font-body-md text-body-md placeholder-on-surface-variant/50 h-[40px]"
+									id="email"
+									name="email"
+									placeholder="Enter your email"
+									type="email"
+									required
+									value={formData.email}
+									onChange={handleChange}
+								/>
+							</div>
 						</div>
 
-						{/* Placeholder Submit Button */}
+						{/* Username Field */}
+						<div className="space-y-unit">
+							<label
+								className="block font-label-md text-label-md text-on-surface"
+								htmlFor="username"
+							>
+								Username *
+							</label>
+							<div className="relative">
+								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+									<span className="material-symbols-outlined text-on-surface-variant text-[20px]">
+										person
+									</span>
+								</div>
+								<input
+									className="block w-full pl-10 pr-3 py-2 border border-outline rounded-lg text-on-surface bg-surface focus:ring-2 focus:ring-primary focus:border-primary transition-shadow font-body-md text-body-md placeholder-on-surface-variant/50 h-[40px]"
+									id="username"
+									name="username"
+									placeholder="Choose a username (4-20 characters)"
+									type="text"
+									required
+									value={formData.username}
+									onChange={handleChange}
+								/>
+							</div>
+						</div>
+
+						{/* Full Name Field */}
+						<div className="space-y-unit">
+							<label
+								className="block font-label-md text-label-md text-on-surface"
+								htmlFor="fullName"
+							>
+								Full Name *
+							</label>
+							<div className="relative">
+								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+									<span className="material-symbols-outlined text-on-surface-variant text-[20px]">
+										badge
+									</span>
+								</div>
+								<input
+									className="block w-full pl-10 pr-3 py-2 border border-outline rounded-lg text-on-surface bg-surface focus:ring-2 focus:ring-primary focus:border-primary transition-shadow font-body-md text-body-md placeholder-on-surface-variant/50 h-[40px]"
+									id="fullName"
+									name="fullName"
+									placeholder="Enter your full name"
+									type="text"
+									required
+									value={formData.fullName}
+									onChange={handleChange}
+								/>
+							</div>
+						</div>
+
+						{/* Phone Number Field */}
+						<div className="space-y-unit">
+							<label
+								className="block font-label-md text-label-md text-on-surface"
+								htmlFor="phoneNumber"
+							>
+								Phone Number *
+							</label>
+							<div className="relative">
+								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+									<span className="material-symbols-outlined text-on-surface-variant text-[20px]">
+										phone
+									</span>
+								</div>
+								<input
+									className="block w-full pl-10 pr-3 py-2 border border-outline rounded-lg text-on-surface bg-surface focus:ring-2 focus:ring-primary focus:border-primary transition-shadow font-body-md text-body-md placeholder-on-surface-variant/50 h-[40px]"
+									id="phoneNumber"
+									name="phoneNumber"
+									placeholder="Enter phone number (10-20 digits)"
+									type="tel"
+									required
+									value={formData.phoneNumber}
+									onChange={handleChange}
+								/>
+							</div>
+						</div>
+
+						{/* Date of Birth Field */}
+						<div className="space-y-unit">
+							<label
+								className="block font-label-md text-label-md text-on-surface"
+								htmlFor="dateOfBirth"
+							>
+								Date of Birth
+							</label>
+							<div className="relative">
+								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+									<span className="material-symbols-outlined text-on-surface-variant text-[20px]">
+										calendar_today
+									</span>
+								</div>
+								<input
+									className="block w-full pl-10 pr-3 py-2 border border-outline rounded-lg text-on-surface bg-surface focus:ring-2 focus:ring-primary focus:border-primary transition-shadow font-body-md text-body-md placeholder-on-surface-variant/50 h-[40px]"
+									id="dateOfBirth"
+									name="dateOfBirth"
+									type="date"
+									value={formData.dateOfBirth}
+									onChange={handleChange}
+								/>
+							</div>
+						</div>
+
+						{/* Password Field */}
+						<div className="space-y-unit">
+							<label
+								className="block font-label-md text-label-md text-on-surface"
+								htmlFor="password"
+							>
+								Password *
+							</label>
+							<div className="relative">
+								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+									<span className="material-symbols-outlined text-on-surface-variant text-[20px]">
+										lock
+									</span>
+								</div>
+								<input
+									className="block w-full pl-10 pr-10 py-2 border border-outline rounded-lg text-on-surface bg-surface focus:ring-2 focus:ring-primary focus:border-primary transition-shadow font-body-md text-body-md h-[40px]"
+									id="password"
+									name="password"
+									placeholder="Create password (min 8 chars)"
+									type={showPassword ? "text" : "password"}
+									required
+									value={formData.password}
+									onChange={handleChange}
+								/>
+								<button
+									className="absolute inset-y-0 right-0 pr-3 flex items-center text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+									onClick={togglePasswordVisibility}
+									type="button"
+								>
+									<span className="material-symbols-outlined text-[20px]">
+										{showPassword ? "visibility_off" : "visibility"}
+									</span>
+								</button>
+							</div>
+						</div>
+
+						{/* Confirm Password Field */}
+						<div className="space-y-unit">
+							<label
+								className="block font-label-md text-label-md text-on-surface"
+								htmlFor="confirmPassword"
+							>
+								Confirm Password *
+							</label>
+							<div className="relative">
+								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+									<span className="material-symbols-outlined text-on-surface-variant text-[20px]">
+										lock
+									</span>
+								</div>
+								<input
+									className="block w-full pl-10 pr-10 py-2 border border-outline rounded-lg text-on-surface bg-surface focus:ring-2 focus:ring-primary focus:border-primary transition-shadow font-body-md text-body-md h-[40px]"
+									id="confirmPassword"
+									name="confirmPassword"
+									placeholder="Re-enter password"
+									type={showConfirmPassword ? "text" : "password"}
+									required
+									value={formData.confirmPassword}
+									onChange={handleChange}
+								/>
+								<button
+									className="absolute inset-y-0 right-0 pr-3 flex items-center text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+									onClick={toggleConfirmPasswordVisibility}
+									type="button"
+								>
+									<span className="material-symbols-outlined text-[20px]">
+										{showConfirmPassword ? "visibility_off" : "visibility"}
+									</span>
+								</button>
+							</div>
+						</div>
+
+						{/* Submit Button */}
 						<button
-							className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm font-label-md text-label-md text-on-primary bg-primary hover:bg-primary-container-variant focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 active:scale-[0.98] h-[40px] gap-2 mt-stack-lg cursor-not-allowed opacity-50"
-							disabled
-							type="button"
+							className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm font-label-md text-label-md text-on-primary bg-primary hover:bg-primary-container-variant focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 active:scale-[0.98] h-[40px] gap-2 mt-stack-lg cursor-pointer"
+							type="submit"
 						>
 							<span>Create Account</span>
 							<span className="material-symbols-outlined text-[18px]">
 								arrow_forward
 							</span>
 						</button>
-					</div>
+					</form>
 
 					{/* Link to Login */}
 					<div className="mt-stack-lg text-center">
