@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -49,14 +50,14 @@ public class AuthService {
     @Transactional
     public RestApiResponse<AuthLoginResponse> login(AuthLoginRequest authLoginRequest) throws CoreThrowHandler {
         Optional<User> user = authRepository.findByEmail(authLoginRequest.getAuthLoginRequestEmail());
-        if (user.isEmpty()) {
-            throw new CoreThrowHandler(RestApiError.AUT_0004);
-        }
+        String hashToCheck = user.isPresent()
+                ? user.get().getPasswordHash()
+                : "$2a$10$dummyHashToEnsureConstantTimingXXXXXXXXXXXXXX";
         boolean isPasswordCorrect = passwordEncoder.matches(
                 authLoginRequest.getAuthLoginRequestPassword(),
-                user.get().getPasswordHash()
+                hashToCheck
         );
-        if (!isPasswordCorrect) {
+        if (user.isEmpty() || !isPasswordCorrect) {
             throw new CoreThrowHandler(RestApiError.AUT_0004);
         }
 
@@ -131,11 +132,11 @@ public class AuthService {
         }
 
         if (authRepository.existsByUsername(request.getUsername())) {
-            throw new CoreThrowHandler(RestApiError.AUT_0018);
+            throw new CoreThrowHandler(RestApiError.AUT_0017);
         }
 
         if (authRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-            throw new CoreThrowHandler(RestApiError.AUT_0019);
+            throw new CoreThrowHandler(RestApiError.AUT_0017);
         }
 
         String hashedPassword = passwordEncoder.encode(request.getPassword());
@@ -156,9 +157,9 @@ public class AuthService {
             if (e.getMessage().contains("email")) {
                 throw new CoreThrowHandler(RestApiError.AUT_0017);
             } else if (e.getMessage().contains("username")) {
-                throw new CoreThrowHandler(RestApiError.AUT_0018);
+                throw new CoreThrowHandler(RestApiError.AUT_0017);
             } else if (e.getMessage().contains("phone")) {
-                throw new CoreThrowHandler(RestApiError.AUT_0019);
+                throw new CoreThrowHandler(RestApiError.AUT_0017);
             }
             throw new CoreThrowHandler(RestApiError.AUT_0005);
         }
@@ -171,5 +172,10 @@ public class AuthService {
                 .restApiResponseTimestamp(Instant.now())
                 .restApiResponseRequestId(MDC.get("requestId"))
                 .build();
+    }
+
+    @Scheduled(cron = "0 0 * * * *")  // Run hourly
+    public void cleanupExpiredTokens() {
+        tokenRepository.deleteByExpiresAtBefore(Instant.now());
     }
 }

@@ -105,6 +105,7 @@ class JWTAuthenticationFilterTest {
         
         Token tokenEntity = new Token();
         tokenEntity.setToken(tokenStr);
+        tokenEntity.setExpiresAt(java.time.Instant.now().plusSeconds(3600));
         when(tokenRepository.findByToken(tokenStr)).thenReturn(Optional.of(tokenEntity));
         
         String email = "test@example.com";

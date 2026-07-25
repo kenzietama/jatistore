@@ -275,7 +275,7 @@ class AuthServiceTest {
 
         CoreThrowHandler exception = assertThrows(CoreThrowHandler.class,
             () -> authService.register(validRequest));
-        assertEquals(RestApiError.AUT_0018.getCode(), exception.getCode());
+        assertEquals(RestApiError.AUT_0017.getCode(), exception.getCode());
 
         verify(authRepository, never()).save(any(User.class));
     }
@@ -288,7 +288,7 @@ class AuthServiceTest {
 
         CoreThrowHandler exception = assertThrows(CoreThrowHandler.class,
             () -> authService.register(validRequest));
-        assertEquals(RestApiError.AUT_0019.getCode(), exception.getCode());
+        assertEquals(RestApiError.AUT_0017.getCode(), exception.getCode());
 
         verify(authRepository, never()).save(any(User.class));
     }

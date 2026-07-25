@@ -5,7 +5,6 @@ import com.indivaragroup.jatistore.dto.request.auth.AuthRegisterRequest;
 import com.indivaragroup.jatistore.dto.response.RestApiPath;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.auth.AuthLoginResponse;
-import com.indivaragroup.jatistore.dto.response.module.auth.AuthRegisterResponse;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.audit.Audit;
 import com.indivaragroup.jatistore.service.auth.AuthService;
@@ -36,7 +35,7 @@ public class AuthController {
 
     @PostMapping(RestApiPath.AUTH_REGISTER_PATH)
     @Audit(action = "REGISTER", affectedModule = "AUTH", description = "User attempted to register")
-    public RestApiResponse<AuthRegisterResponse> register(
+    public RestApiResponse<Void> register(
         @Valid @RequestBody AuthRegisterRequest request
     ) throws CoreThrowHandler {
         return authService.register(request);

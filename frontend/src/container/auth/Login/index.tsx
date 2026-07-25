@@ -186,12 +186,6 @@ const Login: React.FC = () => {
 								>
 									Password
 								</label>
-								<a
-									className="font-label-sm text-label-sm text-primary hover:text-primary-container-variant transition-colors"
-									href="#"
-								>
-									Forgot password?
-								</a>
 							</div>
 							<div className="relative">
 								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -243,6 +237,18 @@ const Login: React.FC = () => {
 							</span>
 						</button>
 					</form>
+
+					<div className="mt-stack-lg pt-stack-md border-t border-outline-variant text-center">
+						<p className="font-body-sm text-body-sm text-on-surface-variant">
+							Don't have an account?{" "}
+							<a
+								className="font-label-md text-label-md text-primary hover:underline underline-offset-4 decoration-2 decoration-primary/30 hover:decoration-primary transition-all"
+								onClick={() => navigate("/auth/register")}
+							>
+								Sign up
+							</a>
+						</p>
+					</div>
 				</div>
 			</main>
 		</div>
