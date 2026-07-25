@@ -14,6 +14,7 @@ import api from "./lib/api";
 
 import "./App.css";
 import Login from "./container/auth/Login";
+import Register from "./container/auth/Register";
 import Dashboard from "./container/seller/Dashboard";
 import ProductManagement from "./container/seller/Product";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -315,7 +316,8 @@ createRoot(document.getElementById("root")!).render(
         </Route>
         
         <Route path="/auth/login" element={<Login />} />
-        
+        <Route path="/auth/register" element={<Register />} />
+
         {/* Seller Routes */}
         <Route element={<ProtectedRoute allowedRoles={["SELLER"]} />}>
           <Route path="/seller/dashboard" element={<Dashboard />} />
