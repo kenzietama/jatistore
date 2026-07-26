@@ -214,7 +214,7 @@ public class UserCheckoutService {
             throw new CoreThrowHandler(RestApiError.USR_0009);
         }
 
-        // Re-validate stock & active product status
+        // Re-validate active product & seller status
         for (CartItem item : cartItems) {
             if (item.getProduct().getDeletedAt() != null) {
                 order.setStatus(OrderStatus.CANCELLED);
@@ -227,14 +227,6 @@ public class UserCheckoutService {
                 orderRepository.save(order);
                 throw new CoreThrowHandler(RestApiError.USR_0001);
             }
-
-            if (item.getProduct().getStock() < item.getQuantity()) {
-                order.setStatus(OrderStatus.CANCELLED);
-                orderRepository.save(order);
-                String customMessage = RestApiError.USR_0011.getMessage()
-                        .replace("{productName}", item.getProduct().getName());
-                throw new CoreThrowHandler(RestApiError.USR_0011.getCode(), customMessage, null);
-            }
         }
 
         // Recalculate and validate amount with fresh flash-sale prices
@@ -244,31 +236,6 @@ public class UserCheckoutService {
         BigDecimal recalculated = freshProjections.stream()
                 .map(p -> p.getEffectivePrice().multiply(BigDecimal.valueOf(p.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        if (recalculated.compareTo(order.getTotalAmount()) != 0) {
-            order.setStatus(OrderStatus.CANCELLED);
-            orderRepository.save(order);
-            throw new CoreThrowHandler(RestApiError.USR_0023);
-        }
-
-        // Validate flash sale quota before payment gateway is invoked
-        if (order.getOrderDetails() != null) {
-            for (OrderDetail detail : order.getOrderDetails()) {
-                if (Boolean.TRUE.equals(detail.getFlashSale())) {
-                    Optional<FlashSaleItem> flashSaleItemOpt = flashSaleItemRepository
-                            .findByProductAndActiveFlashSale(detail.getProduct().getId());
-
-                    if (flashSaleItemOpt.isPresent()) {
-                        FlashSaleItem flashSaleItem = flashSaleItemOpt.get();
-                        if (flashSaleItem.getRemainingQuota() < detail.getQuantity()) {
-                            order.setStatus(OrderStatus.CANCELLED);
-                            orderRepository.save(order);
-                            throw new CoreThrowHandler(RestApiError.USR_0025);
-                        }
-                    }
-                }
-            }
-        }
 
         if (recalculated.compareTo(order.getTotalAmount()) != 0) {
             order.setStatus(OrderStatus.CANCELLED);
