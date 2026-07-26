@@ -48,7 +48,7 @@ public interface CartItemRepository extends JpaRepository<CartItem, UUID> {
             "CASE WHEN fs.id IS NOT NULL THEN true ELSE false END AS flashSale " +
             "FROM trx_cart_items ci " +
             "JOIN mst_products p ON ci.product_id = p.id AND p.deleted_at IS NULL " +
-            "LEFT JOIN mst_flash_sale_items fsi ON fsi.product_id = p.id " +
+            "LEFT JOIN mst_flash_sale_items fsi ON fsi.product_id = p.id AND fsi.remaining_quota >= ci.quantity " +
             "LEFT JOIN mst_flash_sales fs ON fs.id = fsi.flash_sale_id " +
             "    AND NOW() BETWEEN fs.start_time AND fs.end_time " +
             "WHERE ci.id IN (:cartItemIds) " +

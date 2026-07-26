@@ -22,10 +22,25 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
                 p.name,
                 s.store_name as storeName,
                 p.description,
-                COALESCE(CASE WHEN fs.id IS NOT NULL THEN fsi.flash_price ELSE NULL END, p.price) as price,
-                CASE WHEN fsi.flash_price IS NOT NULL THEN p.price ELSE NULL END as originalPrice,
+                COALESCE(CASE
+                    WHEN fs.id IS NOT NULL AND fsi.remaining_quota > 0
+                        THEN fsi.flash_price
+                    END, p.price
+                ) as price,
+                CASE
+                    WHEN fsi.flash_price IS NOT NULL
+                             AND fs.id IS NOT NULL
+                             AND fsi.remaining_quota > 0
+                        THEN p.price
+                    END as originalPrice,
                 p.stock,
-                CASE WHEN fsi.flash_price IS NOT NULL THEN true ELSE false END as isFlashSale,
+                fsi.remaining_quota as remainingQuota,
+                CASE
+                    WHEN fs.id IS NOT NULL
+                             AND fsi.flash_price IS NOT NULL
+                             AND fsi.remaining_quota > 0
+                        THEN true ELSE false
+                    END as isFlashSale,
                 fs.end_time as flashSaleEndTime,
                 p.image,
                 CAST(p.product_category_id AS VARCHAR) as categoryId
@@ -58,10 +73,26 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
     @Query(value = """
             SELECT
-                COALESCE(CASE WHEN fs.id IS NOT NULL THEN fsi.flash_price ELSE NULL END, p.price) as price,
-                CASE WHEN fsi.flash_price IS NOT NULL THEN p.price ELSE NULL END as originalPrice,
-                CASE WHEN fsi.flash_price IS NOT NULL THEN true ELSE false END as isFlashSale,
-                fs.end_time as flashSaleEndTime
+                COALESCE(CASE
+                    WHEN fs.id IS NOT NULL AND fsi.remaining_quota > 0
+                        THEN fsi.flash_price
+                    END, p.price
+                ) as price,
+                CASE
+                    WHEN fs.id IS NOT NULL
+                             AND fsi.flash_price IS NOT NULL
+                             AND fsi.remaining_quota > 0
+                        THEN p.price
+                    END as originalPrice,
+                CASE
+                    WHEN fs.id IS NOT NULL
+                             AND fsi.flash_price IS NOT NULL
+                             AND fsi.remaining_quota > 0
+                        THEN true
+                    ELSE false
+                    END as isFlashSale,
+                fs.end_time as flashSaleEndTime,
+                fsi.remaining_quota as remainingQuota
             FROM mst_products p
             LEFT JOIN mst_flash_sale_items fsi ON fsi.product_id = p.id
             LEFT JOIN mst_flash_sales fs ON fs.id = fsi.flash_sale_id

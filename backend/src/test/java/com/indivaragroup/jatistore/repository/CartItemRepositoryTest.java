@@ -129,6 +129,32 @@ class CartItemRepositoryTest {
         assertThat(result.get(0).getFlashSale()).isFalse();
     }
 
+    @Test
+    void findCheckoutPrices_InsufficientFlashQuota_FallsBackToRetailPrice() {
+        // Setup
+        User user = createUser("buyer5@test.com");
+        Seller seller = createSeller("seller5@test.com");
+        Store store = createStore(seller);
+        Product product = createProduct(store, new BigDecimal("100.00"), 10);
+        FlashSale flashSale = createActiveFlashSale();
+        FlashSaleItem flashSaleItem = createFlashSaleItem(flashSale, product, new BigDecimal("80.00"));
+        flashSaleItem.setRemainingQuota(1);
+        Cart cart = createCart(user);
+        CartItem cartItem = createCartItem(cart, product, 2);
+
+        entityManager.flush();
+
+        // Execute
+        List<CheckoutPriceProjection> result = cartItemRepository.findCheckoutPrices(
+            new UUID[]{cartItem.getId()}
+        );
+
+        // Verify
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getEffectivePrice()).isEqualByComparingTo(new BigDecimal("100.00"));
+        assertThat(result.get(0).getFlashSale()).isFalse();
+    }
+
     // Helper methods
     private User createUser(String email) {
         String randomDigits = String.valueOf(System.nanoTime()).substring(5);
