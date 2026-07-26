@@ -45,6 +45,7 @@ public class UserCheckoutService {
     private final PaymentGatewayClient paymentGatewayClient;
     private final CheckoutFinalizer checkoutFinalizer;
     private final FlashSaleItemRepository flashSaleItemRepository;
+    private final ProductRepository productRepository;
 
     @Audit(action = "ORDER_CREATE", affectedModule = "ORDERS", description = "User creates pending order")
     @Transactional
@@ -84,7 +85,7 @@ public class UserCheckoutService {
             }
         }
 
-        // 4. Calculate total amount (backend security) & validate active flash sale quota
+        // 4. Reserve product stock & active flash sale quota
         List<CheckoutPriceProjection> priceProjections = cartItemRepository.findCheckoutPrices(cartItemIdsArray);
 
         for (CartItem cartItem : cartItems) {
@@ -93,14 +94,17 @@ public class UserCheckoutService {
                     .findFirst()
                     .orElseThrow();
 
+            Product product = cartItem.getProduct();
+            product.setStock(product.getStock() - cartItem.getQuantity());
+            productRepository.save(product);
+
             if (Boolean.TRUE.equals(projection.getFlashSale())) {
                 FlashSaleItem flashSaleItem = flashSaleItemRepository
-                        .findByProductAndActiveFlashSale(projection.getProductId())
+                        .findByProductAndActiveFlashSaleForUpdate(projection.getProductId())
                         .orElseThrow(() -> new CoreThrowHandler(RestApiError.USR_0024));
 
-                if (flashSaleItem.getRemainingQuota() < cartItem.getQuantity()) {
-                    throw new CoreThrowHandler(RestApiError.USR_0025);
-                }
+                flashSaleItem.setRemainingQuota(flashSaleItem.getRemainingQuota() - cartItem.getQuantity());
+                flashSaleItemRepository.save(flashSaleItem);
             }
         }
 
@@ -134,10 +138,21 @@ public class UserCheckoutService {
         }).toList();
         orderDetailRepository.saveAll(orderDetails);
 
+        List<CreateOrderResponse.OrderDetailItemResponse> orderDetailResponses = orderDetails.stream()
+                .map(detail -> CreateOrderResponse.OrderDetailItemResponse.builder()
+                        .productId(detail.getProduct().getId())
+                        .productName(detail.getProduct().getName())
+                        .pricePerItem(detail.getPricePerItem())
+                        .quantity(detail.getQuantity())
+                        .flashSale(detail.getFlashSale())
+                        .build())
+                .toList();
+
         return RestApiResponse.success(CreateOrderResponse.builder()
                 .orderId(order.getId())
                 .totalAmount(order.getTotalAmount())
                 .status(order.getStatus())
+                .orderDetails(orderDetailResponses)
                 .build());
     }
 
