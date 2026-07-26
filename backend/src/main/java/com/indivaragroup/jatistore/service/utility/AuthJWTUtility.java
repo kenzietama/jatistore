@@ -33,6 +33,9 @@ public class AuthJWTUtility {
                     .claim("userId", userId)
                     .claim("email", email)
                     .claim("role", role)
+                    .claim("iss", "jatistore-api")
+                    .claim("aud", "jatistore-web")
+                    .claim("jti", UUID.randomUUID().toString())
                     .issueTime(Date.from(ISSUED_AT))
                     .expirationTime(Date.from(EXPIRES_AT))
                     .build();
@@ -58,7 +61,7 @@ public class AuthJWTUtility {
             SignedJWT signedJWT = SignedJWT.parse(serializedJwt);
             String email = signedJWT.getJWTClaimsSet().getStringClaim("email");
             if (email == null || email.isBlank()) {
-                throw new IllegalArgumentException("Email is missing or empty");
+                    throw new IllegalArgumentException("Email is missing or empty");
             }
             return email;
         } catch (CoreThrowHandler e) {
@@ -72,9 +75,20 @@ public class AuthJWTUtility {
     public void verifyToken(String serializedJwt) {
         try {
             SignedJWT signedJWT = SignedJWT.parse(serializedJwt);
-            JWSVerifier verifier = new MACVerifier(jwtSecret.getBytes());
+            if (!JWSAlgorithm.HS512.equals(signedJWT.getHeader().getAlgorithm())) {
+                throw new CoreThrowHandler(RestApiError.AUT_0008);
+            }
 
+            JWSVerifier verifier = new MACVerifier(jwtSecret.getBytes());
             if (!signedJWT.verify(verifier)) {
+                throw new CoreThrowHandler(RestApiError.AUT_0008);
+            }
+
+            if (!signedJWT.getJWTClaimsSet().getIssuer().equals("jatistore-api")) {
+                throw new CoreThrowHandler(RestApiError.AUT_0008);
+            }
+
+            if (!signedJWT.getJWTClaimsSet().getAudience().contains("jatistore-web")) {
                 throw new CoreThrowHandler(RestApiError.AUT_0008);
             }
 

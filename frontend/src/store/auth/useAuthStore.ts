@@ -18,7 +18,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => {
 	// Initialize state from localStorage if available
-	const initialToken = localStorage.getItem("jatistore_token");
+	let initialToken = localStorage.getItem("jatistore_token");
 	let initialUser: UserDecoded | null = null;
 	let initialIsAuthenticated = false;
 
@@ -32,9 +32,11 @@ export const useAuthStore = create<AuthState>((set) => {
 				initialIsAuthenticated = true;
 			} else {
 				localStorage.removeItem("jatistore_token");
+				initialToken = null;
 			}
 		} catch (error) {
 			localStorage.removeItem("jatistore_token");
+			initialToken = null;
 		}
 	}
 

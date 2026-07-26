@@ -3,6 +3,7 @@ package com.indivaragroup.jatistore.service.auth;
 import com.indivaragroup.jatistore.data.entity.Token;
 import com.indivaragroup.jatistore.data.entity.User;
 import com.indivaragroup.jatistore.dto.request.auth.AuthLoginRequest;
+import com.indivaragroup.jatistore.dto.request.auth.AuthRegisterRequest;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.auth.AuthLoginResponse;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
@@ -19,12 +20,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,11 +52,22 @@ class AuthServiceTest {
     @InjectMocks
     private AuthService authService;
 
+    private AuthRegisterRequest validRequest;
+
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(authService, "jwtUserExpirationSeconds", 600);
         ReflectionTestUtils.setField(authService, "jwtSellerExpirationSeconds", 600);
         ReflectionTestUtils.setField(authService, "jwtAdminExpirationSeconds", 3600);
+
+        validRequest = new AuthRegisterRequest(
+            "test@example.com",
+            "Password123",
+            "testuser",
+            "08123456789",
+            "Test User",
+            LocalDate.of(1990, 1, 1)
+        );
     }
 
     @Test
@@ -268,5 +280,72 @@ class AuthServiceTest {
         when(tokenRepository.findByToken(tokenStr)).thenReturn(Optional.empty());
 
         assertThrows(CoreThrowHandler.class, () -> authService.logout("Bearer " + tokenStr));
+    }
+
+    @Test
+    void testRegisterSuccess() throws CoreThrowHandler {
+        when(authRepository.existsByEmail(anyString())).thenReturn(false);
+        when(authRepository.existsByUsername(anyString())).thenReturn(false);
+        when(authRepository.existsByPhoneNumber(anyString())).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("$2a$10$hashedpassword");
+        when(authRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RestApiResponse<Void> response = authService.register(validRequest);
+
+        assertNotNull(response);
+        assertEquals("Registration successful. Please login.", response.getRestApiResponseMessage());
+        verify(authRepository).save(any(User.class));
+    }
+
+    @Test
+    void testRegisterDuplicateEmail() {
+        when(authRepository.existsByEmail("test@example.com")).thenReturn(true);
+
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class,
+            () -> authService.register(validRequest));
+        assertEquals(RestApiError.AUT_0017.getCode(), exception.getCode());
+
+        verify(authRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void testRegisterDuplicateUsername() {
+        when(authRepository.existsByEmail(anyString())).thenReturn(false);
+        when(authRepository.existsByUsername("testuser")).thenReturn(true);
+
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class,
+            () -> authService.register(validRequest));
+        assertEquals(RestApiError.AUT_0017.getCode(), exception.getCode());
+
+        verify(authRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void testRegisterDuplicatePhone() {
+        when(authRepository.existsByEmail(anyString())).thenReturn(false);
+        when(authRepository.existsByUsername(anyString())).thenReturn(false);
+        when(authRepository.existsByPhoneNumber("08123456789")).thenReturn(true);
+
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class,
+            () -> authService.register(validRequest));
+        assertEquals(RestApiError.AUT_0017.getCode(), exception.getCode());
+
+        verify(authRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void testRegisterPasswordHashing() throws CoreThrowHandler {
+        when(authRepository.existsByEmail(anyString())).thenReturn(false);
+        when(authRepository.existsByUsername(anyString())).thenReturn(false);
+        when(authRepository.existsByPhoneNumber(anyString())).thenReturn(false);
+        when(passwordEncoder.encode("Password123")).thenReturn("$2a$10$hashedpassword");
+        when(authRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        authService.register(validRequest);
+
+        verify(passwordEncoder).encode("Password123");
+        verify(authRepository).save(argThat(user ->
+            user.getPasswordHash().equals("$2a$10$hashedpassword")
+        ));
     }
 }

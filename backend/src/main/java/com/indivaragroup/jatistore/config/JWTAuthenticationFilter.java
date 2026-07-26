@@ -1,5 +1,6 @@
 package com.indivaragroup.jatistore.config;
 
+import com.indivaragroup.jatistore.data.entity.Token;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.repository.TokenRepository;
@@ -17,6 +18,9 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
+
+import java.time.Instant;
+import java.util.Optional;
 
 @Component
 public class JWTAuthenticationFilter extends OncePerRequestFilter {
@@ -42,20 +46,25 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) {
         try {
             String authHeader = request.getHeader("Authorization");
-            if (authHeader != null) {
-                if (!authHeader.startsWith("Bearer ")) {
-                    throw new CoreThrowHandler(RestApiError.AUT_0006);  //invalid header format
-                }
-            } else {
-                filterChain.doFilter(request, response); //auth header missing, continue, restrict protected route
+            if (authHeader == null || authHeader.isBlank()) {
+                filterChain.doFilter(request, response);
                 return;
             }
 
-            String jwt = authHeader.substring(7);
-            authJWTUtility.verifyToken(jwt); //check AUT_0007 & AUT_0008
+            if (!authHeader.startsWith("Bearer ")) {
+                throw new CoreThrowHandler(RestApiError.AUT_0006);  // invalid header format
+            }
 
-            if (tokenRepository.findByToken(jwt).isEmpty()) {
-                throw new CoreThrowHandler(RestApiError.AUT_0009); //session not found / already logout
+            String jwt = authHeader.substring(7).trim();
+            if (jwt.isEmpty()) {
+                throw new CoreThrowHandler(RestApiError.AUT_0006);
+            }
+
+            authJWTUtility.verifyToken(jwt); // check AUT_0007 & AUT_0008
+
+            Optional<Token> tokenEntity = tokenRepository.findByToken(jwt);
+            if (tokenEntity.isEmpty() || (tokenEntity.get().getExpiresAt() != null && tokenEntity.get().getExpiresAt().isBefore(Instant.now()))) {
+                throw new CoreThrowHandler(RestApiError.AUT_0009); // session not found / already logged out / expired
             }
 
             String email = authJWTUtility.resolveSubjectFromEncryptedToken(jwt);

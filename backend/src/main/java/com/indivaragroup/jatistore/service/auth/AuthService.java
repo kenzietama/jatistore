@@ -3,6 +3,7 @@ package com.indivaragroup.jatistore.service.auth;
 import com.indivaragroup.jatistore.data.entity.Token;
 import com.indivaragroup.jatistore.data.entity.User;
 import com.indivaragroup.jatistore.dto.request.auth.AuthLoginRequest;
+import com.indivaragroup.jatistore.dto.request.auth.AuthRegisterRequest;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.auth.AuthLoginResponse;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
@@ -19,7 +20,9 @@ import com.indivaragroup.jatistore.data.entity.Seller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -54,14 +57,14 @@ public class AuthService {
     @Transactional
     public RestApiResponse<AuthLoginResponse> login(AuthLoginRequest authLoginRequest) throws CoreThrowHandler {
         Optional<User> user = authRepository.findByEmail(authLoginRequest.getAuthLoginRequestEmail());
-        if (user.isEmpty()) {
-            throw new CoreThrowHandler(RestApiError.AUT_0004);
-        }
+        String hashToCheck = user.isPresent()
+                ? user.get().getPasswordHash()
+                : "$2a$10$dummyHashToEnsureConstantTimingXXXXXXXXXXXXXX";
         boolean isPasswordCorrect = passwordEncoder.matches(
                 authLoginRequest.getAuthLoginRequestPassword(),
-                user.get().getPasswordHash()
+                hashToCheck
         );
-        if (!isPasswordCorrect) {
+        if (user.isEmpty() || !isPasswordCorrect) {
             throw new CoreThrowHandler(RestApiError.AUT_0004);
         }
 
@@ -148,5 +151,59 @@ public class AuthService {
                 .restApiResponseTimestamp(Instant.now())
                 .restApiResponseRequestId(MDC.get("requestId"))
                 .build();
+    }
+
+    @Transactional
+    public RestApiResponse<Void> register(AuthRegisterRequest request) throws CoreThrowHandler {
+        if (authRepository.existsByEmail(request.getEmail())) {
+            throw new CoreThrowHandler(RestApiError.AUT_0017);
+        }
+
+        if (authRepository.existsByUsername(request.getUsername())) {
+            throw new CoreThrowHandler(RestApiError.AUT_0017);
+        }
+
+        if (authRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new CoreThrowHandler(RestApiError.AUT_0017);
+        }
+
+        String hashedPassword = passwordEncoder.encode(request.getPassword());
+
+        User user = User.builder()
+                .email(request.getEmail())
+                .passwordHash(hashedPassword)
+                .username(request.getUsername())
+                .phoneNumber(request.getPhoneNumber())
+                .fullName(request.getFullName())
+                .dateOfBirth(request.getDateOfBirth())
+                .build();
+
+        try {
+            authRepository.save(user);
+        } catch (DataIntegrityViolationException e) {
+            // Race condition safety: DB constraint caught duplicate
+            if (e.getMessage().contains("email")) {
+                throw new CoreThrowHandler(RestApiError.AUT_0017);
+            } else if (e.getMessage().contains("username")) {
+                throw new CoreThrowHandler(RestApiError.AUT_0017);
+            } else if (e.getMessage().contains("phone")) {
+                throw new CoreThrowHandler(RestApiError.AUT_0017);
+            }
+            throw new CoreThrowHandler(RestApiError.AUT_0005);
+        }
+
+        return RestApiResponse.<Void>builder()
+                .restApiResponseHttpCode(HttpStatus.OK.value())
+                .restApiResponseHttpStatus("SUCCESS")
+                .restApiResponseMessage(RestApiSuccess.REGISTER_SUCCESS.getMessage())
+                .restApiResponseData(null)
+                .restApiResponseTimestamp(Instant.now())
+                .restApiResponseRequestId(MDC.get("requestId"))
+                .build();
+    }
+
+    @Scheduled(cron = "0 0 * * * *")  // Run hourly
+    public void cleanupExpiredTokens() {
+        tokenRepository.deleteByExpiresAtBefore(Instant.now());
     }
 }

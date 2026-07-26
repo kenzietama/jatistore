@@ -18,6 +18,16 @@ public enum RestApiError {
     AUT_0008(HttpStatus.UNAUTHORIZED.value(), "Invalid Token"),
     AUT_0009(HttpStatus.UNAUTHORIZED.value(), "Session not found"),
     AUT_0010(HttpStatus.FORBIDDEN.value(), "Account has been suspended or deactivated."),
+
+    // Registration validation errors (400)
+    AUT_0013(HttpStatus.BAD_REQUEST.value(), "Invalid email format"),
+    AUT_0014(HttpStatus.BAD_REQUEST.value(), "Password must be at least 8 characters with 1 uppercase, 1 lowercase, 1 digit"),
+    AUT_0015(HttpStatus.BAD_REQUEST.value(), "Username must be 4-20 characters, alphanumeric with underscore/dash only"),
+    AUT_0016(HttpStatus.BAD_REQUEST.value(), "Phone number must be 10-20 digits only"),
+
+    // Registration uniqueness errors (409)
+    AUT_0017(HttpStatus.CONFLICT.value(), "Email, username, or phone number is already registered"),
+    AUT_0005(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Registration failed due to unexpected error"),
     GEN_0007(HttpStatus.CONFLICT.value(), "Email or Username already taken"),
 
     USR_0001(HttpStatus.NOT_FOUND.value(), "Product not found"),

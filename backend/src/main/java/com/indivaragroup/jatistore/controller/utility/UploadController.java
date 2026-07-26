@@ -3,6 +3,7 @@ package com.indivaragroup.jatistore.controller.utility;
 import com.indivaragroup.jatistore.service.utility.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -14,6 +15,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/utility")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class UploadController {
 
     private final CloudinaryService cloudinaryService;

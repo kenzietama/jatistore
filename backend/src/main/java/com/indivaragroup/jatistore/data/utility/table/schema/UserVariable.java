@@ -14,6 +14,7 @@ public class UserVariable {
     public static final String COLUMN_MST_USERS_PHONE_NUMBER = "phone_number";
     public static final String COLUMN_MST_USERS_PASSWORD_HASH = "password_hash";
     public static final String COLUMN_MST_USERS_FULL_NAME = "full_name";
+    public static final String COLUMN_MST_USERS_DATE_OF_BIRTH = "date_of_birth";
     public static final String COLUMN_MST_USERS_CREATED_AT = "created_at";
     public static final String COLUMN_MST_USERS_UPDATED_AT = "updated_at";
 

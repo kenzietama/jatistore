@@ -6,6 +6,7 @@ import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -37,6 +38,9 @@ public class User {
 
     @Column(name = UserVariable.COLUMN_MST_USERS_FULL_NAME, nullable = false)
     private String fullName;
+
+    @Column(name = UserVariable.COLUMN_MST_USERS_DATE_OF_BIRTH)
+    private LocalDate dateOfBirth;
 
     @Column(name = UserVariable.COLUMN_MST_USERS_CREATED_AT, nullable = false, updatable = false)
     private Instant createdAt;

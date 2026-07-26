@@ -1,6 +1,7 @@
 package com.indivaragroup.jatistore.controller.auth;
 
 import com.indivaragroup.jatistore.dto.request.auth.AuthLoginRequest;
+import com.indivaragroup.jatistore.dto.request.auth.AuthRegisterRequest;
 import com.indivaragroup.jatistore.dto.response.RestApiPath;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.auth.AuthLoginResponse;
@@ -30,5 +31,13 @@ public class AuthController {
     @Audit(action = "LOGOUT", affectedModule = "AUTH", description = "User logged out")
     public  RestApiResponse<Void> logout(@RequestHeader("Authorization") String authorizationHeader) throws CoreThrowHandler {
         return authService.logout(authorizationHeader);
+    }
+
+    @PostMapping(RestApiPath.AUTH_REGISTER_PATH)
+    @Audit(action = "REGISTER", affectedModule = "AUTH", description = "User attempted to register")
+    public RestApiResponse<Void> register(
+        @Valid @RequestBody AuthRegisterRequest request
+    ) throws CoreThrowHandler {
+        return authService.register(request);
     }
 }

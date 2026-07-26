@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum RestApiSuccess {
 
+    REGISTER_SUCCESS(HttpStatus.OK.value(), "Registration successful. Please login."),
     LOGIN_SUCCESS(HttpStatus.OK.value(), "Login successful."),
     LOGOUT_SUCCESS(HttpStatus.OK.value(), "Logged out successfully."),
     ORDER_RECEIPT_CONFIRMED(HttpStatus.OK.value(), "Order receipt confirmed. Funds released to seller.");
