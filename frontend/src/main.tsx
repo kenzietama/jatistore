@@ -42,6 +42,7 @@ const App = () => {
     location.state?.pendingProductId || null
   );
   const [selectedCheckoutItems, setSelectedCheckoutItems] = useState<any[]>([]);
+  const [pendingOrder, setPendingOrder] = useState<any>(null);
 
   // STATE PENCARIAN GLOBAL
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>("");
@@ -273,8 +274,9 @@ const App = () => {
       {currentPage === "cart" && (
         <CartPage
           onBackToCatalog={() => setCurrentPage("catalog")}
-          onCheckout={(itemsToCheckout) => {
+          onCheckout={(itemsToCheckout, pendingOrderData) => {
             setSelectedCheckoutItems(itemsToCheckout);
+            setPendingOrder(pendingOrderData);
             setCurrentPage("checkout");
           }}
           onRefreshCartCount={fetchCartCount}
@@ -289,9 +291,14 @@ const App = () => {
       {currentPage === "checkout" && (
         <CheckoutPage 
           cartItems={selectedCheckoutItems}
-          onBackToCart={() => setCurrentPage("cart")}
+          pendingOrder={pendingOrder}
+          onBackToCart={() => {
+            setPendingOrder(null);
+            setCurrentPage("cart");
+          }}
           onPaymentSuccess={() => {
             setSelectedCheckoutItems([]);
+            setPendingOrder(null);
             fetchCartCount();
             navigate("/user/orders");
           }}

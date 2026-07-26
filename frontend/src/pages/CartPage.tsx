@@ -18,7 +18,7 @@ interface CartItem {
 
 interface CartPageProps {
   onBackToCatalog: () => void;
-  onCheckout: (checkedItems: any[]) => void;
+  onCheckout: (checkedItems: any[], pendingOrderData?: any) => void;
   onRefreshCartCount: () => void;
   onProductClick: (productId: string) => void;
 }
@@ -26,6 +26,8 @@ interface CartPageProps {
 const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefreshCartCount, onProductClick }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkedItemIds, setCheckedItemIds] = useState<string[]>([]);
   const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
@@ -188,19 +190,45 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
     new Set(activeItems.map((item) => item.storeName).filter(Boolean))
   );
 
-  const handleProceedToCheckout = () => {
-    const itemsToCheckout = cartItems
-      .filter(item => checkedItemIds.includes(item.id) && item.sellerActive !== false)
-      .map(item => ({
-        id: item.productId,
-        cartItemId: item.id,
-        name: item.productName,
-        price: item.unitPrice,
-        image: item.productImage,
-        quantity: item.quantity
-      }));
+  const handleProceedToCheckout = async () => {
+    if (checkedItemIds.length === 0 || isSubmitting) return;
 
-    onCheckout(itemsToCheckout);
+    try {
+      setIsSubmitting(true);
+      setCheckoutError(null);
+
+      const response = await api.post("/api/v1/orders", {
+        selectedCartItemIds: checkedItemIds,
+      });
+
+      const responseCode = response.data?.code ?? response.data?.restApiResponseHttpCode;
+      const createOrderData = response.data?.data ?? response.data?.restApiResponseData;
+
+      if ((response.status === 200 || response.status === 201) && (responseCode === 200 || responseCode === 201) && createOrderData) {
+        const itemsToCheckout = cartItems
+          .filter(item => checkedItemIds.includes(item.id) && item.sellerActive !== false)
+          .map(item => ({
+            id: item.productId,
+            cartItemId: item.id,
+            name: item.productName,
+            price: item.unitPrice,
+            originalPrice: item.originalPrice,
+            image: item.productImage,
+            quantity: item.quantity
+          }));
+
+        onCheckout(itemsToCheckout, createOrderData);
+      } else {
+        const errMsg = response.data?.message || response.data?.restApiResponseMessage || "Gagal membuat pesanan.";
+        setCheckoutError(errMsg);
+      }
+    } catch (err: any) {
+      console.error("Gagal membuat pesanan:", err);
+      const errMsg = err.response?.data?.message || err.response?.data?.restApiResponseMessage || "Gagal membuat pesanan. Silakan coba lagi.";
+      setCheckoutError(errMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -217,6 +245,13 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
         <h1 className="font-headline-lg text-headline-lg text-on-background font-bold">Your Cart</h1>
         <p className="font-body-md text-body-md text-on-surface-variant mt-unit">Review your cart items before proceeding to checkout</p>
       </header>
+
+      {checkoutError && (
+        <div className="bg-error-container text-on-error-container p-stack-md rounded-lg mb-stack-lg flex items-start gap-3 border border-error/20">
+          <span className="material-symbols-outlined text-[20px]">error</span>
+          <span className="font-label-md">{checkoutError}</span>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="text-center py-12 font-body-md text-on-surface-variant">load item from database...</div>
@@ -401,11 +436,13 @@ const CartPage: React.FC<CartPageProps> = ({ onBackToCatalog, onCheckout, onRefr
               </div>
               <button 
                 onClick={handleProceedToCheckout}
-                disabled={checkedItemIds.length === 0}
+                disabled={checkedItemIds.length === 0 || isSubmitting}
                 className="w-full bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md py-3 px-6 rounded-full transition-colors flex items-center justify-center gap-2 mt-stack-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Checkout
-                <span className="material-symbols-outlined">arrow_forward</span>
+                {isSubmitting ? "Creating Order..." : "Checkout"}
+                <span className="material-symbols-outlined">
+                  {isSubmitting ? "progress_activity" : "arrow_forward"}
+                </span>
               </button>
             </div>
           </div>
