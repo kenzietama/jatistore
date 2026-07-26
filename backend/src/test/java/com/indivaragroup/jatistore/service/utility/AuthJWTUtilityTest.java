@@ -108,6 +108,8 @@ class AuthJWTUtilityTest {
     void verifyToken_WithNullExpirationTime_ShouldThrowException() throws Exception {
         // Arrange
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
+                .issuer("jatistore-api")
+                .audience("jatistore-web")
                 .subject("seller.tech@example.com")
                 .claim("userId", UUID.randomUUID().toString())
                 .claim("role", "ROLE_SELLER")

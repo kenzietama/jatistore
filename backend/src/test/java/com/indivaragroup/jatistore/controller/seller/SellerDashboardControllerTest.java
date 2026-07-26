@@ -137,7 +137,7 @@ public class SellerDashboardControllerTest {
         mockMvc.perform(get("/api/v1/seller/dashboard/stats")
                 .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 
     // ==========================================
@@ -169,7 +169,7 @@ public class SellerDashboardControllerTest {
         mockMvc.perform(get("/api/v1/seller/dashboard/financial")
                 .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 
     // ==========================================
@@ -214,6 +214,6 @@ public class SellerDashboardControllerTest {
                 .principal(mockPrincipal)
                 .param("limit", "5")
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 }
