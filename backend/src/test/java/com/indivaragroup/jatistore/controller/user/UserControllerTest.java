@@ -3,7 +3,7 @@ package com.indivaragroup.jatistore.controller.user;
 import com.indivaragroup.jatistore.dto.request.user.UpdateUserProfileRequest;
 import com.indivaragroup.jatistore.dto.response.module.user.UserProfileResponse;
 import com.indivaragroup.jatistore.service.user.UserService;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
