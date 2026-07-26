@@ -519,12 +519,14 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, pendingOrder, on
                         </p>
                         {isFlashSaleApplied && (
                           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded mt-0.5">
-                            ⚡ Flash Sale Price
+                            <span className="material-symbols-outlined text-[13px]">bolt</span>
+                            Flash Sale Price
                           </span>
                         )}
                         {isFallbackOccurred && (
                           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded mt-0.5">
-                            ⚠️ Standard Price (Quota Exhausted)
+                            <span className="material-symbols-outlined text-[13px]">warning</span>
+                            Standard Price (Quota Exhausted)
                           </span>
                         )}
                       </div>
