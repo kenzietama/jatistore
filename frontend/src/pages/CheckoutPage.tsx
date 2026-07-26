@@ -491,20 +491,51 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, pendingOrder, on
               
               {/* Items List */}
               <div className="space-y-stack-md mb-stack-lg max-h-60 overflow-y-auto pr-1">
-                {cartItems.map((item) => (
-                  <div key={item.id} className="flex items-start gap-stack-md">
-                    <div className="w-16 h-16 rounded bg-surface-container overflow-hidden flex-shrink-0 border border-outline-variant">
-                      <img className="w-full h-full object-cover" src={item.image} alt={item.name} />
+                {cartItems.map((item) => {
+                  const detail = pendingOrder?.orderDetails?.find(
+                    (d: any) =>
+                      d.productId === item.productId ||
+                      d.productName === item.name ||
+                      d.productId === item.id ||
+                      d.productId === item.cartItemId
+                  );
+                  const effectivePrice = detail?.pricePerItem ?? item.price;
+                  const isFlashSaleApplied = detail
+                    ? detail.flashSale === true
+                    : item.originalPrice != null && item.originalPrice > item.price;
+                  const isFallbackOccurred = detail
+                    ? detail.flashSale === false && item.originalPrice != null && item.originalPrice > item.price
+                    : false;
+
+                  return (
+                    <div key={item.id} className="flex items-start gap-stack-md border-b border-outline-variant/40 pb-stack-sm last:border-none">
+                      <div className="w-16 h-16 rounded bg-surface-container overflow-hidden flex-shrink-0 border border-outline-variant">
+                        <img className="w-full h-full object-cover" src={item.image} alt={item.name} />
+                      </div>
+                      <div className="flex-grow">
+                        <h4 className="font-label-md text-label-md text-on-surface line-clamp-1 font-semibold">{item.name}</h4>
+                        <p className="font-body-sm text-body-sm text-on-surface-variant font-mono-data">
+                          Rp {effectivePrice.toLocaleString("id-ID")} × {item.quantity}
+                        </p>
+                        {isFlashSaleApplied && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded mt-0.5">
+                            ⚡ Flash Sale Price
+                          </span>
+                        )}
+                        {isFallbackOccurred && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded mt-0.5">
+                            ⚠️ Standard Price (Quota Exhausted)
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <span className="font-mono-data text-mono-data text-on-surface font-semibold block">
+                          Rp {(effectivePrice * item.quantity).toLocaleString("id-ID")}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex-grow">
-                      <h4 className="font-label-md text-label-md text-on-surface line-clamp-1 font-semibold">{item.name}</h4>
-                      <p className="font-body-sm text-body-sm text-on-surface-variant">Qty: {item.quantity}</p>
-                    </div>
-                    <span className="font-mono-data text-mono-data text-on-surface font-semibold">
-                      Rp {(item.price * item.quantity).toLocaleString("id-ID")}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Calculations Total */}
