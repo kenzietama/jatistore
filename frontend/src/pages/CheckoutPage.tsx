@@ -5,6 +5,7 @@ import api from "../lib/api";
 interface CheckoutItem {
   id: string;
   cartItemId: string;
+  productId?: string;
   name: string;
   price: number;
   originalPrice?: number;
@@ -81,11 +82,15 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, pendingOrder, on
   const isFlashSaleQuotaExhausted = Boolean(
     pendingOrder?.orderDetails?.some((detail: any) => {
       const cartItem = cartItems.find(
-        (ci) => ci.id === detail.productId || ci.cartItemId === detail.productId
+        (ci: any) =>
+          ci.productId === detail.productId ||
+          ci.name === detail.productName ||
+          ci.id === detail.productId ||
+          ci.cartItemId === detail.productId
       );
       const expectedFlashSale = cartItem
         ? (cartItem.originalPrice != null && cartItem.originalPrice > cartItem.price)
-        : cartItems.some((c) => c.originalPrice != null);
+        : cartItems.some((c) => c.originalPrice != null && c.originalPrice > c.price);
       return detail.flashSale === false && expectedFlashSale;
     })
   );
