@@ -7,7 +7,7 @@ import com.indivaragroup.jatistore.dto.response.module.seller.financials.SellerL
 import com.indivaragroup.jatistore.dto.response.module.seller.financials.SellerWithdrawalResponse;
 import com.indivaragroup.jatistore.service.seller.SellerFinancialsService;
 import com.indivaragroup.jatistore.service.seller.SellerSecurityHelper;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
