@@ -77,21 +77,16 @@ public class AuthService {
                     log.info("Found audit trail: {}", audit.isPresent());
                     if (audit.isPresent() && audit.get().getPayload() != null) {
                         String payload = audit.get().getPayload();
-                        log.info("Audit payload: {}", payload);
-                        String key = "\"deactivationReason\"";
-                        int keyIdx = payload.indexOf(key);
-                        if (keyIdx != -1) {
-                            int colonIdx = payload.indexOf(":", keyIdx);
-                            if (colonIdx != -1) {
-                                int quoteStart = payload.indexOf("\"", colonIdx);
-                                if (quoteStart != -1) {
-                                    int quoteEnd = payload.indexOf("\"", quoteStart + 1);
-                                    if (quoteEnd != -1) {
-                                        reason = payload.substring(quoteStart + 1, quoteEnd);
-                                        log.info("Extracted reason: {}", reason);
-                                    }
-                                }
+                        try {
+                            com.fasterxml.jackson.databind.JsonNode node =
+                                    new com.fasterxml.jackson.databind.ObjectMapper().readTree(payload);
+                            String parsed = node.path("deactivationReason").asText(null);
+                            if (parsed != null && !parsed.isBlank()) {
+                                reason = parsed;
+                                log.info("Extracted deactivation reason from audit trail for sellerId: {}", seller.get().getId());
                             }
+                        } catch (Exception ex) {
+                            log.warn("Failed to parse deactivation reason from audit payload for sellerId: {}", seller.get().getId(), ex);
                         }
                     }
                 }
