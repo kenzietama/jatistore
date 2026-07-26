@@ -65,25 +65,17 @@ class ProductControllerTest {
     
     @Test
     void getProductList_InvalidPagination_ShouldReturnBadRequest() throws Exception {
-        try {
-            mockMvc.perform(get("/api/v1/products")
-                            .param("page", "-1")
-                            .param("size", "10")
-                            .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().is5xxServerError());
-        } catch (Exception e) {
-            // If it bubbles up as 500 or throws
-        }
-                
-        try {
-            mockMvc.perform(get("/api/v1/products")
-                            .param("page", "0")
-                            .param("size", "0")
-                            .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().is5xxServerError());
-        } catch (Exception e) {
-            // Ignore
-        }
+        mockMvc.perform(get("/api/v1/products")
+                        .param("page", "-1")
+                        .param("size", "10")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/v1/products")
+                        .param("page", "0")
+                        .param("size", "0")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
