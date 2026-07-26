@@ -24,6 +24,11 @@ export function AddProductModal({ isOpen, onClose, onSuccess, initialData }: Add
 
   const isEdit = !!initialData;
 
+  const parseCurrency = (str: string): number => {
+    const raw = str.replace(/\D/g, '');
+    return raw ? parseInt(raw, 10) : 0;
+  };
+
   useEffect(() => {
     productService.getCategories().then(setCategories).catch(console.error);
   }, []);
@@ -32,7 +37,8 @@ export function AddProductModal({ isOpen, onClose, onSuccess, initialData }: Add
     if (isOpen) {
       if (initialData) {
         setName(initialData.name);
-        setPrice(initialData.price.toString());
+        const formattedPrice = new Intl.NumberFormat('id-ID').format(initialData.price);
+        setPrice(formattedPrice);
         setStock(initialData.stock.toString());
         setCategory(initialData.categoryId);
         setDescription(initialData.description || '');
@@ -83,10 +89,15 @@ export function AddProductModal({ isOpen, onClose, onSuccess, initialData }: Add
   };
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    if (!/^\d*$/.test(val)) return;
-    if (val.length > 15) return;
-    setPrice(val);
+    const rawValue = e.target.value.replace(/\D/g, '');
+    if (!rawValue) {
+      setPrice('');
+      return;
+    }
+    if (rawValue.length > 15) return;
+    const numericValue = parseInt(rawValue, 10);
+    const formatted = new Intl.NumberFormat('id-ID').format(numericValue);
+    setPrice(formatted);
   };
 
   const handleStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,7 +125,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess, initialData }: Add
 
       const payload = {
         name,
-        price: parseFloat(price),
+        price: parseCurrency(price),
         stock: parseInt(stock, 10),
         productCategoryId: category,
         description,

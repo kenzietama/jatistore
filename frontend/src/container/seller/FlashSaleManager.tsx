@@ -69,16 +69,26 @@ export default function FlashSaleManager() {
         fetchConfiguredItems(selectedEventId);
     }, [selectedEventId, fetchConfiguredItems]);
 
+    const parseCurrency = (str: string): number => {
+        const raw = str.replace(/\D/g, '');
+        return raw ? parseInt(raw, 10) : 0;
+    };
+
     const handleEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedEventId(e.target.value);
         setErrorMsg('');
     };
 
     const handleFlashPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value;
-        if (!/^\d*$/.test(val)) return; // only numbers
-        if (val.length > 15) return; // max 15 digits
-        setFlashPrice(val);
+        const rawValue = e.target.value.replace(/\D/g, '');
+        if (!rawValue) {
+            setFlashPrice('');
+            return;
+        }
+        if (rawValue.length > 15) return; // max 15 digits
+        const numericValue = parseInt(rawValue, 10);
+        const formatted = new Intl.NumberFormat('id-ID').format(numericValue);
+        setFlashPrice(formatted);
     };
 
     const handlePromoStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,13 +135,13 @@ export default function FlashSaleManager() {
             if (itemToEdit) {
                 await sellerFlashSaleService.updateFlashSaleItem(selectedEventId, itemToEdit.productId, {
                     productId: itemToEdit.productId,
-                    flashPrice: parseFloat(flashPrice),
+                    flashPrice: parseCurrency(flashPrice),
                     remainingQuota: parseInt(promoStock)
                 });
             } else {
                 await sellerFlashSaleService.addFlashSaleItem(selectedEventId, {
                     productId: selectedProductId,
-                    flashPrice: parseFloat(flashPrice),
+                    flashPrice: parseCurrency(flashPrice),
                     remainingQuota: parseInt(promoStock)
                 });
             }
@@ -169,7 +179,8 @@ export default function FlashSaleManager() {
     const handleEditInline = (item: SellerFlashSaleItemResponse) => {
         setItemToEdit(item);
         setSelectedProductId(item.productId);
-        setFlashPrice(item.flashPrice.toString());
+        const formattedPrice = new Intl.NumberFormat('id-ID').format(item.flashPrice);
+        setFlashPrice(formattedPrice);
         setPromoStock(item.remainingQuota.toString());
         setErrorMsg('');
         window.scrollTo({ top: 0, behavior: 'smooth' });
