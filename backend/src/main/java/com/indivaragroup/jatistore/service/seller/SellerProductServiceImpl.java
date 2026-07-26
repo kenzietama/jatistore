@@ -66,6 +66,7 @@ public class SellerProductServiceImpl implements SellerProductService {
 
     @Override
     public Page<ProductResponse> getProducts(UUID sellerId, String search, String category, String status, String sortBy, String sortDir, int page, int limit) throws CoreThrowHandler {
+        log.info("Fetching products for seller ID: {}, search: {}, category: {}, status: {}", sellerId, search, category, status);
         Seller seller = getSellerById(sellerId);
 
         Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;

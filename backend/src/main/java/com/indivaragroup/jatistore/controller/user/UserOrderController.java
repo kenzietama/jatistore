@@ -7,6 +7,7 @@ import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.user.CreateOrderResponse;
 import com.indivaragroup.jatistore.dto.response.module.user.OrderConfirmReceiptResponse;
 import com.indivaragroup.jatistore.dto.response.module.user.OrderHistoryItemResponse;
+import com.indivaragroup.jatistore.audit.Audit;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.service.user.UserCheckoutService;
 import com.indivaragroup.jatistore.service.user.UserOrderService;
@@ -31,6 +32,7 @@ public class UserOrderController {
     private final UserOrderService userOrderService;
     private final UserCheckoutService userCheckoutService;
 
+    @Audit(action = "ORDER_CREATE", affectedModule = "ORDERS", description = "User created an order")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public RestApiResponse<CreateOrderResponse> createOrder(
@@ -40,6 +42,7 @@ public class UserOrderController {
         return userCheckoutService.createOrder(createOrderRequest, principal.getName());
     }
 
+    @Audit(action = "ORDER_HISTORY_FETCH", affectedModule = "ORDERS", description = "User fetched order history")
     @GetMapping
     public RestApiResponse<Page<OrderHistoryItemResponse>> getOrderHistory(
             @RequestParam(required = false) OrderStatus status,
@@ -51,6 +54,7 @@ public class UserOrderController {
         return userOrderService.getOrderHistory(principal.getName(), status, pageable);
     }
 
+    @Audit(action = "ORDER_CONFIRM_RECEIPT", affectedModule = "ORDERS", description = "User confirmed receipt of order")
     @PostMapping(RestApiPath.USER_ORDER_CONFIRM_RECEIPT_PATH)
     public RestApiResponse<OrderConfirmReceiptResponse> confirmReceipt(
             @PathVariable UUID orderId,

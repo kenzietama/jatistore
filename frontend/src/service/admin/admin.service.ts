@@ -45,6 +45,7 @@ export interface CategoryRequest {
 
 export interface UpdateSellerStatusRequest {
   active: boolean;
+  deactivationReason?: string;
 }
 
 export const adminService = {

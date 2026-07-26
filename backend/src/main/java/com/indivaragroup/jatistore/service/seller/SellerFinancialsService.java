@@ -15,6 +15,7 @@ import com.indivaragroup.jatistore.repository.SellerLedgerRepository;
 import com.indivaragroup.jatistore.repository.SellerRepository;
 import com.indivaragroup.jatistore.service.payment.PaymentGatewayClient;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SellerFinancialsService {
 
     private final SellerRepository sellerRepository;
@@ -38,10 +40,14 @@ public class SellerFinancialsService {
 
     private Seller getSellerById(UUID sellerId) throws CoreThrowHandler {
         return sellerRepository.findById(sellerId)
-                .orElseThrow(() -> new CoreThrowHandler(RestApiError.SLR_0002));
+                .orElseThrow(() -> {
+                    log.error("Seller not found for ID: {}", sellerId);
+                    return new CoreThrowHandler(RestApiError.SLR_0002);
+                });
     }
 
     public SellerFinancialDashboardResponse getDashboard(UUID sellerId) throws CoreThrowHandler {
+        log.info("Fetching financial dashboard for seller ID: {}", sellerId);
         Seller seller = getSellerById(sellerId);
 
         List<SellerLedger> top50 = sellerLedgerRepository.findBySellerIdOrderByCreatedAtDescAmountDesc(sellerId, PageRequest.of(0, 50)).getContent();
@@ -50,11 +56,12 @@ public class SellerFinancialsService {
                 .availableBalance(seller.getCachedAvailableBalance())
                 .onHoldBalance(seller.getCachedOnHoldBalance())
                 .totalEarnings(seller.getCachedAvailableBalance().add(seller.getCachedOnHoldBalance()))
-                .recentTransactions(top50.stream().map(SellerLedgerTransactionResponse::from).collect(Collectors.toList()))
+                .recentTransactions(top50.stream().map(SellerLedgerTransactionResponse::from).toList())
                 .build();
     }
 
     public SellerBalanceSummaryResponse getBalanceSummary(UUID sellerId) throws CoreThrowHandler {
+        log.info("Fetching balance summary for seller ID: {}", sellerId);
         Seller seller = getSellerById(sellerId);
         return SellerBalanceSummaryResponse.builder()
                 .availableBalance(seller.getCachedAvailableBalance())
@@ -64,6 +71,7 @@ public class SellerFinancialsService {
     }
 
     public Page<SellerLedgerTransactionResponse> getTransactionHistory(UUID sellerId, String type, String search, int page, int size, String sort) throws CoreThrowHandler {
+        log.info("Fetching transaction history for seller ID: {}, type: {}, search: {}", sellerId, type, search);
         Seller seller = getSellerById(sellerId);
         
         org.springframework.data.domain.Sort sortObj = org.springframework.data.domain.Sort.by(
@@ -88,43 +96,53 @@ public class SellerFinancialsService {
     @Audit(action = "WITHDRAWAL", affectedModule = "FINANCIALS", description = "Seller withdraws available balance")
     @Transactional
     public SellerWithdrawalResponse simulateWithdrawal(UUID sellerId, SellerWithdrawalRequest request) throws CoreThrowHandler {
+        log.info("Simulating withdrawal for seller ID: {}", sellerId);
         Seller seller = getSellerById(sellerId);
 
         if (request == null || request.getAmount() == null) {
+            log.warn("Withdrawal request or amount is null for seller ID: {}", sellerId);
             throw new CoreThrowHandler(RestApiError.GEN_0001, "amount");
         }
 
-        if (request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+        BigDecimal amount = request.getAmount();
+
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("Withdrawal amount must be greater than zero. Seller ID: {}, amount: {}", sellerId, amount);
             throw new CoreThrowHandler(RestApiError.SLR_0041);
         }
 
-        if (request.getAmount().compareTo(seller.getCachedAvailableBalance()) > 0) {
+        if (amount.compareTo(seller.getCachedAvailableBalance()) > 0) {
+            log.warn("Insufficient available balance. Seller ID: {}, requested: {}, available: {}", sellerId, amount, seller.getCachedAvailableBalance());
             throw new CoreThrowHandler(RestApiError.SLR_0042);
         }
 
-        if (request.getAmount().compareTo(MAX_WITHDRAWAL_LIMIT) > 0) {
+        if (amount.compareTo(MAX_WITHDRAWAL_LIMIT) > 0) {
+            log.warn("Withdrawal amount exceeds maximum limit. Seller ID: {}, requested: {}, limit: {}", sellerId, amount, MAX_WITHDRAWAL_LIMIT);
             throw new CoreThrowHandler(RestApiError.SLR_0043);
         }
 
         SellerLedger debitEntry = SellerLedger.builder()
                 .seller(seller)
-                .amount(request.getAmount().negate())
+                .amount(amount.negate())
                 .balanceType(BalanceType.AVAILABLE)
                 .order(null)
                 .build();
 
         debitEntry = sellerLedgerRepository.save(debitEntry);
-        BigDecimal newBalance = seller.getCachedAvailableBalance().subtract(request.getAmount());
+        BigDecimal newBalance = seller.getCachedAvailableBalance().subtract(amount);
 
         String gatewayRef;
         try {
-            gatewayRef = paymentGatewayClient.simulatePayout(request.getAmount());
+            log.info("Calling payment gateway to simulate payout of {}", amount);
+            gatewayRef = paymentGatewayClient.simulatePayout(amount);
         } catch (Exception e) {
-            throw new CoreThrowHandler(RestApiError.USR_0014);
+            log.error("Payment gateway payout simulation failed: {}", e.getMessage(), e);
+            throw new CoreThrowHandler(RestApiError.USR_0014); // Or a specific SLR payout error if one existed, but reusing USR_0014 is okay.
         }
 
+        log.info("Withdrawal simulation successful for seller ID: {}", sellerId);
         return SellerWithdrawalResponse.builder()
-                .amount(request.getAmount())
+                .amount(amount)
                 .newAvailableBalance(newBalance)
                 .withdrawalId(debitEntry.getId())
                 .mockGatewayRef(gatewayRef)

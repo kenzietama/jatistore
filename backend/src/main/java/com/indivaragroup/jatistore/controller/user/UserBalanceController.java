@@ -4,6 +4,7 @@ import com.indivaragroup.jatistore.dto.response.RestApiPath;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.user.UserBalanceResponse;
 import com.indivaragroup.jatistore.service.user.UserBalanceService;
+import com.indivaragroup.jatistore.audit.Audit;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +19,7 @@ public class UserBalanceController {
 
     private final UserBalanceService userBalanceService;
 
+    @Audit(action = "USER_BALANCE_FETCH", affectedModule = "FINANCIALS", description = "User fetched their balance")
     @GetMapping()
     public RestApiResponse<UserBalanceResponse> getBalance() {
         return userBalanceService.getBalance();

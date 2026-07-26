@@ -4,6 +4,7 @@ import com.indivaragroup.jatistore.dto.request.user.UpdateUserProfileRequest;
 import com.indivaragroup.jatistore.dto.response.RestApiPath;
 import com.indivaragroup.jatistore.dto.response.RestApiResponse;
 import com.indivaragroup.jatistore.dto.response.module.user.UserProfileResponse;
+import com.indivaragroup.jatistore.audit.Audit;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.service.user.UserService;
 import jakarta.validation.Valid;
@@ -26,6 +27,7 @@ public class UserController {
 
     private final UserService userService;
 
+    @Audit(action = "USER_PROFILE_FETCH", affectedModule = "USERS", description = "User fetched their profile")
     @GetMapping(RestApiPath.USER_PROFILE_PATH)
     public RestApiResponse<UserProfileResponse> getUserProfile(@AuthenticationPrincipal UserDetails userDetails) throws CoreThrowHandler {
         log.info("Receiving profile request for user: {}", userDetails.getUsername());
@@ -42,6 +44,7 @@ public class UserController {
                 .build();
     }
 
+    @Audit(action = "USER_PROFILE_UPDATE", affectedModule = "USERS", description = "User updated their profile")
     @PutMapping(RestApiPath.USER_PROFILE_PATH)
     public RestApiResponse<Void> updateUserProfile(
             @AuthenticationPrincipal UserDetails userDetails,

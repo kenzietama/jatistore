@@ -18,11 +18,13 @@ export function SellerManagement() {
     sellerId: string;
     storeName: string;
     currentStatus: boolean;
+    deactivationReason: string;
   }>({
     isOpen: false,
     sellerId: '',
     storeName: '',
-    currentStatus: false
+    currentStatus: false,
+    deactivationReason: ''
   });
 
   const fetchSellers = async () => {
@@ -47,15 +49,16 @@ export function SellerManagement() {
       isOpen: true,
       sellerId,
       storeName,
-      currentStatus
+      currentStatus,
+      deactivationReason: ''
     });
   };
 
   const handleConfirmStatusChange = async () => {
-    const { sellerId, currentStatus } = confirmModal;
+    const { sellerId, currentStatus, deactivationReason } = confirmModal;
     setConfirmModal(prev => ({ ...prev, isOpen: false }));
     try {
-      await adminService.updateSellerStatus(sellerId, { active: !currentStatus });
+      await adminService.updateSellerStatus(sellerId, { active: !currentStatus, deactivationReason: currentStatus ? deactivationReason : undefined });
       setSellers(sellers.map(s => 
         s.id === sellerId ? { ...s, active: !currentStatus } : s
       ));
@@ -205,11 +208,24 @@ export function SellerManagement() {
                 Are you sure you want to {confirmModal.currentStatus ? 'deactivate' : 'activate'}{' '}
                 <strong>{confirmModal.storeName}</strong>?
                 {confirmModal.currentStatus && (
-                  <span className="block mt-2 text-error text-[13px] font-medium">
+                  <span className="block mt-2 text-error text-[13px] font-medium mb-4">
                     Warning: All products of this seller will be hidden from the catalog and buyers won't be able to checkout items from this seller.
                   </span>
                 )}
               </p>
+              {confirmModal.currentStatus && (
+                <div className="mt-4">
+                  <label htmlFor="reason" className="block text-label-sm font-label-sm text-on-surface mb-1">Deactivation Reason <span className="text-error">*</span></label>
+                  <textarea
+                    id="reason"
+                    rows={3}
+                    className="w-full px-3 py-2 border border-outline rounded-md text-[13px] font-mono-data focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-container-lowest"
+                    placeholder="Enter the reason for deactivating this seller account..."
+                    value={confirmModal.deactivationReason}
+                    onChange={(e) => setConfirmModal(prev => ({ ...prev, deactivationReason: e.target.value }))}
+                  />
+                </div>
+              )}
             </div>
             
             <div className="p-4 bg-surface-container-low flex justify-end gap-3 border-t border-outline-variant">
@@ -222,10 +238,11 @@ export function SellerManagement() {
               </button>
               <button
                 type="button"
+                disabled={confirmModal.currentStatus && !confirmModal.deactivationReason.trim()}
                 className={`px-5 py-2 text-label-md font-label-md rounded shadow-sm transition-colors text-white ${
                   confirmModal.currentStatus 
-                    ? 'bg-error hover:bg-error/95' 
-                    : 'bg-primary hover:bg-primary/95'
+                    ? 'bg-error hover:bg-error/95 disabled:opacity-50 disabled:cursor-not-allowed' 
+                    : 'bg-primary hover:bg-primary/95 disabled:opacity-50 disabled:cursor-not-allowed'
                 }`}
                 onClick={handleConfirmStatusChange}
               >

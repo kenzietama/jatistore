@@ -157,7 +157,7 @@ public class AuditAspect {
             
             String errorMsg = exception.getMessage();
             if (exception instanceof com.indivaragroup.jatistore.exception.CoreThrowHandler coreThrow) {
-                errorMsg = coreThrow.getRestApiError().getMessage();
+                errorMsg = coreThrow.getRestApiError() != null ? coreThrow.getRestApiError().getMessage() : coreThrow.getCustomMessage();
             }
             auditTrail.setDescription("Failed login attempt: " + errorMsg);
 
@@ -203,7 +203,7 @@ public class AuditAspect {
             
             String errorMsg = exception.getMessage();
             if (exception instanceof com.indivaragroup.jatistore.exception.CoreThrowHandler coreThrow) {
-                errorMsg = coreThrow.getRestApiError().getMessage();
+                errorMsg = coreThrow.getRestApiError() != null ? coreThrow.getRestApiError().getMessage() : coreThrow.getCustomMessage();
             }
             auditTrail.setDescription("Order cancelled due to payment failure: " + errorMsg);
 

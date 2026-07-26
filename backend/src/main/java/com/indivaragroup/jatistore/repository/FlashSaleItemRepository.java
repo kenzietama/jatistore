@@ -18,6 +18,8 @@ public interface FlashSaleItemRepository extends JpaRepository<FlashSaleItem, UU
 
     boolean existsByFlashSaleIdAndProductId(UUID flashSaleId, UUID productId);
 
+    Optional<FlashSaleItem> findByFlashSaleIdAndProductId(UUID flashSaleId, UUID productId);
+
     @Query("SELECT COUNT(fsi) FROM FlashSaleItem fsi JOIN fsi.flashSale fs " +
            "WHERE fsi.product.id = :productId " +
            "AND fs.id != :flashSaleId " +
