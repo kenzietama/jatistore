@@ -307,7 +307,7 @@ public class SellerFlashSaleServiceTest {
 
         FlashSaleItem item = new FlashSaleItem();
         item.setProduct(product);
-        when(flashSaleItemRepository.findByFlashSaleIdAndSellerId(eq(fs.getId()), eq(seller.getId()), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(item)));
+        when(flashSaleItemRepository.findByFlashSaleIdAndProductId(fs.getId(), product.getId())).thenReturn(Optional.of(item));
 
         sellerFlashSaleService.removeFlashSaleItem("test@example.com", fs.getId(), product.getId());
         verify(flashSaleItemRepository).delete(item);
@@ -349,7 +349,7 @@ public class SellerFlashSaleServiceTest {
         assertThrows(CoreThrowHandler.class, () -> sellerFlashSaleService.removeFlashSaleItem("test@example.com", fs.getId(), product.getId())); // store mismatch
         
         store.setSeller(seller);
-        when(flashSaleItemRepository.findByFlashSaleIdAndSellerId(eq(fs.getId()), eq(seller.getId()), any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
+        when(flashSaleItemRepository.findByFlashSaleIdAndProductId(fs.getId(), product.getId())).thenReturn(Optional.empty());
         assertThrows(CoreThrowHandler.class, () -> sellerFlashSaleService.removeFlashSaleItem("test@example.com", fs.getId(), product.getId())); // item not found
     }
 
@@ -376,7 +376,7 @@ public class SellerFlashSaleServiceTest {
 
         FlashSaleItem item = new FlashSaleItem();
         item.setProduct(product);
-        when(flashSaleItemRepository.findByFlashSaleIdAndSellerId(eq(fs.getId()), eq(seller.getId()), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(item)));
+        when(flashSaleItemRepository.findByFlashSaleIdAndProductId(fs.getId(), product.getId())).thenReturn(Optional.of(item));
 
         FlashSaleItemRequest request = new FlashSaleItemRequest();
         request.setProductId(product.getId());
@@ -446,7 +446,7 @@ public class SellerFlashSaleServiceTest {
         assertThrows(CoreThrowHandler.class, () -> sellerFlashSaleService.updateFlashSaleItem("test@example.com", fs.getId(), product.getId(), request));
 
         request.setRemainingQuota(10); // reset to valid quota
-        when(flashSaleItemRepository.findByFlashSaleIdAndSellerId(eq(fs.getId()), eq(seller.getId()), any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
+        when(flashSaleItemRepository.findByFlashSaleIdAndProductId(fs.getId(), product.getId())).thenReturn(Optional.empty());
         assertThrows(CoreThrowHandler.class, () -> sellerFlashSaleService.updateFlashSaleItem("test@example.com", fs.getId(), product.getId(), request)); // item not found
     }
 }

@@ -3,6 +3,7 @@ package com.indivaragroup.jatistore.service.admin;
 import com.indivaragroup.jatistore.data.entity.FlashSale;
 import com.indivaragroup.jatistore.dto.request.module.admin.FlashSaleRequest;
 import com.indivaragroup.jatistore.dto.response.module.admin.FlashSaleResponse;
+import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
 import com.indivaragroup.jatistore.repository.FlashSaleItemRepository;
 import com.indivaragroup.jatistore.repository.FlashSaleRepository;
@@ -257,5 +258,56 @@ public class AdminFlashSaleServiceTest {
     void deleteFlashSale_notFound_shouldThrow() {
         when(flashSaleRepository.findById(any())).thenReturn(Optional.empty());
         assertThrows(CoreThrowHandler.class, () -> adminFlashSaleService.deleteFlashSale(UUID.randomUUID()));
+    }
+
+    @Test
+    void createFlashSale_Overlapping_shouldThrow() {
+        FlashSaleRequest request = new FlashSaleRequest();
+        request.setName("Event");
+        request.setStartTime(Instant.now().plus(1, ChronoUnit.DAYS));
+        request.setEndTime(Instant.now().plus(2, ChronoUnit.DAYS));
+        
+        when(flashSaleRepository.existsOverlappingFlashSale(any(), any())).thenReturn(true);
+        
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> adminFlashSaleService.createFlashSale(request));
+        assertEquals(RestApiError.ADM_0019.getCode(), exception.getCode());
+    }
+
+    @Test
+    void updateFlashSale_Ended_shouldThrow() {
+        FlashSale flashSale = new FlashSale();
+        flashSale.setId(UUID.randomUUID());
+        flashSale.setStartTime(Instant.now().minus(2, ChronoUnit.DAYS));
+        flashSale.setEndTime(Instant.now().minus(1, ChronoUnit.DAYS)); // ended
+        
+        when(flashSaleRepository.findById(flashSale.getId())).thenReturn(Optional.of(flashSale));
+        
+        FlashSaleRequest request = new FlashSaleRequest();
+        request.setName("Updated");
+        request.setStartTime(Instant.now().plus(2, ChronoUnit.DAYS));
+        request.setEndTime(Instant.now().plus(3, ChronoUnit.DAYS));
+        
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> adminFlashSaleService.updateFlashSale(flashSale.getId(), request));
+        assertEquals(RestApiError.ADM_0020.getCode(), exception.getCode());
+    }
+
+    @Test
+    void updateFlashSale_Overlapping_shouldThrow() {
+        FlashSale flashSale = new FlashSale();
+        flashSale.setId(UUID.randomUUID());
+        flashSale.setStartTime(Instant.now().plus(1, ChronoUnit.DAYS));
+        flashSale.setEndTime(Instant.now().plus(2, ChronoUnit.DAYS));
+        
+        when(flashSaleRepository.findById(flashSale.getId())).thenReturn(Optional.of(flashSale));
+        
+        FlashSaleRequest request = new FlashSaleRequest();
+        request.setName("Updated");
+        request.setStartTime(Instant.now().plus(2, ChronoUnit.DAYS));
+        request.setEndTime(Instant.now().plus(3, ChronoUnit.DAYS));
+        
+        when(flashSaleRepository.existsOverlappingFlashSaleExcludeId(any(), any(), any())).thenReturn(true);
+        
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> adminFlashSaleService.updateFlashSale(flashSale.getId(), request));
+        assertEquals(RestApiError.ADM_0019.getCode(), exception.getCode());
     }
 }

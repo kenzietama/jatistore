@@ -235,6 +235,7 @@ class UserCheckoutServiceTest {
 
         Store store = new Store();
         Seller seller = new Seller();
+        seller.setActive(true);
         store.setSeller(seller);
         product.setStore(store);
 
@@ -292,6 +293,7 @@ class UserCheckoutServiceTest {
         product.setStock(10);
         Store store = new Store();
         Seller seller = new Seller();
+        seller.setActive(true);
         store.setSeller(seller);
         product.setStore(store);
 
@@ -570,6 +572,7 @@ class UserCheckoutServiceTest {
 
         Store store = new Store();
         Seller seller = new Seller();
+        seller.setActive(true);
         store.setSeller(seller);
         product.setStore(store);
 
@@ -634,6 +637,12 @@ class UserCheckoutServiceTest {
         product.setPrice(new BigDecimal("100.00"));
         product.setStock(10);
 
+        Store store = new Store();
+        Seller seller = new Seller();
+        seller.setActive(true);
+        store.setSeller(seller);
+        product.setStore(store);
+
         OrderDetail orderDetail = new OrderDetail();
         orderDetail.setProduct(product);
         orderDetail.setQuantity(2);
@@ -697,6 +706,12 @@ class UserCheckoutServiceTest {
         product.setPrice(new BigDecimal("100.00"));
         product.setStock(10);
         product.setDeletedAt(java.time.Instant.now()); // Soft-deleted
+
+        Store store = new Store();
+        Seller seller = new Seller();
+        seller.setActive(true);
+        store.setSeller(seller);
+        product.setStore(store);
 
         OrderDetail orderDetail = new OrderDetail();
         orderDetail.setProduct(product);
@@ -820,5 +835,242 @@ class UserCheckoutServiceTest {
         assertEquals(RestApiError.USR_0014.getCode(), exception.getCode());
         verify(transactionRepository, atLeastOnce()).save(argThat(tx -> tx.getStatus() == TransactionStatus.FAILED));
         verify(orderRepository, atLeastOnce()).save(argThat(o -> o.getStatus() == OrderStatus.CANCELLED));
+    }
+
+    @Test
+    void createOrder_EmptyCartItems_ThrowsUSR_0009() {
+        CreateOrderRequest request = CreateOrderRequest.builder()
+                .selectedCartItemIds(List.of(UUID.randomUUID()))
+                .build();
+        when(cartItemRepository.selectDistinctStore(any())).thenReturn(1);
+        when(cartItemRepository.findAllById(anyList())).thenReturn(List.of());
+        
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
+            userCheckoutService.createOrder(request, "user@example.com");
+        });
+        assertEquals(RestApiError.USR_0009.getCode(), exception.getCode());
+    }
+
+    @Test
+    void createOrder_InactiveSeller_ThrowsUSR_0001() {
+        UUID cartItemId = UUID.randomUUID();
+        CreateOrderRequest request = CreateOrderRequest.builder()
+                .selectedCartItemIds(List.of(cartItemId))
+                .build();
+        Product product = new Product();
+        product.setId(UUID.randomUUID());
+        product.setPrice(new BigDecimal("100.00"));
+        Store store = new Store();
+        Seller seller = new Seller();
+        seller.setActive(false);
+        store.setSeller(seller);
+        product.setStore(store);
+        CartItem cartItem = new CartItem();
+        cartItem.setId(cartItemId);
+        cartItem.setProduct(product);
+
+        when(cartItemRepository.selectDistinctStore(any())).thenReturn(1);
+        when(cartItemRepository.findAllById(anyList())).thenReturn(List.of(cartItem));
+        when(authRepository.findByEmail(anyString())).thenReturn(Optional.of(mockUser));
+
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
+            userCheckoutService.createOrder(request, "user@example.com");
+        });
+        assertEquals(RestApiError.USR_0001.getCode(), exception.getCode());
+    }
+
+    @Test
+    void payOrder_EmptyCartItems_ThrowsUSR_0009() {
+        when(orderRepository.findById(mockOrder.getId())).thenReturn(Optional.of(mockOrder));
+        when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser));
+        when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockCart));
+        when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of());
+        when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
+
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
+            userCheckoutService.payOrder(mockOrder.getId(), walletPayRequest, "user@example.com");
+        });
+        assertEquals(RestApiError.USR_0009.getCode(), exception.getCode());
+        verify(orderRepository).save(argThat(order -> order.getStatus() == OrderStatus.CANCELLED));
+    }
+
+    @Test
+    void payOrder_InactiveSeller_ThrowsUSR_0001() {
+        mockSeller.setActive(false);
+        when(orderRepository.findById(mockOrder.getId())).thenReturn(Optional.of(mockOrder));
+        when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser));
+        when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockCart));
+        when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of(mockCartItem));
+        when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
+
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
+            userCheckoutService.payOrder(mockOrder.getId(), walletPayRequest, "user@example.com");
+        });
+        assertEquals(RestApiError.USR_0001.getCode(), exception.getCode());
+        verify(orderRepository).save(argThat(order -> order.getStatus() == OrderStatus.CANCELLED));
+    }
+
+    @Test
+    void payOrder_CardPayment_NewCardCreated() throws CoreThrowHandler {
+        CheckoutPriceProjection proj = createMockProjection(mockCartItem.getId(), mockProduct.getId(), 2, BigDecimal.valueOf(100), false);
+        Order paidOrder = Order.builder()
+                .id(mockOrder.getId())
+                .user(mockUser)
+                .totalAmount(BigDecimal.valueOf(200))
+                .status(OrderStatus.PAID_ON_HOLD)
+                .build();
+        Transaction successTransaction = Transaction.builder()
+                .id(mockTransaction.getId())
+                .order(paidOrder)
+                .paymentMethod(PaymentMethod.CARD)
+                .status(TransactionStatus.SUCCESS)
+                .paymentGatewayRef("gateway-ref-456")
+                .paymentCard(mockPaymentCard)
+                .build();
+
+        when(orderRepository.findById(mockOrder.getId())).thenReturn(Optional.of(mockOrder)).thenReturn(Optional.of(paidOrder));
+        when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser));
+        when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockCart));
+        when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of(mockCartItem));
+        when(cartItemRepository.findCheckoutPrices(any())).thenReturn(List.of(proj));
+        when(paymentCardRepository.findByCardNumber(any())).thenReturn(Optional.empty());
+        when(paymentCardRepository.save(any())).thenReturn(mockPaymentCard);
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
+        when(transactionRepository.findById(mockTransaction.getId())).thenReturn(Optional.of(successTransaction));
+        when(paymentGatewayClient.chargeCard(any())).thenReturn(
+                new CardChargeResponse("success", BigDecimal.valueOf(200), "Payment successful", "gateway-ref-456", "1111"));
+        when(orderRepository.save(any(Order.class))).thenReturn(paidOrder);
+        doNothing().when(checkoutFinalizer).finalizeOrder(any(), anyList());
+
+        RestApiResponse<UserCheckoutResponse> response = userCheckoutService.payOrder(
+                mockOrder.getId(), cardPayRequest, "user@example.com");
+        
+        verify(paymentCardRepository).save(any());
+        assertNotNull(response);
+    }
+
+    @Test
+    void createOrder_UserNotFound_ThrowsGEN_0005() {
+        UUID cartItemId = UUID.randomUUID();
+        CreateOrderRequest request = CreateOrderRequest.builder()
+                .selectedCartItemIds(List.of(cartItemId))
+                .build();
+        CartItem cartItem = new CartItem();
+        cartItem.setId(cartItemId);
+
+        when(cartItemRepository.selectDistinctStore(any())).thenReturn(1);
+        when(cartItemRepository.findAllById(anyList())).thenReturn(List.of(cartItem));
+        when(authRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
+
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
+            userCheckoutService.createOrder(request, "unknown@example.com");
+        });
+
+        assertEquals(RestApiError.GEN_0005.getCode(), exception.getCode());
+    }
+
+    @Test
+    void createOrder_FlashSaleItemNotFound_ThrowsUSR_0024() {
+        UUID cartItemId = UUID.randomUUID();
+        CreateOrderRequest request = CreateOrderRequest.builder()
+                .selectedCartItemIds(List.of(cartItemId))
+                .build();
+                
+        Product product = new Product();
+        product.setId(UUID.randomUUID());
+        product.setPrice(new BigDecimal("100.00"));
+        product.setStock(10);
+        Store store = new Store();
+        Seller seller = new Seller();
+        seller.setActive(true);
+        store.setSeller(seller);
+        product.setStore(store);
+
+        CartItem cartItem = new CartItem();
+        cartItem.setId(cartItemId);
+        cartItem.setProduct(product);
+        cartItem.setQuantity(2);
+
+        CheckoutPriceProjection proj = createMockProjection(cartItemId, product.getId(), 2, BigDecimal.valueOf(80), true);
+
+        when(cartItemRepository.selectDistinctStore(any())).thenReturn(1);
+        when(cartItemRepository.findAllById(anyList())).thenReturn(List.of(cartItem));
+        when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser));
+        when(cartItemRepository.findCheckoutPrices(any())).thenReturn(List.of(proj));
+        when(flashSaleItemRepository.findByProductAndActiveFlashSale(product.getId())).thenReturn(Optional.empty());
+
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
+            userCheckoutService.createOrder(request, "user@example.com");
+        });
+
+        assertEquals(RestApiError.USR_0024.getCode(), exception.getCode());
+    }
+
+    @Test
+    void payOrder_UserNotFoundInRevalidate_ThrowsUSR_0006() {
+        when(orderRepository.findById(mockOrder.getId())).thenReturn(Optional.of(mockOrder));
+        when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.empty());
+
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
+            userCheckoutService.payOrder(mockOrder.getId(), walletPayRequest, "user@example.com");
+        });
+
+        assertEquals(RestApiError.USR_0006.getCode(), exception.getCode());
+    }
+
+    @Test
+    void payOrder_CartNotFoundInRevalidate_ThrowsUSR_0009() {
+        when(orderRepository.findById(mockOrder.getId())).thenReturn(Optional.of(mockOrder));
+        when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser));
+        when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.empty());
+
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
+            userCheckoutService.payOrder(mockOrder.getId(), walletPayRequest, "user@example.com");
+        });
+
+        assertEquals(RestApiError.USR_0009.getCode(), exception.getCode());
+    }
+    
+    @Test
+    void payOrder_CardPayment_UserNotFound_ThrowsGEN_0005() {
+        CheckoutPriceProjection proj = createMockProjection(mockCartItem.getId(), mockProduct.getId(), 2, BigDecimal.valueOf(100), false);
+        when(orderRepository.findById(mockOrder.getId())).thenReturn(Optional.of(mockOrder));
+        when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser)).thenReturn(Optional.empty()); 
+        when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockCart));
+        when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of(mockCartItem));
+        when(cartItemRepository.findCheckoutPrices(any())).thenReturn(List.of(proj));
+        
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
+            userCheckoutService.payOrder(mockOrder.getId(), cardPayRequest, "user@example.com");
+        });
+        
+        assertEquals(RestApiError.GEN_0005.getCode(), exception.getCode());
+    }
+    
+    @Test
+    void handlePaymentSuccess_FinalizeThrowsException() throws CoreThrowHandler {
+        doThrow(new CoreThrowHandler(RestApiError.GEN_0001)).when(checkoutFinalizer).finalizeOrder(any(), anyList());
+        
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
+            userCheckoutService.handlePaymentSuccess(mockOrder, mockTransaction, List.of(mockCartItem), "ref");
+        });
+        
+        assertEquals(RestApiError.GEN_0001.getCode(), exception.getCode());
+        verify(orderRepository, times(2)).save(any());
+        verify(transactionRepository, times(2)).save(any());
+        assertEquals(OrderStatus.CANCELLED, mockOrder.getStatus());
+        assertEquals(TransactionStatus.FAILED, mockTransaction.getStatus());
+    }
+    
+    @Test
+    void handlePaymentError_Not402_ThrowsUSR_0014() throws CoreThrowHandler {
+        HttpClientErrorException ex = new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR);
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
+            userCheckoutService.handlePaymentError(mockOrder, mockTransaction, ex);
+        });
+        
+        assertEquals(RestApiError.USR_0014.getCode(), exception.getCode());
+        verify(orderRepository).save(argThat(o -> o.getStatus() == OrderStatus.CANCELLED));
+        verify(transactionRepository).save(argThat(t -> t.getStatus() == TransactionStatus.FAILED));
     }
 }

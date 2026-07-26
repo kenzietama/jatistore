@@ -9,6 +9,7 @@ const Login: React.FC = () => {
 	const [showPassword, setShowPassword] = useState(false);
 	const [validationError, setValidationError] = useState<string | null>(null);
 	const [authError, setAuthError] = useState<string | null>(null);
+	const [deactivatedReasonModal, setDeactivatedReasonModal] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 	const navigate = useNavigate();
 	const location = useLocation();
@@ -79,6 +80,8 @@ const Login: React.FC = () => {
 					setValidationError(
 						fieldErrors || "Validation error occurred.",
 					);
+				} else if (responseData.code === 'AUT_0010' || error.response.status === 403) {
+					setDeactivatedReasonModal(responseData.message || "Account has been suspended or deactivated.");
 				} else {
 					setAuthError(
 						responseData.message || "Authentication failed.",
@@ -251,6 +254,44 @@ const Login: React.FC = () => {
 					</div>
 				</div>
 			</main>
+
+			{/* Deactivated Reason Modal */}
+			{deactivatedReasonModal && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+					<div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+						<div className="p-6 border-b border-outline-variant flex items-center gap-3 bg-error-container/20">
+							<span className="material-symbols-outlined text-error text-[28px]">
+								block
+							</span>
+							<h3 className="font-headline-sm text-headline-sm text-error m-0">
+								Account Deactivated
+							</h3>
+						</div>
+						
+						<div className="p-6">
+							<p className="font-body-md text-on-surface-variant m-0 mb-4">
+								Your seller account has been deactivated by the system administrator. You cannot log in at this time.
+							</p>
+							<div className="bg-surface-container-low p-4 rounded border border-outline-variant">
+								<h4 className="font-label-md text-label-md text-on-surface mb-2">Reason for deactivation:</h4>
+								<p className="font-body-md text-error italic whitespace-pre-wrap m-0">
+									"{deactivatedReasonModal}"
+								</p>
+							</div>
+						</div>
+						
+						<div className="p-4 bg-surface-container-low flex justify-end gap-3 border-t border-outline-variant">
+							<button
+								type="button"
+								className="px-5 py-2 text-label-md font-label-md rounded shadow-sm transition-colors text-white bg-primary hover:bg-primary/95 w-full sm:w-auto"
+								onClick={() => setDeactivatedReasonModal(null)}
+							>
+								Understood
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 };

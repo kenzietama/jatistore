@@ -51,67 +51,110 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
   const [minPrice] = useState<number>(0);
   const [maxPrice] = useState<number>(100000000);
   
-  // State untuk Pagination
+  // Pagination State
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(0);
   const [totalElements, setTotalElements] = useState<number>(0);
   const [pageSize] = useState<number>(20);
   const [isFlashSaleOnly, setIsFlashSaleOnly] = useState<boolean>(false);
   
-  // State Dinamis untuk Flash Sale dari Admin Backend
+  // Dynamic State for Flash Sale from Backend
   const [flashSaleEvent, setFlashSaleEvent] = useState<{ name: string; endTime: string } | null>(null);
-  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [upcomingFlashSaleEvent, setUpcomingFlashSaleEvent] = useState<{ name: string; startTime: string } | null>(null);
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
 
-  // 1. Fetch data flash sale aktif yang diatur admin dari backend
-  useEffect(() => {
-    const fetchActiveFlashSale = async () => {
-      try {
-        const response = await api.get("/api/v1/public/flash-sale/active");
-        
-        if (response.data && (response.data.code === 200 || response.data.restApiResponseHttpCode === 200)) {
-          const eventData = response.data.data || response.data.restApiResponseData;
-          
-          if (eventData && eventData.endTime) {
-            setFlashSaleEvent({
-              name: eventData.name || "Flash Sale",
-              endTime: eventData.endTime
-            });
-          }
+  // 1. Fetch active and upcoming flash sale data from backend
+  const checkFlashSaleStatus = async () => {
+    try {
+      const [activeRes, upcomingRes] = await Promise.all([
+        api.get("/api/v1/public/flash-sale/active").catch(() => null),
+        api.get("/api/v1/public/flash-sale/upcoming").catch(() => null)
+      ]);
+      
+      let hasActive = false;
+      let timestampStr = null;
+
+      if (activeRes?.data && (activeRes.data.code === 200 || activeRes.data.restApiResponseHttpCode === 200)) {
+        timestampStr = activeRes.data.timestamp || activeRes.data.restApiResponseTimestamp;
+        const activeData = activeRes.data.data || activeRes.data.restApiResponseData;
+        if (activeData && activeData.endTime) {
+          setFlashSaleEvent({
+            name: activeData.name || "Flash Sale",
+            endTime: activeData.endTime
+          });
+          setUpcomingFlashSaleEvent(null);
+          hasActive = true;
+        } else {
+          setFlashSaleEvent(null);
+          setIsFlashSaleOnly(false);
         }
-      } catch (error) {
-        console.error("Gagal memuat flash sale aktif:", error);
+      } else {
+        setFlashSaleEvent(null);
+        setIsFlashSaleOnly(false);
       }
-    };
 
-    fetchActiveFlashSale();
+      if (!hasActive && upcomingRes?.data && (upcomingRes.data.code === 200 || upcomingRes.data.restApiResponseHttpCode === 200)) {
+        if (!timestampStr) timestampStr = upcomingRes.data.timestamp || upcomingRes.data.restApiResponseTimestamp;
+        const upcomingData = upcomingRes.data.data || upcomingRes.data.restApiResponseData;
+        if (upcomingData && upcomingData.startTime) {
+          setUpcomingFlashSaleEvent({
+            name: upcomingData.name || "Upcoming Flash Sale",
+            startTime: upcomingData.startTime
+          });
+        } else {
+          setUpcomingFlashSaleEvent(null);
+        }
+      } else {
+        setUpcomingFlashSaleEvent(null);
+      }
+
+      if (timestampStr) {
+        const serverTime = new Date(timestampStr).getTime();
+        const localTime = new Date().getTime();
+        setServerTimeOffset(serverTime - localTime);
+      }
+    } catch (error) {
+      console.error("Failed to load flash sale status:", error);
+    }
+  };
+
+  useEffect(() => {
+    checkFlashSaleStatus();
   }, []);
 
-  // 2. Kalkulasi hitung mundur (Countdown) real-time & reset status jika waktu habis
+  // 2. Real-time countdown calculation & auto-refresh
   useEffect(() => {
-    if (!flashSaleEvent?.endTime) return;
-
-    const targetTime = new Date(flashSaleEvent.endTime).getTime();
+    let targetTime = 0;
+    
+    if (flashSaleEvent?.endTime) {
+      targetTime = new Date(flashSaleEvent.endTime).getTime();
+    } else if (upcomingFlashSaleEvent?.startTime) {
+      targetTime = new Date(upcomingFlashSaleEvent.startTime).getTime();
+    } else {
+      return;
+    }
 
     const timer = setInterval(() => {
-      const now = new Date().getTime();
+      const now = new Date().getTime() + serverTimeOffset;
       const difference = targetTime - now;
 
       if (difference <= 0) {
         clearInterval(timer);
-        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
-        setFlashSaleEvent(null); // Menghilangkan bar & mengakhiri flash sale
-        setIsFlashSaleOnly(false); // Reset filter flash sale jika sedang aktif
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        // Auto-refresh: Re-check flash sale status (will update state and trigger re-render)
+        checkFlashSaleStatus();
       } else {
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
         const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-
-        setTimeLeft({ hours, minutes, seconds });
+        setTimeLeft({ days, hours, minutes, seconds });
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [flashSaleEvent]);
+  }, [flashSaleEvent, upcomingFlashSaleEvent, serverTimeOffset]);
 
 
   const fetchProducts = async (page: number) => {
@@ -130,7 +173,7 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
         params.append('categoryId', selectedCategoryId);
       }
 
-      // Hanya kirim parameter flash sale jika event masih aktif
+      // Only send flash sale parameter if the event is active
       if (isFlashSaleOnly && flashSaleEvent) {
         params.append('isFlashSale', 'true');
       }
@@ -173,7 +216,7 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
 
   const filteredProducts = products.filter((product) => {
     const matchesPrice = product.price >= minPrice && product.price <= maxPrice;
-    // Jika flash sale event sudah habis (flashSaleEvent == null), paksa status flash sale produk jadi false
+    // If flash sale event has ended, force product flash sale status to false
     const activeFlashSaleStatus = flashSaleEvent ? product.isFlashSale : false;
     const matchesFlashSale = isFlashSaleOnly ? activeFlashSaleStatus === true : true;
     return matchesPrice && matchesFlashSale;
@@ -251,14 +294,15 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
                   <h3 className="font-headline-lg text-headline-lg text-on-surface flex items-center gap-2">
                     {flashSaleEvent.name} <span className="text-xs bg-error text-on-error px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">HOT</span>
                   </h3>
-                  <p className="text-body-sm text-on-surface-variant">Penawaran terbatas sesuai jadwal admin, segera amankan produk pilihanmu!</p>
+                  <p className="text-body-sm text-on-surface-variant">Limited time offer, grab your favorite products now!</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-2 bg-surface px-4 py-2 rounded-xl border border-outline-variant shadow-sm">
-                  <span className="text-xs text-on-surface-variant font-medium">End :</span>
+                  <span className="text-xs text-on-surface-variant font-medium">Ends in :</span>
                   <div className="flex items-center gap-1 font-mono font-bold text-error">
+                    <span className="bg-error/10 px-2 py-1 rounded">{String(timeLeft.days).padStart(2, '0')}</span>:
                     <span className="bg-error/10 px-2 py-1 rounded">{String(timeLeft.hours).padStart(2, '0')}</span>:
                     <span className="bg-error/10 px-2 py-1 rounded">{String(timeLeft.minutes).padStart(2, '0')}</span>:
                     <span className="bg-error/10 px-2 py-1 rounded">{String(timeLeft.seconds).padStart(2, '0')}</span>
@@ -279,8 +323,42 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
           </section>
         )}
 
+        {/* Upcoming Flash Sale Bar - Akan otomatis muncul jika kurang dari 1 jam */}
+        {(() => {
+          const isWithinOneHour = timeLeft.days === 0 && (timeLeft.hours === 0 || (timeLeft.hours === 1 && timeLeft.minutes === 0 && timeLeft.seconds === 0));
+          return !flashSaleEvent && upcomingFlashSaleEvent && isWithinOneHour && (
+            <section className="bg-gradient-to-r from-secondary/10 via-secondary/5 to-surface border border-secondary/20 rounded-2xl p-6 shadow-sm">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="bg-secondary text-on-secondary p-2 rounded-xl flex items-center justify-center shadow-sm">
+                    <span className="material-symbols-outlined text-[24px]">schedule</span>
+                  </div>
+                  <div>
+                    <h3 className="font-headline-lg text-headline-lg text-on-surface flex items-center gap-2">
+                      {upcomingFlashSaleEvent.name} <span className="text-xs bg-secondary text-on-secondary px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">SOON</span>
+                    </h3>
+                    <p className="text-body-sm text-on-surface-variant">Get ready, massive discounts are about to begin!</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 bg-surface px-4 py-2 rounded-xl border border-outline-variant shadow-sm">
+                    <span className="text-xs text-on-surface-variant font-medium">Starts in :</span>
+                    <div className="flex items-center gap-1 font-mono font-bold text-secondary">
+                      <span className="bg-secondary-container px-2 py-1 rounded">{String(timeLeft.days).padStart(2, '0')}</span>:
+                      <span className="bg-secondary-container px-2 py-1 rounded">{String(timeLeft.hours).padStart(2, '0')}</span>:
+                      <span className="bg-secondary-container px-2 py-1 rounded">{String(timeLeft.minutes).padStart(2, '0')}</span>:
+                      <span className="bg-secondary-container px-2 py-1 rounded">{String(timeLeft.seconds).padStart(2, '0')}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          );
+        })()}
+
         {/* Sidebar & Products Layout */}
-        <div className="flex gap-stack-lg">
+        <div className="flex flex-col lg:flex-row gap-8 items-start">
           {/* Left Sidebar */}
           <aside className="w-60 flex-shrink-0 hidden md:block">
             <div className="sticky top-20 bg-surface rounded-lg border border-outline-variant p-4 space-y-6">
@@ -340,23 +418,20 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
               <h3 className="font-headline-md text-headline-md text-on-surface">
                 {isFlashSaleOnly ? "Flash Sale Product" : "All Product"}
               </h3>
-              <span className="text-body-sm text-on-surface-variant">
-                Show Page {currentPage + 1} From {totalPages || 1} ({totalElements} Product)
-              </span>
             </div>
 
             {isLoading ? (
-              <div className="text-center py-16 font-label-md text-on-surface-variant">Memuat produk dari server...</div>
+              <div className="text-center py-16 font-label-md text-on-surface-variant">Loading products from server...</div>
             ) : filteredProducts.length === 0 ? (
               <div className="text-center py-16 bg-surface-container-lowest border border-outline-variant rounded-lg">
                 <span className="material-symbols-outlined text-[48px] text-on-surface-variant/40">search_off</span>
-                <p className="text-body-lg font-body-lg text-on-surface-variant mt-2">Produk tidak ditemukan</p>
+                <p className="text-body-lg font-body-lg text-on-surface-variant mt-2">Products not found</p>
               </div>
             ) : (
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-stack-sm md:gap-stack-md">
                   {filteredProducts.map((product) => {
-                    // Status diskon hanya true jika event flash sale masih aktif DAN produk itu bertanda flash sale
+                    // Discount status is true only if flash sale event is active AND the product is marked for flash sale
                     const isItemFlashSale = flashSaleEvent ? (isFlashSaleOnly || product.isFlashSale) : false;
 
                     return (
@@ -431,43 +506,48 @@ const CatalogPage: React.FC<CatalogPageProps> = ({
                 </div>
 
                 {/* Navigasi Pagination UI */}
-                {totalPages > 1 && (
-                  <div className="flex justify-center items-center gap-2 mt-8 flex-wrap">
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 0))}
-                      disabled={currentPage === 0}
-                      className="px-4 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface font-label-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-container transition-colors flex items-center gap-1"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">chevron_left</span>
-                      Previous
-                    </button>
+                <div className="flex flex-col items-center gap-4 mt-8">
+                  {totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 0))}
+                        disabled={currentPage === 0}
+                        className="px-4 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface font-label-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-container transition-colors flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                        Previous
+                      </button>
 
-                    <div className="flex items-center gap-1 overflow-x-auto px-2">
-                      {getVisiblePageNumbers().map((pageIndex) => (
-                        <button
-                          key={pageIndex}
-                          onClick={() => setCurrentPage(pageIndex)}
-                          className={`w-10 h-10 rounded-lg font-label-md transition-colors flex items-center justify-center ${
-                            currentPage === pageIndex
-                              ? 'bg-primary text-on-primary font-bold shadow-sm'
-                              : 'bg-surface border border-outline-variant text-on-surface hover:bg-surface-container'
-                          }`}
-                        >
-                          {pageIndex + 1}
-                        </button>
-                      ))}
+                      <div className="flex items-center gap-1 overflow-x-auto px-2">
+                        {getVisiblePageNumbers().map((pageIndex) => (
+                          <button
+                            key={pageIndex}
+                            onClick={() => setCurrentPage(pageIndex)}
+                            className={`w-10 h-10 rounded-lg font-label-md transition-colors flex items-center justify-center ${
+                              currentPage === pageIndex
+                                ? 'bg-primary text-on-primary font-bold shadow-sm'
+                                : 'bg-surface border border-outline-variant text-on-surface hover:bg-surface-container'
+                            }`}
+                          >
+                            {pageIndex + 1}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages - 1))}
+                        disabled={currentPage >= totalPages - 1}
+                        className="px-4 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface font-label-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-container transition-colors flex items-center gap-1"
+                      >
+                        Next
+                        <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                      </button>
                     </div>
-
-                    <button
-                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages - 1))}
-                      disabled={currentPage >= totalPages - 1}
-                      className="px-4 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface font-label-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-container transition-colors flex items-center gap-1"
-                    >
-                      Next
-                      <span className="material-symbols-outlined text-[18px]">chevron_right</span>
-                    </button>
-                  </div>
-                )}
+                  )}
+                  <span className="text-body-sm text-on-surface-variant text-center">
+                    Show Page {currentPage + 1} From {totalPages || 1} ({totalElements} Product)
+                  </span>
+                </div>
               </>
             )}
           </section>

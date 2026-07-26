@@ -183,10 +183,7 @@ public class SellerFlashSaleService {
         getActiveFlashSaleOrThrow(flashSaleId);
         getOwnedProductOrThrow(productId, seller);
 
-        FlashSaleItem item = flashSaleItemRepository.findByFlashSaleIdAndSellerId(flashSaleId, seller.getId(), PageRequest.of(0, 100))
-                .stream()
-                .filter(i -> i.getProduct().getId().equals(productId))
-                .findFirst()
+        FlashSaleItem item = flashSaleItemRepository.findByFlashSaleIdAndProductId(flashSaleId, productId)
                 .orElseThrow(() -> {
                     log.error("FlashSaleItem not found for product {} in flashSale {}", productId, flashSaleId);
                     return new CoreThrowHandler(RestApiError.SLR_0016);
@@ -218,10 +215,7 @@ public class SellerFlashSaleService {
             throw new CoreThrowHandler(RestApiError.SLR_0033);
         }
 
-        FlashSaleItem item = flashSaleItemRepository.findByFlashSaleIdAndSellerId(flashSaleId, seller.getId(), PageRequest.of(0, 100))
-                .stream()
-                .filter(i -> i.getProduct().getId().equals(productId))
-                .findFirst()
+        FlashSaleItem item = flashSaleItemRepository.findByFlashSaleIdAndProductId(flashSaleId, productId)
                 .orElseThrow(() -> {
                     log.error("FlashSaleItem not found for product {} in flashSale {}", productId, flashSaleId);
                     return new CoreThrowHandler(RestApiError.SLR_0016);

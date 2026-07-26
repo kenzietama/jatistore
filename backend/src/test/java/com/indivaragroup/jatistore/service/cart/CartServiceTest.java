@@ -65,6 +65,14 @@ class CartServiceTest {
         product.setStock(10);
         product.setImage("test.jpg");
 
+        com.indivaragroup.jatistore.data.entity.Seller seller = new com.indivaragroup.jatistore.data.entity.Seller();
+        seller.setActive(true);
+
+        com.indivaragroup.jatistore.data.entity.Store store = new com.indivaragroup.jatistore.data.entity.Store();
+        store.setSeller(seller);
+
+        product.setStore(store);
+
         cart = new Cart();
         cart.setId(cartId);
         cart.setUserId(userId);
@@ -205,8 +213,21 @@ class CartServiceTest {
     @Test
     void getCartByUserId_WithItems_ShouldReturnCartResponse() {
         // Arrange
+        Object[] rawItem = new Object[] {
+                cartItemId,
+                productId,
+                "Test Product",
+                "test.jpg",
+                new BigDecimal("100.00"),
+                new BigDecimal("100.00"),
+                2,
+                10,
+                UUID.randomUUID(),
+                "Test Store",
+                true
+        };
         when(cartRepository.findByUserId(userId)).thenReturn(Optional.of(cart));
-        when(cartItemRepository.findByCartId(cartId)).thenReturn(List.of(cartItem));
+        when(cartItemRepository.getCartItemsWithFlashSale(cartId)).thenReturn(List.<Object[]>of(rawItem));
 
         // Act
         CartResponse result = cartService.getCartByUserId(userId);

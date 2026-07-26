@@ -6,6 +6,7 @@ import com.indivaragroup.jatistore.repository.SellerRepository;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.DashboardStatsResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.FinancialOverviewResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.RecentOrderResponse;
+import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.SellerProfileResponse;
 import com.indivaragroup.jatistore.service.seller.SellerDashboardService;
 import com.indivaragroup.jatistore.service.utility.AuthJWTUtility;
 import com.indivaragroup.jatistore.repository.AuthRepository;
@@ -81,6 +82,29 @@ public class SellerDashboardControllerTest {
         when(authRepository.findByEmail("seller@test.com")).thenReturn(Optional.of(mockUser));
         when(sellerRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockSeller));
         when(sellerSecurityHelper.getSellerIdFromPrincipal(any())).thenReturn(mockSellerId);
+    }
+
+    // ==========================================
+    // GET PROFILE
+    // ==========================================
+
+    @Test
+    void getProfile_shouldReturnOk() throws Exception {
+        // Arrange
+        SellerProfileResponse mockResponse = SellerProfileResponse.builder()
+            .storeName("Test Store")
+            .storeImage("image.jpg")
+            .email("seller@test.com")
+            .build();
+        when(dashboardService.getProfile(mockSellerId)).thenReturn(mockResponse);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/seller/dashboard/profile")
+                .principal(mockPrincipal)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.storeName").value("Test Store"))
+                .andExpect(jsonPath("$.data.email").value("seller@test.com"));
     }
 
     // ==========================================

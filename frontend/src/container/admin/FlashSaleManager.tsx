@@ -222,6 +222,7 @@ export const FlashSaleManager: React.FC = () => {
                     onChange={handleInputChange}
                     placeholder="e.g. Mega Midnight Sale"
                     required
+                    maxLength={50}
                     type="text"
                   />
                 </div>

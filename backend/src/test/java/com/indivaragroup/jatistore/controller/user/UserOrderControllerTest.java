@@ -68,6 +68,39 @@ class UserOrderControllerTest {
     }
 
     @Test
+    void createOrder_Success() throws Exception {
+        com.indivaragroup.jatistore.dto.request.user.CreateOrderRequest request = com.indivaragroup.jatistore.dto.request.user.CreateOrderRequest.builder()
+                .selectedCartItemIds(List.of(UUID.randomUUID()))
+                .build();
+                
+        com.indivaragroup.jatistore.dto.response.module.user.CreateOrderResponse responseData = com.indivaragroup.jatistore.dto.response.module.user.CreateOrderResponse.builder()
+                .orderId(UUID.randomUUID())
+                .totalAmount(BigDecimal.valueOf(100))
+                .status(OrderStatus.PENDING)
+                .build();
+
+        RestApiResponse<com.indivaragroup.jatistore.dto.response.module.user.CreateOrderResponse> apiResponse = RestApiResponse.<com.indivaragroup.jatistore.dto.response.module.user.CreateOrderResponse>builder()
+                .restApiResponseHttpCode(201)
+                .restApiResponseHttpStatus("CREATED")
+                .restApiResponseMessage("Order created successfully")
+                .restApiResponseData(responseData)
+                .build();
+
+        when(userCheckoutService.createOrder(any(), eq("user@example.com")))
+                .thenReturn(apiResponse);
+
+        mockMvc.perform(post("/api/v1/orders")
+                        .principal(mockPrincipal)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(new ObjectMapper().writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.data.totalAmount").value(100));
+
+        verify(userCheckoutService, times(1)).createOrder(any(), eq("user@example.com"));
+    }
+
+    @Test
     void getOrderHistory_Success() throws Exception {
         UUID orderId = UUID.randomUUID();
         OrderItemResponse item = OrderItemResponse.builder()
