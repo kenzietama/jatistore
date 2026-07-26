@@ -33,7 +33,13 @@ export function SellerSidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIs
         const user = useAuthStore.getState().user;
         if (upcomingIds.length > 0 && user?.userId) {
           const storageKey = `seenFlashSaleIds_${user.userId}`;
-          const seenIds = JSON.parse(localStorage.getItem(storageKey) || '[]');
+          let seenIds: string[] = [];
+          try {
+            const parsed = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            seenIds = Array.isArray(parsed) ? parsed : [];
+          } catch {
+            seenIds = [];
+          }
           const hasNew = upcomingIds.some(id => !seenIds.includes(id));
           setHasNewFlashSale(hasNew);
         }
