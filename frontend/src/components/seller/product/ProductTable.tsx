@@ -36,15 +36,33 @@ export function ProductTable({ refreshTrigger, onEdit }: { refreshTrigger?: numb
     return () => clearTimeout(timer);
   }, [refreshTrigger, search, status, sortBy, sortDir, page, size]);
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this product?')) {
-      try {
-        await productService.deleteProduct(id);
-        fetchProducts();
-      } catch (error) {
-        console.error('Failed to delete product', error);
-      }
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = (id: string) => {
+    setDeleteTargetId(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTargetId) return;
+    setIsDeleting(true);
+    try {
+      await productService.deleteProduct(deleteTargetId);
+      fetchProducts();
+    } catch (error) {
+      console.error('Failed to delete product', error);
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+      setDeleteTargetId(null);
     }
+  };
+
+  const cancelDelete = () => {
+    setIsDeleteModalOpen(false);
+    setDeleteTargetId(null);
   };
 
   return (
@@ -236,6 +254,36 @@ export function ProductTable({ refreshTrigger, onEdit }: { refreshTrigger?: numb
           </button>
         </div>
       </div>
+
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 bg-on-background/30 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-6 max-w-sm w-full shadow-lg">
+            <h3 className="text-headline-md font-headline-md text-on-surface mb-2">Confirm Delete</h3>
+            <p className="text-body-md font-body-md text-on-surface-variant mb-6">Are you sure you want to delete this product? This action cannot be undone.</p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={cancelDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-md text-label-md disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded bg-error text-on-error hover:opacity-90 transition-opacity font-label-md text-label-md flex items-center gap-2 disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <span className="material-symbols-outlined text-[18px] animate-spin">refresh</span>
+                ) : (
+                  <span className="material-symbols-outlined text-[18px]">delete</span>
+                )}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

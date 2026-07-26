@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import api from "../lib/api"; 
+import api from "../lib/api";
 
 interface Product {
   id: string;
@@ -8,13 +8,13 @@ interface Product {
   image: string;
   price: number;
   stock: number;
-  discountTag?: string;     
-  originalPrice?: number;   
-  rating?: number;          
-  reviewsCount?: number;    
-  thumbnails?: string[];    
-  isFlashSale?: boolean;        
-  flashSaleEndTime?: string;    
+  discountTag?: string;
+  originalPrice?: number;
+  rating?: number;
+  reviewsCount?: number;
+  thumbnails?: string[];
+  isFlashSale?: boolean;
+  flashSaleEndTime?: string;
   store?: {
     id: string;
     storeName: string;
@@ -22,19 +22,19 @@ interface Product {
 }
 
 interface ProductDetailPageProps {
-  productId: string; 
+  productId: string;
   onBackToCatalog: () => void;
   onAddToCart: (productId: string, quantity: number, priceToUse: number) => void;
-  onCartClick: () => void; 
-  isFromFlashSale?: boolean; 
+  onCartClick: () => void;
+  isFromFlashSale?: boolean;
 }
 
-const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ 
-  productId, 
-  onBackToCatalog, 
+const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
+  productId,
+  onBackToCatalog,
   onAddToCart,
   onCartClick,
-  isFromFlashSale = false 
+  isFromFlashSale = false
 }) => {
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
@@ -42,9 +42,11 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const [flashSaleEvent, setFlashSaleEvent] = useState<{ name: string; endTime: string } | null>(null);
-  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [upcomingFlashSaleEvent, setUpcomingFlashSaleEvent] = useState<{ name: string; startTime: string } | null>(null);
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
 
-  // 1. Fetch Detail Produk
+  // 1. Fetch Product Details
   useEffect(() => {
     setIsLoading(true);
     api.get(`/api/v1/products/${productId}`)
@@ -55,65 +57,108 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
         if (fetchedProduct && fetchedProduct.id) {
           setProduct(fetchedProduct);
           setMainImage(fetchedProduct.image || "https://placehold.co/600x400?text=No+Image");
-          setQuantity(1); 
+          setQuantity(1);
         } else {
           setProduct(null);
         }
         setIsLoading(false);
       })
       .catch((error) => {
-        console.error("Gagal memuat detail produk:", error);
+        console.error("Failed to load product details:", error);
         setIsLoading(false);
       });
   }, [productId]);
 
-  // 2. Fetch Flash Sale Aktif dari Endpoint Publik Backend
-  useEffect(() => {
-    const fetchActiveFlashSale = async () => {
-      try {
-        const response = await api.get("/api/v1/public/flash-sale/active");
-        if (response.data && (response.data.code === 200 || response.data.restApiResponseHttpCode === 200)) {
-          const eventData = response.data.data || response.data.restApiResponseData;
-          if (eventData && eventData.endTime) {
-            setFlashSaleEvent({
-              name: eventData.name || "Flash Sale",
-              endTime: eventData.endTime
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Gagal memuat flash sale aktif:", error);
-      }
-    };
+  // 2. Fetch Active and Upcoming Flash Sale from Backend
+  const checkFlashSaleStatus = async () => {
+    try {
+      const [activeRes, upcomingRes] = await Promise.all([
+        api.get("/api/v1/public/flash-sale/active").catch(() => null),
+        api.get("/api/v1/public/flash-sale/upcoming").catch(() => null)
+      ]);
 
-    fetchActiveFlashSale();
+      let hasActive = false;
+      let timestampStr = null;
+
+      if (activeRes?.data && (activeRes.data.code === 200 || activeRes.data.restApiResponseHttpCode === 200)) {
+        timestampStr = activeRes.data.timestamp || activeRes.data.restApiResponseTimestamp;
+        const activeData = activeRes.data.data || activeRes.data.restApiResponseData;
+        if (activeData && activeData.endTime) {
+          setFlashSaleEvent({
+            name: activeData.name || "Flash Sale",
+            endTime: activeData.endTime
+          });
+          setUpcomingFlashSaleEvent(null);
+          hasActive = true;
+        } else {
+          setFlashSaleEvent(null);
+        }
+      } else {
+        setFlashSaleEvent(null);
+      }
+
+      if (!hasActive && upcomingRes?.data && (upcomingRes.data.code === 200 || upcomingRes.data.restApiResponseHttpCode === 200)) {
+        if (!timestampStr) timestampStr = upcomingRes.data.timestamp || upcomingRes.data.restApiResponseTimestamp;
+        const upcomingData = upcomingRes.data.data || upcomingRes.data.restApiResponseData;
+        if (upcomingData && upcomingData.startTime) {
+          setUpcomingFlashSaleEvent({
+            name: upcomingData.name || "Upcoming Flash Sale",
+            startTime: upcomingData.startTime
+          });
+        } else {
+          setUpcomingFlashSaleEvent(null);
+        }
+      } else {
+        setUpcomingFlashSaleEvent(null);
+      }
+
+      if (timestampStr) {
+        const serverTime = new Date(timestampStr).getTime();
+        const localTime = new Date().getTime();
+        setServerTimeOffset(serverTime - localTime);
+      }
+    } catch (error) {
+      console.error("Failed to load flash sale status:", error);
+    }
+  };
+
+  useEffect(() => {
+    checkFlashSaleStatus();
   }, []);
 
-  // 3. Countdown Timer Real-time berdasarkan Flash Sale Aktif Admin
+  // 3. Real-time Countdown Timer based on Flash Sale
   useEffect(() => {
-    if (!flashSaleEvent?.endTime) return;
+    let targetTime = 0;
 
-    const targetTime = new Date(flashSaleEvent.endTime).getTime();
+    if (flashSaleEvent?.endTime) {
+      targetTime = new Date(flashSaleEvent.endTime).getTime();
+    } else if (upcomingFlashSaleEvent?.startTime) {
+      targetTime = new Date(upcomingFlashSaleEvent.startTime).getTime();
+    } else {
+      return;
+    }
 
     const timer = setInterval(() => {
-      const now = new Date().getTime();
+      const now = new Date().getTime() + serverTimeOffset;
       const difference = targetTime - now;
 
       if (difference <= 0) {
         clearInterval(timer);
-        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
-        setFlashSaleEvent(null); 
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        // Auto-refresh: Re-check flash sale status (will update state and trigger re-render)
+        checkFlashSaleStatus();
       } else {
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
         const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((difference % (1000 * 60)) / 1000);
 
-        setTimeLeft({ hours, minutes, seconds });
+        setTimeLeft({ days, hours, minutes, seconds });
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [flashSaleEvent]);
+  }, [flashSaleEvent, upcomingFlashSaleEvent, serverTimeOffset]);
 
   const handleQuantityChange = (type: "add" | "remove") => {
     if (!product) return;
@@ -127,7 +172,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
-        <p className="font-label-md text-on-surface-variant">Memuat detail produk dari database...</p>
+        <p className="font-label-md text-on-surface-variant">Loading product details from database...</p>
       </div>
     );
   }
@@ -135,7 +180,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   if (!product) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-surface gap-4">
-        <p className="font-label-md text-error">Produk tidak ditemukan atau telah dihapus.</p>
+        <p className="font-label-md text-error">Product not found or has been deleted.</p>
         <button onClick={onBackToCatalog} className="text-primary font-semibold hover:underline">Back to Catalog</button>
       </div>
     );
@@ -146,18 +191,18 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   const finalSoldBy = product.store?.storeName ?? "JatiStore Official";
   const finalThumbnails = product.thumbnails ?? [];
 
-  // ⚡ Status Flash Sale Aktif yang Konsisten (Mendukung flag isFlashSale, isFromFlashSale, atau discountTag dari backend)
+  // ⚡ Consistent Active Flash Sale Status
   const isFlashSaleActive = Boolean(flashSaleEvent && (product.isFlashSale || isFromFlashSale || product.discountTag));
-  
-  // 💰 Kalkulasi Harga Asli & Diskon yang Konsisten (Mencegah ketidaksesuaian antara tampilan UI dan keranjang)
+
+  // Consistent Original & Discount Price Calculation
   const isProductPricedAsDiscounted = isFlashSaleActive && product.originalPrice && product.originalPrice > product.price;
-  
-  const displayOriginalPrice = isProductPricedAsDiscounted 
-    ? product.originalPrice 
+
+  const displayOriginalPrice = isProductPricedAsDiscounted
+    ? product.originalPrice
     : (isFlashSaleActive ? Math.round(product.price * 1.3) : null);
 
-  const displayCurrentPrice = isProductPricedAsDiscounted 
-    ? product.price 
+  const displayCurrentPrice = isProductPricedAsDiscounted
+    ? product.price
     : (isFlashSaleActive ? product.price : (product.originalPrice || product.price));
 
   return (
@@ -174,7 +219,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           <div className="lg:col-span-7 flex flex-col gap-stack-sm">
             <div className="w-full flex items-center justify-center aspect-[4/3] rounded-xl overflow-hidden bg-surface-container-lowest border border-outline-variant shadow-sm relative group">
               <img alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" src={mainImage} />
-              
+
               {isFlashSaleActive && (
                 <div className="absolute top-4 left-4 bg-error text-on-error px-3.5 py-1.5 rounded-full font-label-sm text-label-sm uppercase tracking-wide shadow-md flex items-center gap-1.5 z-10">
                   <span className="material-symbols-outlined text-[18px]">bolt</span>
@@ -182,17 +227,17 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 </div>
               )}
             </div>
-            
+
             {/* Thumbnails */}
             <div className="flex gap-stack-sm overflow-x-auto pb-2 snap-x">
-              <div 
+              <div
                 onClick={() => setMainImage(product.image || "https://placehold.co/600x400?text=No+Image")}
                 className={`w-24 h-24 shrink-0 rounded-lg border-2 overflow-hidden cursor-pointer snap-start transition-all ${mainImage === product.image ? "border-primary opacity-100" : "border-outline-variant opacity-70 hover:opacity-100"}`}
               >
                 <img alt="Main image thumbnail" className="w-full h-full object-cover" src={product.image || "https://placehold.co/600x400?text=No+Image"} />
               </div>
               {finalThumbnails.map((thumb, index) => (
-                <div 
+                <div
                   key={index}
                   onClick={() => setMainImage(thumb)}
                   className={`w-24 h-24 shrink-0 rounded-lg border-2 overflow-hidden cursor-pointer snap-start transition-all ${mainImage === thumb ? "border-primary opacity-100" : "border-outline-variant opacity-70 hover:opacity-100"}`}
@@ -205,20 +250,39 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
           {/* Product Details */}
           <div className="lg:col-span-5 flex flex-col gap-stack-md bg-surface-container-lowest p-gutter rounded-xl shadow-sm border border-outline-variant">
-            
+
             {isFlashSaleActive && (
-              <div className="bg-gradient-to-r from-error/15 to-error/5 border border-error/30 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
+              <div className="bg-gradient-to-r from-error/15 to-error/5 border border-error/30 rounded-xl p-3.5 flex items-center justify-between shadow-sm mb-2">
                 <div className="flex items-center gap-2 text-error">
                   <span className="material-symbols-outlined text-[22px]">bolt</span>
-                  <span className="font-label-md font-bold uppercase tracking-wider text-xs">Flash Sale Berakhir:</span>
+                  <span className="font-label-md font-bold uppercase tracking-wider text-xs">Flash Sale Ends In:</span>
                 </div>
                 <div className="flex items-center gap-1 font-mono font-bold text-error text-sm">
+                  <span className="bg-error/20 px-2 py-0.5 rounded">{String(timeLeft.days).padStart(2, '0')}</span>:
                   <span className="bg-error/20 px-2 py-0.5 rounded">{String(timeLeft.hours).padStart(2, '0')}</span>:
                   <span className="bg-error/20 px-2 py-0.5 rounded">{String(timeLeft.minutes).padStart(2, '0')}</span>:
                   <span className="bg-error/20 px-2 py-0.5 rounded">{String(timeLeft.seconds).padStart(2, '0')}</span>
                 </div>
               </div>
             )}
+
+            {(() => {
+              const isWithinOneHour = timeLeft.days === 0 && (timeLeft.hours === 0 || (timeLeft.hours === 1 && timeLeft.minutes === 0 && timeLeft.seconds === 0));
+              return !flashSaleEvent && upcomingFlashSaleEvent && isWithinOneHour && (
+                <div className="bg-gradient-to-r from-secondary-container/30 to-secondary-container/10 border border-secondary/30 rounded-xl p-3.5 flex items-center justify-between shadow-sm mb-2">
+                  <div className="flex items-center gap-2 text-secondary">
+                    <span className="material-symbols-outlined text-[22px]">schedule</span>
+                    <span className="font-label-md font-bold uppercase tracking-wider text-xs">Flash Sale Starts In:</span>
+                  </div>
+                  <div className="flex items-center gap-1 font-mono font-bold text-secondary text-sm">
+                    <span className="bg-secondary-container/50 px-2 py-0.5 rounded">{String(timeLeft.days).padStart(2, '0')}</span>:
+                    <span className="bg-secondary-container/50 px-2 py-0.5 rounded">{String(timeLeft.hours).padStart(2, '0')}</span>:
+                    <span className="bg-secondary-container/50 px-2 py-0.5 rounded">{String(timeLeft.minutes).padStart(2, '0')}</span>:
+                    <span className="bg-secondary-container/50 px-2 py-0.5 rounded">{String(timeLeft.seconds).padStart(2, '0')}</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div>
               <div className="flex items-center gap-1 mb-1 text-on-surface-variant">
@@ -236,7 +300,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               </div>
             </div>
 
-            {/* HARGA PRODUK: Selaras antara tampilan UI dan harga yang dikirim ke keranjang */}
+            {/* PRODUCT PRICE: Synchronized between UI and cart */}
             <div className="flex flex-col pb-stack-md border-b border-outline-variant">
               <div className="flex items-baseline gap-3">
                 <span className={`text-display-lg font-display-lg ${isFlashSaleActive ? 'text-error font-bold' : 'text-on-surface font-bold'}`}>
@@ -256,11 +320,11 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             </div>
 
             <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-              {product.description || "Tidak ada deskripsi untuk produk ini."}
+              {product.description || "No description available for this product."}
             </p>
 
             <div className="flex items-center gap-4 py-2">
-              <span className="flex items-center justify-center w-auto px-3 h-8 rounded bg-surface-container-high text-on-surface font-mono-data text-mono-data">Stok: {product.stock}</span>
+              <span className="flex items-center justify-center w-auto px-3 h-8 rounded bg-surface-container-high text-on-surface font-mono-data text-mono-data">Stock: {product.stock}</span>
               <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">In Stock</span>
             </div>
 
@@ -274,21 +338,20 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   <span className="material-symbols-outlined">add</span>
                 </button>
               </div>
-              
-              <button 
+
+              <button
                 onClick={async () => {
-                  // Memastikan harga yang dikirim ke keranjang 100% sinkron dengan harga aktif yang sedang ditampilkan (displayCurrentPrice)
+                  // Ensure cart price is synchronized with the currently displayed active price
                   await onAddToCart(product.id, quantity, displayCurrentPrice);
-                  onCartClick(); 
+                  onCartClick();
                 }}
-                className={`flex-1 font-label-md text-label-md py-3 px-6 rounded-full transition-colors flex items-center justify-center gap-2 shadow-sm ${
-                  isFlashSaleActive 
-                    ? 'bg-error text-on-error hover:bg-error/90' 
+                className={`flex-1 font-label-md text-label-md py-3 px-6 rounded-full transition-colors flex items-center justify-center gap-2 shadow-sm ${isFlashSaleActive
+                    ? 'bg-error text-on-error hover:bg-error/90'
                     : 'bg-primary text-on-primary hover:bg-primary/90'
-                }`}
+                  }`}
               >
                 <span className="material-symbols-outlined">shopping_cart</span>
-                Tambah Keranjang
+                Add to Cart
               </button>
             </div>
           </div>

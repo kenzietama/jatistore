@@ -101,7 +101,8 @@ class UserOrderServiceTest {
                 "Test Product",
                 2,
                 BigDecimal.valueOf(100),
-                false
+                false,
+                "test.jpg"
         };
 
         List<Object[]> orderList = new java.util.ArrayList<>();
@@ -284,5 +285,18 @@ class UserOrderServiceTest {
         assertEquals(mockSeller, onHoldLedger.getSeller());
         assertEquals(mockOrder, onHoldLedger.getOrder());
         assertEquals(mockOrder.getTotalAmount().negate(), onHoldLedger.getAmount());
+    }
+
+    @Test
+    void confirmReceipt_UserNotFound_ThrowsException() {
+        when(authRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
+
+        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
+            userOrderService.confirmReceipt("unknown@example.com", orderId);
+        });
+
+        assertEquals(RestApiError.GEN_0005.getCode(), exception.getCode());
+        verify(authRepository).findByEmail("unknown@example.com");
+        verify(orderRepository, never()).findById(any());
     }
 }

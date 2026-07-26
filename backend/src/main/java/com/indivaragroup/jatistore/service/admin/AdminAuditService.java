@@ -8,6 +8,7 @@ import com.indivaragroup.jatistore.dto.response.module.admin.AuditTrailResponse;
 import com.indivaragroup.jatistore.repository.AuditTrailRepository;
 import com.indivaragroup.jatistore.repository.AuthRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -20,12 +21,15 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AdminAuditService {
 
     private final AuditTrailRepository auditTrailRepository;
     private final AuthRepository authRepository;
 
     public Page<AuditTrailResponse> getAuditTrails(String action, String module, UUID userId, Instant startDate, Instant endDate, int page, int size) {
+        log.info("Fetching audit trails - action: {}, module: {}, userId: {}, startDate: {}, endDate: {}, page: {}, size: {}", 
+                action, module, userId, startDate, endDate, page, size);
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
         Specification<AuditTrail> spec = (root, query, cb) -> {

@@ -99,7 +99,7 @@ public class SellerOrderServiceImpl implements SellerOrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> {
                     log.error("Order {} not found", orderId);
-                    return new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Order not found", null);
+                    return new CoreThrowHandler(RestApiError.USR_0015);
                 });
                 
         List<SellerOrderItemDTO> items = mapToOrderItems(order, seller.getId());
@@ -128,7 +128,7 @@ public class SellerOrderServiceImpl implements SellerOrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> {
                     log.error("Order {} not found", orderId);
-                    return new CoreThrowHandler(org.springframework.http.HttpStatus.NOT_FOUND.value(), "Order not found", null);
+                    return new CoreThrowHandler(RestApiError.USR_0015);
                 });
                 
         boolean hasSellerProducts = order.getOrderDetails().stream()

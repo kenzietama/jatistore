@@ -59,6 +59,8 @@ export default function WithdrawalModal({ availableBalance, onClose, onSuccess }
             return;
         }
         
+        if (rawValue.length > 15) return; // max 15 digits
+        
         // Format with thousand separators and Rp prefix
         const numericValue = parseInt(rawValue, 10);
         const formatted = new Intl.NumberFormat('id-ID', {

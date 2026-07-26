@@ -112,6 +112,52 @@ public class SellerOrderServiceImplTest {
     }
 
     @Test
+    void getSellerOrders_shouldReturnPage_withSortByAmount() throws CoreThrowHandler {
+        UUID sellerId = UUID.randomUUID();
+        setupMockSeller(sellerId);
+        
+        Order order = setupMockOrder(UUID.randomUUID(), sellerId, OrderStatus.SHIPPED);
+
+        Page<Order> page = new PageImpl<>(List.of(order));
+        when(orderRepository.findOrdersBySellerAndFilters(eq(sellerId), eq(null), any(), any(Pageable.class))).thenReturn(page);
+
+        Page<SellerOrderListResponse> result = sellerOrderService.getSellerOrders(sellerId, null, null, "amount", "asc", 0, 10);
+        
+        assertEquals(1, result.getTotalElements());
+    }
+
+    @Test
+    void getSellerOrders_shouldReturnPage_withSortByStatus() throws CoreThrowHandler {
+        UUID sellerId = UUID.randomUUID();
+        setupMockSeller(sellerId);
+        
+        Order order = setupMockOrder(UUID.randomUUID(), sellerId, OrderStatus.SHIPPED);
+
+        Page<Order> page = new PageImpl<>(List.of(order));
+        when(orderRepository.findOrdersBySellerAndFilters(eq(sellerId), eq(null), any(), any(Pageable.class))).thenReturn(page);
+
+        Page<SellerOrderListResponse> result = sellerOrderService.getSellerOrders(sellerId, null, null, "status", "asc", 0, 10);
+        
+        assertEquals(1, result.getTotalElements());
+    }
+
+    @Test
+    void getSellerOrders_shouldReturnPage_withNullStatus() throws CoreThrowHandler {
+        UUID sellerId = UUID.randomUUID();
+        setupMockSeller(sellerId);
+        
+        Order order = setupMockOrder(UUID.randomUUID(), sellerId, null); // null status
+
+        Page<Order> page = new PageImpl<>(List.of(order));
+        when(orderRepository.findOrdersBySellerAndFilters(eq(sellerId), eq(null), any(), any(Pageable.class))).thenReturn(page);
+
+        Page<SellerOrderListResponse> result = sellerOrderService.getSellerOrders(sellerId, null, null, "date", "desc", 0, 10);
+        
+        assertEquals(1, result.getTotalElements());
+        assertNull(result.getContent().get(0).getStatus());
+    }
+
+    @Test
     void getSellerOrders_sellerNotFound_shouldThrow() {
         UUID sellerId = UUID.randomUUID();
         when(sellerRepository.findById(sellerId)).thenReturn(Optional.empty());

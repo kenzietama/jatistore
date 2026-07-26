@@ -8,6 +8,9 @@ import com.indivaragroup.jatistore.data.entity.User;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.DashboardStatsResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.FinancialOverviewResponse;
 import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.RecentOrderResponse;
+import com.indivaragroup.jatistore.dto.response.module.seller.dashboard.SellerProfileResponse;
+import com.indivaragroup.jatistore.data.entity.Store;
+import com.indivaragroup.jatistore.repository.StoreRepository;
 import com.indivaragroup.jatistore.data.utility.constant.OrderStatus;
 import com.indivaragroup.jatistore.dto.utility.RestApiError;
 import com.indivaragroup.jatistore.exception.CoreThrowHandler;
@@ -47,6 +50,9 @@ public class SellerDashboardServiceImplTest {
     private ProductRepository productRepository;
 
     @Mock
+    private StoreRepository storeRepository;
+
+    @Mock
     private OrderDetailRepository orderDetailRepository;
 
     @InjectMocks
@@ -57,6 +63,57 @@ public class SellerDashboardServiceImplTest {
     @BeforeEach
     void setUp() {
         sellerId = UUID.randomUUID();
+    }
+
+    // ==========================================
+    // GET PROFILE
+    // ==========================================
+
+    @Test
+    void getProfile_shouldReturnProfile() throws CoreThrowHandler {
+        // Arrange
+        User mockUser = new User();
+        mockUser.setEmail("seller@test.com");
+        Seller mockSeller = new Seller();
+        mockSeller.setId(sellerId);
+        mockSeller.setUser(mockUser);
+        
+        Store mockStore = new Store();
+        mockStore.setStoreName("Test Store");
+        mockStore.setImage("store.jpg");
+        
+        when(sellerRepository.findById(sellerId)).thenReturn(Optional.of(mockSeller));
+        when(storeRepository.findBySellerId(sellerId)).thenReturn(Optional.of(mockStore));
+
+        // Act
+        SellerProfileResponse response = sellerDashboardService.getProfile(sellerId);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals("Test Store", response.getStoreName());
+        assertEquals("store.jpg", response.getStoreImage());
+        assertEquals("seller@test.com", response.getEmail());
+    }
+
+    @Test
+    void getProfile_shouldThrowException_whenStoreNotFound() {
+        // Arrange
+        User mockUser = new User();
+        mockUser.setEmail("seller@test.com");
+        Seller mockSeller = new Seller();
+        mockSeller.setId(sellerId);
+        mockSeller.setUser(mockUser);
+        
+        when(sellerRepository.findById(sellerId)).thenReturn(Optional.of(mockSeller));
+        when(storeRepository.findBySellerId(sellerId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        try {
+            sellerDashboardService.getProfile(sellerId);
+            fail("Expected CoreThrowHandler");
+        } catch (CoreThrowHandler ex) {
+            assertEquals(RestApiError.SLR_0002, ex.getRestApiError());
+        }
     }
 
     // ==========================================
