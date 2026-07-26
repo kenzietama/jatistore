@@ -184,4 +184,19 @@ class CheckoutFinalizerTest {
         verify(productRepository).save(product);
         assertThat(product.getStock()).isEqualTo(8); // 10 - 2
     }
+
+    @Test
+    void finalizeOrder_NullOrderDetails_SkipsFlashSaleLogic() {
+        order.setOrderDetails(null);
+        
+        when(productRepository.save(any(Product.class))).thenReturn(product);
+        when(sellerLedgerRepository.save(any(SellerLedger.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        checkoutFinalizer.finalizeOrder(order, List.of(cartItem));
+
+        verify(flashSaleItemRepository, never()).findByProductAndActiveFlashSaleForUpdate(any());
+        verify(flashSaleItemRepository, never()).save(any());
+        verify(productRepository).save(product);
+        assertThat(product.getStock()).isEqualTo(8); // 10 - 2
+    }
 }

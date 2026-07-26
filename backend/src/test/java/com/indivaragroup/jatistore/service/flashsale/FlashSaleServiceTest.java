@@ -46,4 +46,28 @@ class FlashSaleServiceTest {
         assertNull(result);
         verify(flashSaleRepository, times(1)).findActiveFlashSale(any());
     }
+
+    @Test
+    void getUpcomingFlashSale_ShouldReturnFlashSale_WhenPresent() {
+        FlashSale flashSale = new FlashSale();
+        flashSale.setName("Next Sale");
+        
+        when(flashSaleRepository.findAvailableFlashSales(any())).thenReturn(java.util.List.of(flashSale));
+
+        FlashSale result = flashSaleService.getUpcomingFlashSale();
+
+        assertNotNull(result);
+        assertEquals("Next Sale", result.getName());
+        verify(flashSaleRepository, times(1)).findAvailableFlashSales(any());
+    }
+
+    @Test
+    void getUpcomingFlashSale_ShouldReturnNull_WhenNotPresent() {
+        when(flashSaleRepository.findAvailableFlashSales(any())).thenReturn(java.util.List.of());
+
+        FlashSale result = flashSaleService.getUpcomingFlashSale();
+
+        assertNull(result);
+        verify(flashSaleRepository, times(1)).findAvailableFlashSales(any());
+    }
 }

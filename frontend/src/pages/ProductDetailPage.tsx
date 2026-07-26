@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import api from "../lib/api"; 
+import api from "../lib/api";
 
 interface Product {
   id: string;
@@ -8,13 +8,13 @@ interface Product {
   image: string;
   price: number;
   stock: number;
-  discountTag?: string;     
-  originalPrice?: number;   
-  rating?: number;          
-  reviewsCount?: number;    
-  thumbnails?: string[];    
-  isFlashSale?: boolean;        
-  flashSaleEndTime?: string;    
+  discountTag?: string;
+  originalPrice?: number;
+  rating?: number;
+  reviewsCount?: number;
+  thumbnails?: string[];
+  isFlashSale?: boolean;
+  flashSaleEndTime?: string;
   store?: {
     id: string;
     storeName: string;
@@ -22,19 +22,19 @@ interface Product {
 }
 
 interface ProductDetailPageProps {
-  productId: string; 
+  productId: string;
   onBackToCatalog: () => void;
   onAddToCart: (productId: string, quantity: number, priceToUse: number) => void;
-  onCartClick: () => void; 
-  isFromFlashSale?: boolean; 
+  onCartClick: () => void;
+  isFromFlashSale?: boolean;
 }
 
-const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ 
-  productId, 
-  onBackToCatalog, 
+const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
+  productId,
+  onBackToCatalog,
   onAddToCart,
   onCartClick,
-  isFromFlashSale = false 
+  isFromFlashSale = false
 }) => {
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
@@ -57,7 +57,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
         if (fetchedProduct && fetchedProduct.id) {
           setProduct(fetchedProduct);
           setMainImage(fetchedProduct.image || "https://placehold.co/600x400?text=No+Image");
-          setQuantity(1); 
+          setQuantity(1);
         } else {
           setProduct(null);
         }
@@ -76,7 +76,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
         api.get("/api/v1/public/flash-sale/active").catch(() => null),
         api.get("/api/v1/public/flash-sale/upcoming").catch(() => null)
       ]);
-      
+
       let hasActive = false;
       let timestampStr = null;
 
@@ -129,7 +129,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   // 3. Real-time Countdown Timer based on Flash Sale
   useEffect(() => {
     let targetTime = 0;
-    
+
     if (flashSaleEvent?.endTime) {
       targetTime = new Date(flashSaleEvent.endTime).getTime();
     } else if (upcomingFlashSaleEvent?.startTime) {
@@ -146,7 +146,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
         clearInterval(timer);
         setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
         // Auto-refresh: Re-check flash sale status (will update state and trigger re-render)
-        checkFlashSaleStatus(); 
+        checkFlashSaleStatus();
       } else {
         const days = Math.floor(difference / (1000 * 60 * 60 * 24));
         const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -193,16 +193,16 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
   // ⚡ Consistent Active Flash Sale Status
   const isFlashSaleActive = Boolean(flashSaleEvent && (product.isFlashSale || isFromFlashSale || product.discountTag));
-  
-  // 💰 Consistent Original & Discount Price Calculation
+
+  // Consistent Original & Discount Price Calculation
   const isProductPricedAsDiscounted = isFlashSaleActive && product.originalPrice && product.originalPrice > product.price;
-  
-  const displayOriginalPrice = isProductPricedAsDiscounted 
-    ? product.originalPrice 
+
+  const displayOriginalPrice = isProductPricedAsDiscounted
+    ? product.originalPrice
     : (isFlashSaleActive ? Math.round(product.price * 1.3) : null);
 
-  const displayCurrentPrice = isProductPricedAsDiscounted 
-    ? product.price 
+  const displayCurrentPrice = isProductPricedAsDiscounted
+    ? product.price
     : (isFlashSaleActive ? product.price : (product.originalPrice || product.price));
 
   return (
@@ -219,7 +219,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           <div className="lg:col-span-7 flex flex-col gap-stack-sm">
             <div className="w-full flex items-center justify-center aspect-[4/3] rounded-xl overflow-hidden bg-surface-container-lowest border border-outline-variant shadow-sm relative group">
               <img alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" src={mainImage} />
-              
+
               {isFlashSaleActive && (
                 <div className="absolute top-4 left-4 bg-error text-on-error px-3.5 py-1.5 rounded-full font-label-sm text-label-sm uppercase tracking-wide shadow-md flex items-center gap-1.5 z-10">
                   <span className="material-symbols-outlined text-[18px]">bolt</span>
@@ -227,17 +227,17 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 </div>
               )}
             </div>
-            
+
             {/* Thumbnails */}
             <div className="flex gap-stack-sm overflow-x-auto pb-2 snap-x">
-              <div 
+              <div
                 onClick={() => setMainImage(product.image || "https://placehold.co/600x400?text=No+Image")}
                 className={`w-24 h-24 shrink-0 rounded-lg border-2 overflow-hidden cursor-pointer snap-start transition-all ${mainImage === product.image ? "border-primary opacity-100" : "border-outline-variant opacity-70 hover:opacity-100"}`}
               >
                 <img alt="Main image thumbnail" className="w-full h-full object-cover" src={product.image || "https://placehold.co/600x400?text=No+Image"} />
               </div>
               {finalThumbnails.map((thumb, index) => (
-                <div 
+                <div
                   key={index}
                   onClick={() => setMainImage(thumb)}
                   className={`w-24 h-24 shrink-0 rounded-lg border-2 overflow-hidden cursor-pointer snap-start transition-all ${mainImage === thumb ? "border-primary opacity-100" : "border-outline-variant opacity-70 hover:opacity-100"}`}
@@ -250,7 +250,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
           {/* Product Details */}
           <div className="lg:col-span-5 flex flex-col gap-stack-md bg-surface-container-lowest p-gutter rounded-xl shadow-sm border border-outline-variant">
-            
+
             {isFlashSaleActive && (
               <div className="bg-gradient-to-r from-error/15 to-error/5 border border-error/30 rounded-xl p-3.5 flex items-center justify-between shadow-sm mb-2">
                 <div className="flex items-center gap-2 text-error">
@@ -338,18 +338,17 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   <span className="material-symbols-outlined">add</span>
                 </button>
               </div>
-              
-              <button 
+
+              <button
                 onClick={async () => {
                   // Ensure cart price is synchronized with the currently displayed active price
                   await onAddToCart(product.id, quantity, displayCurrentPrice);
-                  onCartClick(); 
+                  onCartClick();
                 }}
-                className={`flex-1 font-label-md text-label-md py-3 px-6 rounded-full transition-colors flex items-center justify-center gap-2 shadow-sm ${
-                  isFlashSaleActive 
-                    ? 'bg-error text-on-error hover:bg-error/90' 
+                className={`flex-1 font-label-md text-label-md py-3 px-6 rounded-full transition-colors flex items-center justify-center gap-2 shadow-sm ${isFlashSaleActive
+                    ? 'bg-error text-on-error hover:bg-error/90'
                     : 'bg-primary text-on-primary hover:bg-primary/90'
-                }`}
+                  }`}
               >
                 <span className="material-symbols-outlined">shopping_cart</span>
                 Add to Cart
