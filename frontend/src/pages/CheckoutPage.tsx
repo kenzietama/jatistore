@@ -46,6 +46,15 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, pendingOrder, on
   const [expiryDate, setExpiryDate] = useState<string>("");
   const [cvc, setCvc] = useState<string>("");
 
+  const [savedCards, setSavedCards] = useState<any[]>([]);
+  const [selectedCardId, setSelectedCardId] = useState<string | number>("new");
+  const [fieldErrors, setFieldErrors] = useState<{
+    cardNumber?: string;
+    cardHolderName?: string;
+    expiryDate?: string;
+    cvc?: string;
+  }>({});
+
   const [checkoutResponse, setCheckoutResponse] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState<number>(300);
 
@@ -57,8 +66,46 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, pendingOrder, on
 
   useEffect(() => {
     fetchWalletBalance();
+    fetchSavedCards();
     console.log(cartItems);
   }, []);
+
+  const fetchSavedCards = async () => {
+    const token = localStorage.getItem("jatistore_token");
+    if (!token) return;
+
+    try {
+      const response = await api.get("/api/v1/user/cards");
+      if (response.data) {
+        const cards = response.data.data || response.data.restApiResponseData || response.data;
+        if (Array.isArray(cards)) {
+          setSavedCards(cards);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch saved cards:", err);
+    }
+  };
+
+  const handleSelectCard = (card: any) => {
+    setSelectedCardId(card.id);
+    const rawNum = card.cardNumber || card.number || ("424242424242" + (card.last4 || "4242"));
+    const formattedNum = rawNum.match(/.{1,4}/g)?.join(' ') || rawNum;
+    setCardNumber(formattedNum);
+    setCardHolderName(card.cardHolderName || card.card_holder_name || "");
+    setExpiryDate(card.expiryDate || card.expiry_date || "");
+    setCvc("");
+    setFieldErrors({});
+  };
+
+  const handleSelectNewCard = () => {
+    setSelectedCardId("new");
+    setCardNumber("");
+    setCardHolderName("");
+    setExpiryDate("");
+    setCvc("");
+    setFieldErrors({});
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -138,9 +185,37 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, pendingOrder, on
         return;
       }
 
-      if (paymentMethod === "card" && (!cardNumber || !cardHolderName || !expiryDate || !cvc)) {
-        setError("Please fill in all card details.");
-        return;
+      if (paymentMethod === "card") {
+        const errors: {
+          cardNumber?: string;
+          cardHolderName?: string;
+          expiryDate?: string;
+          cvc?: string;
+        } = {};
+
+        const cleanCardNum = cardNumber.replace(/\s/g, "");
+        if (!/^\d{16}$/.test(cleanCardNum)) {
+          errors.cardNumber = "Card number must be 16 digits";
+        }
+
+        if (!cardHolderName || cardHolderName.trim().length < 2) {
+          errors.cardHolderName = "Cardholder name is required";
+        }
+
+        if (!/^(0[1-9]|1[0-2])\/[0-9]{2}$/.test(expiryDate)) {
+          errors.expiryDate = "Invalid expiry format (MM/YY)";
+        }
+
+        if (!/^\d{3,4}$/.test(cvc)) {
+          errors.cvc = "CVV/CVC must be 3 or 4 digits";
+        }
+
+        if (Object.keys(errors).length > 0) {
+          setFieldErrors(errors);
+          setIsLoading(false);
+          return;
+        }
+        setFieldErrors({});
       }
 
       let orderIdToPay = pendingOrder?.orderId;
@@ -340,53 +415,130 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, pendingOrder, on
                     <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>credit_card</span>
                     Payment Details
                   </h2>
+
+                  {/* Saved Cards Selector Radio List */}
+                  {savedCards.length > 0 && (
+                    <div className="mb-stack-lg border-b border-outline-variant pb-stack-md space-y-2">
+                      <label className="block font-label-md text-label-md text-on-surface-variant mb-unit font-semibold">
+                        Saved Cards
+                      </label>
+                      {savedCards.map((card: any) => {
+                        const isSelected = selectedCardId === card.id;
+                        return (
+                          <div
+                            key={card.id}
+                            onClick={() => handleSelectCard(card)}
+                            className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer transition-all ${
+                              isSelected
+                                ? "border-primary bg-surface-container-low"
+                                : "border-outline-variant hover:border-primary/50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name="savedCard"
+                                checked={isSelected}
+                                onChange={() => handleSelectCard(card)}
+                                className="text-primary focus:ring-primary"
+                              />
+                              <div>
+                                <p className="font-label-md text-on-surface font-semibold">
+                                  •••• •••• •••• {card.last4}
+                                </p>
+                                <p className="text-body-sm text-on-surface-variant">
+                                  {card.cardHolderName || card.card_holder_name || "Cardholder"} • Exp {card.expiryDate || card.expiry_date}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="material-symbols-outlined text-primary">credit_card</span>
+                          </div>
+                        );
+                      })}
+
+                      <div
+                        onClick={handleSelectNewCard}
+                        className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer transition-all ${
+                          selectedCardId === "new"
+                            ? "border-primary bg-surface-container-low"
+                            : "border-outline-variant hover:border-primary/50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="radio"
+                            name="savedCard"
+                            checked={selectedCardId === "new"}
+                            onChange={handleSelectNewCard}
+                            className="text-primary focus:ring-primary"
+                          />
+                          <span className="font-label-md text-on-surface font-semibold">Use a new card</span>
+                        </div>
+                        <span className="material-symbols-outlined text-outline">add_card</span>
+                      </div>
+                    </div>
+                  )}
+
                   <form className="space-y-stack-md" onSubmit={handlePayNow}>
                     <div>
                       <label className="block font-label-md text-label-md text-on-surface-variant mb-unit" htmlFor="cardName">Cardholder Name</label>
-                      <div className="relative rounded-lg border border-outline-variant bg-surface-bright transition-all input-focus-ring">
+                      <div className={`relative rounded-lg border bg-surface-bright transition-all input-focus-ring ${fieldErrors.cardHolderName ? 'border-error' : 'border-outline-variant'}`}>
                         <input
                           className="w-full bg-transparent border-none font-body-md text-body-md text-on-surface py-2 px-3 focus:ring-0"
                           id="cardName"
                           placeholder="Jane Doe"
-                          required
                           type="text"
                           value={cardHolderName}
-                          onChange={(e) => setCardHolderName(e.target.value)}
+                          onChange={(e) => {
+                            setCardHolderName(e.target.value);
+                            if (fieldErrors.cardHolderName) setFieldErrors((prev) => ({ ...prev, cardHolderName: undefined }));
+                          }}
                           disabled={isLoading}
                         />
                       </div>
+                      {fieldErrors.cardHolderName && (
+                        <p className="text-error text-body-sm mt-1 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[16px]">error</span>
+                          {fieldErrors.cardHolderName}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="block font-label-md text-label-md text-on-surface-variant mb-unit" htmlFor="cardNumber">Card Number</label>
-                      <div className="relative rounded-lg border border-outline-variant bg-surface-bright transition-all input-focus-ring flex items-center pr-3">
+                      <div className={`relative rounded-lg border bg-surface-bright transition-all input-focus-ring flex items-center pr-3 ${fieldErrors.cardNumber ? 'border-error' : 'border-outline-variant'}`}>
                         <input
                           className="w-full bg-transparent border-none font-body-md text-body-md text-on-surface py-2 px-3 focus:ring-0 font-mono-data"
                           id="cardNumber"
                           maxLength={19}
                           placeholder="0000 0000 0000 0000"
-                          required
                           type="text"
                           value={cardNumber}
                           onChange={(e) => {
                             const value = e.target.value.replace(/\s/g, '');
                             const formatted = value.match(/.{1,4}/g)?.join(' ') || value;
                             setCardNumber(formatted);
+                            if (fieldErrors.cardNumber) setFieldErrors((prev) => ({ ...prev, cardNumber: undefined }));
                           }}
                           disabled={isLoading}
                         />
                         <span className="material-symbols-outlined text-outline-variant">payment</span>
                       </div>
+                      {fieldErrors.cardNumber && (
+                        <p className="text-error text-body-sm mt-1 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[16px]">error</span>
+                          {fieldErrors.cardNumber}
+                        </p>
+                      )}
                     </div>
                     <div className="grid grid-cols-2 gap-stack-md">
                       <div>
                         <label className="block font-label-md text-label-md text-on-surface-variant mb-unit" htmlFor="expiry">Expiry (MM/YY)</label>
-                        <div className="relative rounded-lg border border-outline-variant bg-surface-bright transition-all input-focus-ring">
+                        <div className={`relative rounded-lg border bg-surface-bright transition-all input-focus-ring ${fieldErrors.expiryDate ? 'border-error' : 'border-outline-variant'}`}>
                           <input
                             className="w-full bg-transparent border-none font-body-md text-body-md text-on-surface py-2 px-3 focus:ring-0 font-mono-data"
                             id="expiry"
                             maxLength={5}
                             placeholder="MM/YY"
-                            required
                             type="text"
                             value={expiryDate}
                             onChange={(e) => {
@@ -395,27 +547,42 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, pendingOrder, on
                                 value = value.slice(0, 2) + '/' + value.slice(2, 4);
                               }
                               setExpiryDate(value);
+                              if (fieldErrors.expiryDate) setFieldErrors((prev) => ({ ...prev, expiryDate: undefined }));
                             }}
                             disabled={isLoading}
                           />
                         </div>
+                        {fieldErrors.expiryDate && (
+                          <p className="text-error text-body-sm mt-1 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[16px]">error</span>
+                            {fieldErrors.expiryDate}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <label className="block font-label-md text-label-md text-on-surface-variant mb-unit" htmlFor="cvv">CVV</label>
-                        <div className="relative rounded-lg border border-outline-variant bg-surface-bright transition-all input-focus-ring flex items-center pr-3">
+                        <div className={`relative rounded-lg border bg-surface-bright transition-all input-focus-ring flex items-center pr-3 ${fieldErrors.cvc ? 'border-error' : 'border-outline-variant'}`}>
                           <input
                             className="w-full bg-transparent border-none font-body-md text-body-md text-on-surface py-2 px-3 focus:ring-0 font-mono-data"
                             id="cvv"
                             maxLength={4}
                             placeholder="123"
-                            required
                             type="password"
                             value={cvc}
-                            onChange={(e) => setCvc(e.target.value.replace(/\D/g, ''))}
+                            onChange={(e) => {
+                              setCvc(e.target.value.replace(/\D/g, ''));
+                              if (fieldErrors.cvc) setFieldErrors((prev) => ({ ...prev, cvc: undefined }));
+                            }}
                             disabled={isLoading}
                           />
                           <span className="material-symbols-outlined text-outline-variant" style={{ fontVariationSettings: "'FILL' 0" }}>help</span>
                         </div>
+                        {fieldErrors.cvc && (
+                          <p className="text-error text-body-sm mt-1 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[16px]">error</span>
+                            {fieldErrors.cvc}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="mt-stack-lg p-stack-sm bg-surface-container rounded-lg flex items-center gap-3">
