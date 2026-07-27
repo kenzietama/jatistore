@@ -2,15 +2,19 @@
   "rewrites": [
     {
       "source": "/swagger-ui.html",
+      "destination": "https://jatistore-production.up.railway.app/swagger-ui.html"
+    },
+    {
+      "source": "/swagger-ui",
       "destination": "https://jatistore-production.up.railway.app/swagger-ui/index.html"
     },
     {
-      "source": "/swagger-ui/:path*",
-      "destination": "https://jatistore-production.up.railway.app/swagger-ui/:path*"
+      "source": "/swagger-ui/(.*)",
+      "destination": "https://jatistore-production.up.railway.app/swagger-ui/$1"
     },
     {
-      "source": "/v3/api-docs/:path*",
-      "destination": "https://jatistore-production.up.railway.app/v3/api-docs/:path*"
+      "source": "/v3/api-docs/(.*)",
+      "destination": "https://jatistore-production.up.railway.app/v3/api-docs/$1"
     },
     {
       "source": "/v3/api-docs",
