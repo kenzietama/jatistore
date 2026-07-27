@@ -1,3 +1,6 @@
+server:
+  forward-headers-strategy: framework
+
 spring:
   application:
     name: JatiStore
@@ -25,9 +28,9 @@ spring:
 jwt:
   secret: ${JWT_SECRET:9aDf784GjkLpQweRtyUioPasDfgHjKlZxcVbnM1234567890QWERTYUIOPASDFGHJKLZXCVBNM_HS512_VERY_SECRET_AND_LONG_KEY}
   expiration-seconds:
-    admin: 360000
-    seller: 360000
-    user: 360000
+    admin: 3600
+    seller: 3600
+    user: 3600
 
 allowed:
   origins: ${ALLOWED_ORIGINS:http://localhost:5173}
