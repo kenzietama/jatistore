@@ -22,11 +22,14 @@ spring:
     enabled: true
     baseline-on-migrate: true
 jwt:
-  secret: 9aDf784GjkLpQweRtyUioPasDfgHjKlZxcVbnM1234567890QWERTYUIOPASDFGHJKLZXCVBNM_HS512_VERY_SECRET_AND_LONG_KEY
+  secret: ${JWT_SECRET:9aDf784GjkLpQweRtyUioPasDfgHjKlZxcVbnM1234567890QWERTYUIOPASDFGHJKLZXCVBNM_HS512_VERY_SECRET_AND_LONG_KEY}
   expiration-seconds:
     admin: 360000
     seller: 360000
     user: 360000
+
+allowed:
+  origins: ${ALLOWED_ORIGINS:http://localhost:5173}
 
 cloudinary:
   url: ${CLOUDINARY_URL:cloudinary://653729848272621:_oe0o7FhXU_9-GDZi_Q2En2zJDA@dqoqfiucw}

@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: JatiStore
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/jatistore?sslmode=require}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:password}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
+    show-sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    validate-on-migrate: true
+
+jwt:
+  secret: ${JWT_SECRET:default_insecure_secret_do_not_use_in_production}
+  expiration-seconds:
+    admin: 28800    # 8 hours
+    seller: 28800   # 8 hours
+    user: 28800     # 8 hours
+
+cloudinary:
+  url: ${CLOUDINARY_URL:}
+
+server:
+  port: ${PORT:8080}
+  compression:
+    enabled: true
+  error:
+    include-message: always
+    include-stacktrace: never
+
+logging:
+  level:
+    root: INFO
+    com.indivaragroup.jatistore: INFO
