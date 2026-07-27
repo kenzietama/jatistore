@@ -1,6 +1,22 @@
 {
   "rewrites": [
     {
+      "source": "/swagger-ui.html",
+      "destination": "https://jatistore-production.up.railway.app/swagger-ui.html"
+    },
+    {
+      "source": "/swagger-ui/:path*",
+      "destination": "https://jatistore-production.up.railway.app/swagger-ui/:path*"
+    },
+    {
+      "source": "/v3/api-docs/:path*",
+      "destination": "https://jatistore-production.up.railway.app/v3/api-docs/:path*"
+    },
+    {
+      "source": "/v3/api-docs",
+      "destination": "https://jatistore-production.up.railway.app/v3/api-docs"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
