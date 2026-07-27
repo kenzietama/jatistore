@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/swagger-ui.html",
-      "destination": "https://jatistore-production.up.railway.app/swagger-ui.html"
+      "destination": "https://jatistore-production.up.railway.app/swagger-ui/index.html"
     },
     {
       "source": "/swagger-ui/:path*",
