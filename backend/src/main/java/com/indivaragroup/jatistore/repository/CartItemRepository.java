@@ -81,7 +81,15 @@ public interface CartItemRepository extends JpaRepository<CartItem, UUID> {
                     ELSE NULL 
                 END as originalPrice,
                 ci.quantity,
-                p.stock as maxStock,
+                COALESCE(
+                    (SELECT fsi.remaining_quota 
+                     FROM mst_flash_sale_items fsi 
+                     JOIN mst_flash_sales fs ON fs.id = fsi.flash_sale_id 
+                     WHERE fsi.product_id = p.id 
+                       AND NOW() BETWEEN fs.start_time AND fs.end_time 
+                     LIMIT 1), 
+                    p.stock
+                ) as maxStock,
                 s.id as storeId,
                 s.store_name as storeName,
                 sl.active as sellerActive

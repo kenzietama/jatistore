@@ -269,7 +269,7 @@ public class UserCheckoutService {
         User user = authRepository.findByEmail(email)
                 .orElseThrow(() -> new CoreThrowHandler(RestApiError.GEN_0005));
 
-        return paymentCardRepository.findByCardNumber(request.getCardNumber())
+        return paymentCardRepository.findByUserIdAndCardNumberAndDeletedAtIsNull(user.getId(), request.getCardNumber())
                 .orElseGet(() -> paymentCardRepository.save(PaymentCard.builder()
                         .user(user)
                         .cardNumber(request.getCardNumber())

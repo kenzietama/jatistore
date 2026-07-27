@@ -39,4 +39,7 @@ public class PaymentCard {
     @Column(name = PaymentCardVariable.COLUMN_MST_PAYMENT_CARDS_EXPIRY_DATE, nullable = false)
     @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.CHAR)
     private String expiryDate;
+
+    @Column(name = PaymentCardVariable.COLUMN_MST_PAYMENT_CARDS_DELETED_AT)
+    private java.time.Instant deletedAt;
 }

@@ -13,4 +13,5 @@ public class PaymentCardVariable {
     public static final String COLUMN_MST_PAYMENT_CARDS_CARD_NUMBER = "card_number";
     public static final String COLUMN_MST_PAYMENT_CARDS_CARD_HOLDER_NAME = "card_holder_name";
     public static final String COLUMN_MST_PAYMENT_CARDS_EXPIRY_DATE = "expiry_date";
+    public static final String COLUMN_MST_PAYMENT_CARDS_DELETED_AT = "deleted_at";
 }

@@ -472,7 +472,7 @@ class UserCheckoutServiceTest {
         when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockCart));
         when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of(mockCartItem));
         when(cartItemRepository.findCheckoutPrices(any())).thenReturn(List.of(proj));
-        when(paymentCardRepository.findByCardNumber(any())).thenReturn(Optional.of(mockPaymentCard));
+        when(paymentCardRepository.findByUserIdAndCardNumberAndDeletedAtIsNull(any(), any())).thenReturn(Optional.of(mockPaymentCard));
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
         when(transactionRepository.findById(mockTransaction.getId())).thenReturn(Optional.of(successTransaction));
         when(paymentGatewayClient.chargeCard(any())).thenReturn(
@@ -711,7 +711,7 @@ class UserCheckoutServiceTest {
         when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockCart));
         when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of(mockCartItem));
         when(cartItemRepository.findCheckoutPrices(any())).thenReturn(List.of(proj));
-        when(paymentCardRepository.findByCardNumber(any())).thenReturn(Optional.of(mockPaymentCard));
+        when(paymentCardRepository.findByUserIdAndCardNumberAndDeletedAtIsNull(any(), any())).thenReturn(Optional.of(mockPaymentCard));
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
         when(paymentGatewayClient.chargeCard(any()))
                 .thenThrow(new HttpClientErrorException(HttpStatus.PAYMENT_REQUIRED));
@@ -867,7 +867,7 @@ class UserCheckoutServiceTest {
         when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockCart));
         when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of(mockCartItem));
         when(cartItemRepository.findCheckoutPrices(any())).thenReturn(List.of(proj));
-        when(paymentCardRepository.findByCardNumber(any())).thenReturn(Optional.empty());
+        when(paymentCardRepository.findByUserIdAndCardNumberAndDeletedAtIsNull(any(), any())).thenReturn(Optional.empty());
         when(paymentCardRepository.save(any())).thenReturn(mockPaymentCard);
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mockTransaction);
         when(transactionRepository.findById(mockTransaction.getId())).thenReturn(Optional.of(successTransaction));

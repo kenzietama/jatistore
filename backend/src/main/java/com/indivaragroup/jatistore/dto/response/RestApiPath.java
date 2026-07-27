@@ -18,6 +18,7 @@ public class RestApiPath {
     public static final String USER_BASE_PATH = "/user";
     public static final String USER_PROFILE_PATH = "/profile";
     public static final String USER_BALANCE_PATH = "/balance";
+    public static final String USER_CARDS_PATH = "/cards";
 
     public static final String PRODUCT_BASE_PATH = "/products";
     public static final String PRODUCT_LIST_PATH = "";
