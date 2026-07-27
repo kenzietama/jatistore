@@ -30,3 +30,11 @@ jwt:
 
 cloudinary:
   url: ${CLOUDINARY_URL:cloudinary://653729848272621:_oe0o7FhXU_9-GDZi_Q2En2zJDA@dqoqfiucw}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
