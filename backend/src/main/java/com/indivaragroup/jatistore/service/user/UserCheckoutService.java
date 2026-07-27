@@ -45,6 +45,7 @@ public class UserCheckoutService {
     private final PaymentGatewayClient paymentGatewayClient;
     private final CheckoutFinalizer checkoutFinalizer;
     private final FlashSaleItemRepository flashSaleItemRepository;
+    private final ProductRepository productRepository;
 
     @Audit(action = "ORDER_CREATE", affectedModule = "ORDERS", description = "User creates pending order")
     @Transactional
@@ -84,7 +85,7 @@ public class UserCheckoutService {
             }
         }
 
-        // 4. Calculate total amount (backend security) & validate active flash sale quota
+        // 4. Reserve product stock & active flash sale quota
         List<CheckoutPriceProjection> priceProjections = cartItemRepository.findCheckoutPrices(cartItemIdsArray);
 
         for (CartItem cartItem : cartItems) {
@@ -93,14 +94,17 @@ public class UserCheckoutService {
                     .findFirst()
                     .orElseThrow();
 
+            Product product = cartItem.getProduct();
+            product.setStock(product.getStock() - cartItem.getQuantity());
+            productRepository.save(product);
+
             if (Boolean.TRUE.equals(projection.getFlashSale())) {
                 FlashSaleItem flashSaleItem = flashSaleItemRepository
-                        .findByProductAndActiveFlashSale(projection.getProductId())
+                        .findByProductAndActiveFlashSaleForUpdate(projection.getProductId())
                         .orElseThrow(() -> new CoreThrowHandler(RestApiError.USR_0024));
 
-                if (flashSaleItem.getRemainingQuota() < cartItem.getQuantity()) {
-                    throw new CoreThrowHandler(RestApiError.USR_0025);
-                }
+                flashSaleItem.setRemainingQuota(flashSaleItem.getRemainingQuota() - cartItem.getQuantity());
+                flashSaleItemRepository.save(flashSaleItem);
             }
         }
 
@@ -134,10 +138,21 @@ public class UserCheckoutService {
         }).toList();
         orderDetailRepository.saveAll(orderDetails);
 
+        List<CreateOrderResponse.OrderDetailItemResponse> orderDetailResponses = orderDetails.stream()
+                .map(detail -> CreateOrderResponse.OrderDetailItemResponse.builder()
+                        .productId(detail.getProduct().getId())
+                        .productName(detail.getProduct().getName())
+                        .pricePerItem(detail.getPricePerItem())
+                        .quantity(detail.getQuantity())
+                        .flashSale(detail.getFlashSale())
+                        .build())
+                .toList();
+
         return RestApiResponse.success(CreateOrderResponse.builder()
                 .orderId(order.getId())
                 .totalAmount(order.getTotalAmount())
                 .status(order.getStatus())
+                .orderDetails(orderDetailResponses)
                 .build());
     }
 
@@ -199,7 +214,7 @@ public class UserCheckoutService {
             throw new CoreThrowHandler(RestApiError.USR_0009);
         }
 
-        // Re-validate stock & active product status
+        // Re-validate active product & seller status
         for (CartItem item : cartItems) {
             if (item.getProduct().getDeletedAt() != null) {
                 order.setStatus(OrderStatus.CANCELLED);
@@ -212,14 +227,6 @@ public class UserCheckoutService {
                 orderRepository.save(order);
                 throw new CoreThrowHandler(RestApiError.USR_0001);
             }
-
-            if (item.getProduct().getStock() < item.getQuantity()) {
-                order.setStatus(OrderStatus.CANCELLED);
-                orderRepository.save(order);
-                String customMessage = RestApiError.USR_0011.getMessage()
-                        .replace("{productName}", item.getProduct().getName());
-                throw new CoreThrowHandler(RestApiError.USR_0011.getCode(), customMessage, null);
-            }
         }
 
         // Recalculate and validate amount with fresh flash-sale prices
@@ -229,31 +236,6 @@ public class UserCheckoutService {
         BigDecimal recalculated = freshProjections.stream()
                 .map(p -> p.getEffectivePrice().multiply(BigDecimal.valueOf(p.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        if (recalculated.compareTo(order.getTotalAmount()) != 0) {
-            order.setStatus(OrderStatus.CANCELLED);
-            orderRepository.save(order);
-            throw new CoreThrowHandler(RestApiError.USR_0023);
-        }
-
-        // Validate flash sale quota before payment gateway is invoked
-        if (order.getOrderDetails() != null) {
-            for (OrderDetail detail : order.getOrderDetails()) {
-                if (Boolean.TRUE.equals(detail.getFlashSale())) {
-                    Optional<FlashSaleItem> flashSaleItemOpt = flashSaleItemRepository
-                            .findByProductAndActiveFlashSale(detail.getProduct().getId());
-
-                    if (flashSaleItemOpt.isPresent()) {
-                        FlashSaleItem flashSaleItem = flashSaleItemOpt.get();
-                        if (flashSaleItem.getRemainingQuota() < detail.getQuantity()) {
-                            order.setStatus(OrderStatus.CANCELLED);
-                            orderRepository.save(order);
-                            throw new CoreThrowHandler(RestApiError.USR_0025);
-                        }
-                    }
-                }
-            }
-        }
 
         if (recalculated.compareTo(order.getTotalAmount()) != 0) {
             order.setStatus(OrderStatus.CANCELLED);

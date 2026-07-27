@@ -29,6 +29,7 @@ import com.indivaragroup.jatistore.repository.CartItemRepository;
 import com.indivaragroup.jatistore.repository.PaymentCardRepository;
 import com.indivaragroup.jatistore.repository.TransactionRepository;
 import com.indivaragroup.jatistore.repository.FlashSaleItemRepository;
+import com.indivaragroup.jatistore.repository.ProductRepository;
 import com.indivaragroup.jatistore.repository.projection.CheckoutPriceProjection;
 import com.indivaragroup.jatistore.service.payment.PaymentGatewayClient;
 import com.indivaragroup.jatistore.dto.response.payment.CardChargeResponse;
@@ -88,6 +89,9 @@ class UserCheckoutServiceTest {
 
     @Mock
     private FlashSaleItemRepository flashSaleItemRepository;
+
+    @Mock
+    private ProductRepository productRepository;
 
     @InjectMocks
     private UserCheckoutService userCheckoutService;
@@ -216,6 +220,11 @@ class UserCheckoutServiceTest {
         assertEquals(mockOrder.getId(), response.getRestApiResponseData().getOrderId());
         assertEquals(BigDecimal.valueOf(200), response.getRestApiResponseData().getTotalAmount());
         assertEquals(OrderStatus.PENDING, response.getRestApiResponseData().getStatus());
+        assertEquals(8, mockProduct.getStock());
+        verify(productRepository).save(mockProduct);
+        assertNotNull(response.getRestApiResponseData().getOrderDetails());
+        assertEquals(1, response.getRestApiResponseData().getOrderDetails().size());
+        assertEquals("Test Product", response.getRestApiResponseData().getOrderDetails().get(0).getProductName());
     }
 
     @Test
@@ -230,6 +239,7 @@ class UserCheckoutServiceTest {
 
         Product product = new Product();
         product.setId(UUID.randomUUID());
+        product.setName("Flash Product");
         product.setPrice(new BigDecimal("100.00"));
         product.setStock(10);
 
@@ -256,7 +266,7 @@ class UserCheckoutServiceTest {
         when(cartItemRepository.findAllById(anyList())).thenReturn(List.of(cartItem));
         when(authRepository.findByEmail("buyer@test.com")).thenReturn(Optional.of(user));
         when(cartItemRepository.findCheckoutPrices(any())).thenReturn(List.of(projection));
-        when(flashSaleItemRepository.findByProductAndActiveFlashSale(product.getId())).thenReturn(Optional.of(flashSaleItem));
+        when(flashSaleItemRepository.findByProductAndActiveFlashSaleForUpdate(product.getId())).thenReturn(Optional.of(flashSaleItem));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(orderDetailRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -277,10 +287,18 @@ class UserCheckoutServiceTest {
         verify(orderRepository).save(orderCaptor.capture());
         Order savedOrder = orderCaptor.getValue();
         assertThat(savedOrder.getTotalAmount()).isEqualByComparingTo(new BigDecimal("160.00"));
+
+        assertThat(product.getStock()).isEqualTo(8);
+        verify(productRepository).save(product);
+        assertThat(flashSaleItem.getRemainingQuota()).isEqualTo(98);
+        verify(flashSaleItemRepository).save(flashSaleItem);
+
+        assertThat(response.getRestApiResponseData().getOrderDetails()).hasSize(1);
+        assertThat(response.getRestApiResponseData().getOrderDetails().get(0).getFlashSale()).isTrue();
     }
 
     @Test
-    void createOrder_QuotaExhausted_ThrowsUSR_0025() {
+    void createOrder_QuotaExhausted_FallsBackToRetailPriceAndDeductsStock() {
         UUID cartItemId = UUID.randomUUID();
         CreateOrderRequest request = CreateOrderRequest.builder()
                 .selectedCartItemIds(List.of(cartItemId))
@@ -289,6 +307,7 @@ class UserCheckoutServiceTest {
         User user = User.builder().id(UUID.randomUUID()).email("buyer@test.com").build();
         Product product = new Product();
         product.setId(UUID.randomUUID());
+        product.setName("Quota Exhausted Product");
         product.setPrice(new BigDecimal("100.00"));
         product.setStock(10);
         Store store = new Store();
@@ -306,21 +325,23 @@ class UserCheckoutServiceTest {
         cartItem.setProduct(product);
         cartItem.setQuantity(5);
 
-        CheckoutPriceProjection projection = createMockProjection(cartItemId, product.getId(), 5, new BigDecimal("80.00"), true);
-        FlashSaleItem flashSaleItem = new FlashSaleItem();
-        flashSaleItem.setRemainingQuota(2); // Only 2 remaining, but requested 5
+        CheckoutPriceProjection projection = createMockProjection(cartItemId, product.getId(), 5, new BigDecimal("100.00"), false);
 
         when(cartItemRepository.selectDistinctStore(any())).thenReturn(1);
         when(cartItemRepository.findAllById(anyList())).thenReturn(List.of(cartItem));
         when(authRepository.findByEmail("buyer@test.com")).thenReturn(Optional.of(user));
         when(cartItemRepository.findCheckoutPrices(any())).thenReturn(List.of(projection));
-        when(flashSaleItemRepository.findByProductAndActiveFlashSale(product.getId())).thenReturn(Optional.of(flashSaleItem));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(orderDetailRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
 
-        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
-            userCheckoutService.createOrder(request, "buyer@test.com");
-        });
+        RestApiResponse<CreateOrderResponse> response = userCheckoutService.createOrder(request, "buyer@test.com");
 
-        assertThat(exception.getRestApiError()).isEqualTo(RestApiError.USR_0025);
+        assertNotNull(response);
+        assertEquals(200, response.getRestApiResponseHttpCode());
+        assertThat(response.getRestApiResponseData().getTotalAmount()).isEqualByComparingTo(new BigDecimal("500.00"));
+        assertThat(product.getStock()).isEqualTo(5);
+        verify(productRepository).save(product);
+        verify(flashSaleItemRepository, never()).findByProductAndActiveFlashSaleForUpdate(any());
     }
 
     @Test
@@ -510,24 +531,6 @@ class UserCheckoutServiceTest {
     }
 
     @Test
-    void payOrder_Fail_InsufficientStock() {
-        mockProduct.setStock(1); // Less than order quantity of 2
-        when(orderRepository.findById(mockOrder.getId())).thenReturn(Optional.of(mockOrder));
-        when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser));
-        when(cartRepository.findByUserId(mockUser.getId())).thenReturn(Optional.of(mockCart));
-        when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of(mockCartItem));
-        when(orderRepository.save(any(Order.class))).thenReturn(mockOrder);
-
-        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
-            userCheckoutService.payOrder(
-                    mockOrder.getId(), walletPayRequest, "user@example.com");
-        });
-
-        assertEquals(RestApiError.USR_0011.getCode(), exception.getCode());
-        verify(orderRepository).save(argThat(order -> order.getStatus() == OrderStatus.CANCELLED));
-    }
-
-    @Test
     void payOrder_Fail_AmountChangedAfterOrderCreation() {
         CheckoutPriceProjection proj = createMockProjection(mockCartItem.getId(), mockProduct.getId(), 2, BigDecimal.valueOf(125), false);
         when(orderRepository.findById(mockOrder.getId())).thenReturn(Optional.of(mockOrder));
@@ -609,75 +612,6 @@ class UserCheckoutServiceTest {
 
         assertThat(exception.getRestApiError()).isEqualTo(RestApiError.USR_0023);
 
-        ArgumentCaptor<Order> orderCaptor = ArgumentCaptor.forClass(Order.class);
-        verify(orderRepository).save(orderCaptor.capture());
-        assertThat(orderCaptor.getValue().getStatus()).isEqualTo(OrderStatus.CANCELLED);
-    }
-
-    @Test
-    void payOrder_QuotaExhaustedBeforePayment_CancelsWithUSR_0025() {
-        UUID orderId = UUID.randomUUID();
-        UUID cartItemId = UUID.randomUUID();
-
-        PayOrderRequest payRequest = new PayOrderRequest();
-        payRequest.setPaymentMethod(PaymentMethod.WALLET);
-
-        Order order = new Order();
-        order.setId(orderId);
-        order.setTotalAmount(new BigDecimal("160.00"));
-        order.setStatus(OrderStatus.PENDING);
-
-        User user = new User();
-        user.setId(UUID.randomUUID());
-        user.setEmail("buyer@test.com");
-        order.setUser(user);
-
-        Product product = new Product();
-        product.setId(UUID.randomUUID());
-        product.setPrice(new BigDecimal("100.00"));
-        product.setStock(10);
-
-        Store store = new Store();
-        Seller seller = new Seller();
-        seller.setActive(true);
-        store.setSeller(seller);
-        product.setStore(store);
-
-        OrderDetail orderDetail = new OrderDetail();
-        orderDetail.setProduct(product);
-        orderDetail.setQuantity(2);
-        orderDetail.setPricePerItem(new BigDecimal("80.00"));
-        orderDetail.setFlashSale(true);
-        order.setOrderDetails(List.of(orderDetail));
-
-        Cart cart = new Cart();
-        cart.setUserId(user.getId());
-
-        CartItem cartItem = new CartItem();
-        cartItem.setId(cartItemId);
-        cartItem.setCart(cart);
-        cartItem.setProduct(product);
-        cartItem.setQuantity(2);
-
-        CheckoutPriceProjection proj = createMockProjection(cartItemId, product.getId(), 2, new BigDecimal("80.00"), true);
-        FlashSaleItem flashSaleItem = new FlashSaleItem();
-        flashSaleItem.setRemainingQuota(1); // Only 1 remaining, but order needs 2
-
-        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
-        when(authRepository.findByEmail("buyer@test.com")).thenReturn(Optional.of(user));
-        when(cartRepository.findByUserId(user.getId())).thenReturn(Optional.of(cart));
-        when(cartItemRepository.findByCartAndProductIdIn(any(), anyList())).thenReturn(List.of(cartItem));
-        when(cartItemRepository.findCheckoutPrices(any())).thenReturn(List.of(proj));
-        when(flashSaleItemRepository.findByProductAndActiveFlashSale(product.getId())).thenReturn(Optional.of(flashSaleItem));
-        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
-            userCheckoutService.payOrder(orderId, payRequest, "buyer@test.com");
-        });
-
-        assertThat(exception.getRestApiError()).isEqualTo(RestApiError.USR_0025);
-        verify(paymentGatewayClient, never()).chargeWallet(any());
-        verify(paymentGatewayClient, never()).chargeCard(any());
         ArgumentCaptor<Order> orderCaptor = ArgumentCaptor.forClass(Order.class);
         verify(orderRepository).save(orderCaptor.capture());
         assertThat(orderCaptor.getValue().getStatus()).isEqualTo(OrderStatus.CANCELLED);
@@ -997,7 +931,7 @@ class UserCheckoutServiceTest {
         when(cartItemRepository.findAllById(anyList())).thenReturn(List.of(cartItem));
         when(authRepository.findByEmail("user@example.com")).thenReturn(Optional.of(mockUser));
         when(cartItemRepository.findCheckoutPrices(any())).thenReturn(List.of(proj));
-        when(flashSaleItemRepository.findByProductAndActiveFlashSale(product.getId())).thenReturn(Optional.empty());
+        when(flashSaleItemRepository.findByProductAndActiveFlashSaleForUpdate(product.getId())).thenReturn(Optional.empty());
 
         CoreThrowHandler exception = assertThrows(CoreThrowHandler.class, () -> {
             userCheckoutService.createOrder(request, "user@example.com");

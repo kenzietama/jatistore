@@ -21,6 +21,7 @@ public class ProductListItemResponse {
     private BigDecimal price;
     private BigDecimal originalPrice;
     private Integer stock;
+    private Integer remainingQuota;
     private Boolean isFlashSale;
     private Instant flashSaleEndTime;
     private String image;

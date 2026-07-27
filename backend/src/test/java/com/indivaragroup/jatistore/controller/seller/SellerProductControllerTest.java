@@ -151,7 +151,7 @@ public class SellerProductControllerTest {
         mockMvc.perform(get("/api/v1/seller/products/{id}", mockProductId)
                 .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -247,6 +247,6 @@ public class SellerProductControllerTest {
         mockMvc.perform(delete("/api/v1/seller/products/{id}", mockProductId)
                 .principal(mockPrincipal)
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
     }
 }

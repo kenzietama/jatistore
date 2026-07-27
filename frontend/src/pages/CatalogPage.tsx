@@ -10,6 +10,7 @@ interface Product {
   price: number;
   originalPrice?: number;
   stock: number;
+  remainingQuota?: number;
   isFlashSale?: boolean;
   flashSaleEndTime?: string;
   category?: {

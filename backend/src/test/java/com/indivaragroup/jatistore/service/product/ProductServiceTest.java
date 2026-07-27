@@ -41,7 +41,7 @@ class ProductServiceTest {
     void getProductList_ShouldReturnPageData() {
         Object[] row = new Object[]{
                 UUID.randomUUID(), "Test Product", "Test Store", "Desc",
-                new BigDecimal("10000"), new BigDecimal("15000"), 10, true,
+                new BigDecimal("10000"), new BigDecimal("15000"), 10, 5, true,
                 Instant.now(), "image.jpg", UUID.randomUUID().toString()
         };
         Page<Object[]> page = new PageImpl<>(Collections.singletonList(row));
@@ -61,7 +61,7 @@ class ProductServiceTest {
     void getProductList_NullCategory() {
         Object[] row = new Object[]{
                 UUID.randomUUID(), "Test Product", "Test Store", "Desc",
-                new BigDecimal("10000"), new BigDecimal("15000"), 10, true,
+                new BigDecimal("10000"), new BigDecimal("15000"), 10, 5, true,
                 Instant.now(), "image.jpg", null
         };
         Page<Object[]> page = new PageImpl<>(Collections.singletonList(row));
@@ -92,7 +92,7 @@ class ProductServiceTest {
         when(productRepository.findByIdAndDeletedAtIsNull(productId)).thenReturn(Optional.of(product));
         
         Object[] flashRow = new Object[]{
-                new BigDecimal("10000"), new BigDecimal("15000"), true, Instant.now()
+                new BigDecimal("10000"), new BigDecimal("15000"), true, Instant.now(), 5
         };
         when(productRepository.getFlashSaleDetailInfo(productId)).thenReturn(List.<Object[]>of(flashRow));
 

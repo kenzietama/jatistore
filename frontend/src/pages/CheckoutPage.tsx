@@ -5,19 +5,35 @@ import api from "../lib/api";
 interface CheckoutItem {
   id: string;
   cartItemId: string;
+  productId?: string;
   name: string;
   price: number;
+  originalPrice?: number;
   image: string;
   quantity: number;
 }
 
+export interface PendingOrder {
+  orderId: string;
+  totalAmount: number;
+  status?: string;
+  orderDetails?: Array<{
+    productId: string;
+    productName: string;
+    pricePerItem: number;
+    quantity: number;
+    flashSale?: boolean;
+  }>;
+}
+
 interface CheckoutPageProps {
   cartItems: CheckoutItem[];
+  pendingOrder?: PendingOrder | null;
   onBackToCart: () => void;
   onPaymentSuccess: () => void;
 }
 
-const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, onPaymentSuccess }) => {
+const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, pendingOrder, onBackToCart, onPaymentSuccess }) => {
   const [paymentMethod, setPaymentMethod] = useState<"card" | "wallet">("card");
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -31,9 +47,10 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
   const [cvc, setCvc] = useState<string>("");
 
   const [checkoutResponse, setCheckoutResponse] = useState<any>(null);
+  const [timeLeft, setTimeLeft] = useState<number>(300);
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const total = subtotal;
+  const total = pendingOrder?.totalAmount ?? subtotal;
 
   const remainingBalance = walletBalance - total;
   const isBalanceEnough = remainingBalance >= 0;
@@ -42,6 +59,41 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
     fetchWalletBalance();
     console.log(cartItems);
   }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  };
+
+  const isFlashSaleQuotaExhausted = Boolean(
+    pendingOrder?.orderDetails?.some((detail: any) => {
+      const cartItem = cartItems.find(
+        (ci: any) =>
+          ci.productId === detail.productId ||
+          ci.name === detail.productName ||
+          ci.id === detail.productId ||
+          ci.cartItemId === detail.productId
+      );
+      const expectedFlashSale = cartItem
+        ? (cartItem.originalPrice != null && cartItem.originalPrice > cartItem.price)
+        : cartItems.some((c) => c.originalPrice != null && c.originalPrice > c.price);
+      return detail.flashSale === false && expectedFlashSale;
+    })
+  );
 
   const fetchWalletBalance = async () => {
     const token = localStorage.getItem("jatistore_token");
@@ -69,6 +121,10 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
     e.stopPropagation();
 
     if (isLoading) return;
+    if (timeLeft === 0) {
+      setError("Order reservation expired. Please return to cart.");
+      return;
+    }
 
     setError(null);
     setIsLoading(true);
@@ -87,27 +143,32 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
         return;
       }
 
-      const selectedCartItemIds = cartItems.map((item) => item.cartItemId);
-      const createOrderResponse = await api.post("/api/v1/orders", {
-        selectedCartItemIds,
-      });
-      const createOrderCode =
-        createOrderResponse.data?.code ??
-        createOrderResponse.data?.restApiResponseHttpCode;
-      const createOrderData =
-        createOrderResponse.data?.data ??
-        createOrderResponse.data?.restApiResponseData;
-      const isCreateOrderSuccessful =
-        createOrderResponse.status === 201 &&
-        (createOrderCode === 200 || createOrderCode === 201);
+      let orderIdToPay = pendingOrder?.orderId;
 
-      if (!isCreateOrderSuccessful || !createOrderData?.orderId) {
-        setError(
-          createOrderResponse.data?.message ||
-            createOrderResponse.data?.restApiResponseMessage ||
-            "Order creation failed. Please try again."
-        );
-        return;
+      if (!orderIdToPay) {
+        const selectedCartItemIds = cartItems.map((item) => item.cartItemId);
+        const createOrderResponse = await api.post("/api/v1/orders", {
+          selectedCartItemIds,
+        });
+        const createOrderCode =
+          createOrderResponse.data?.code ??
+          createOrderResponse.data?.restApiResponseHttpCode;
+        const createOrderData =
+          createOrderResponse.data?.data ??
+          createOrderResponse.data?.restApiResponseData;
+        const isCreateOrderSuccessful =
+          (createOrderResponse.status === 200 || createOrderResponse.status === 201) &&
+          (createOrderCode === 200 || createOrderCode === 201);
+
+        if (!isCreateOrderSuccessful || !createOrderData?.orderId) {
+          setError(
+            createOrderResponse.data?.message ||
+              createOrderResponse.data?.restApiResponseMessage ||
+              "Order creation failed. Please try again."
+          );
+          return;
+        }
+        orderIdToPay = createOrderData.orderId;
       }
 
       const paymentPayload: {
@@ -129,14 +190,14 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
 
       paymentStarted = true;
       const paymentResponse = await api.post(
-        `/api/v1/orders/${createOrderData.orderId}/pay`,
+        `/api/v1/orders/${orderIdToPay}/pay`,
         paymentPayload
       );
       const paymentCode =
         paymentResponse.data?.code ??
         paymentResponse.data?.restApiResponseHttpCode;
 
-      if (paymentCode === 200) {
+      if (paymentCode === 200 || paymentResponse.status === 200) {
         const paymentData =
           paymentResponse.data?.data ??
           paymentResponse.data?.restApiResponseData;
@@ -194,6 +255,31 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
               <h1 className="font-headline-lg text-headline-lg text-on-background mb-unit font-bold">Secure Checkout</h1>
               <p className="font-body-md text-body-md text-on-surface-variant">Complete your purchase safely and securely.</p>
             </div>
+
+            {/* 5-Minute Countdown Timer Banner */}
+            <div className={`p-stack-md rounded-xl mb-stack-md flex items-center justify-between border ${
+              timeLeft > 0 ? "bg-amber-500/10 border-amber-500/30 text-amber-700" : "bg-error-container text-on-error-container border-error/20"
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[20px]">timer</span>
+                <span className="font-label-md">
+                  {timeLeft > 0 ? "Order reserved for:" : "Order reservation expired. Please return to cart."}
+                </span>
+              </div>
+              <span className="font-mono-data font-bold text-headline-sm">
+                {formatTime(timeLeft)}
+              </span>
+            </div>
+
+            {/* Flash Sale Quota Exhausted Notice Banner */}
+            {isFlashSaleQuotaExhausted && (
+              <div className="bg-amber-100 text-amber-900 border border-amber-300 p-stack-md rounded-xl mb-stack-md flex items-start gap-3">
+                <span className="material-symbols-outlined text-[20px] text-amber-700">warning</span>
+                <span className="font-label-md">
+                  Flash sale quota was exhausted for one or more items. Standard retail price applied.
+                </span>
+              </div>
+            )}
 
             {/* Error Alert */}
             {error && (
@@ -405,20 +491,53 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, onBackToCart, on
               
               {/* Items List */}
               <div className="space-y-stack-md mb-stack-lg max-h-60 overflow-y-auto pr-1">
-                {cartItems.map((item) => (
-                  <div key={item.id} className="flex items-start gap-stack-md">
-                    <div className="w-16 h-16 rounded bg-surface-container overflow-hidden flex-shrink-0 border border-outline-variant">
-                      <img className="w-full h-full object-cover" src={item.image} alt={item.name} />
+                {cartItems.map((item) => {
+                  const detail = pendingOrder?.orderDetails?.find(
+                    (d: any) =>
+                      d.productId === item.productId ||
+                      d.productName === item.name ||
+                      d.productId === item.id ||
+                      d.productId === item.cartItemId
+                  );
+                  const effectivePrice = detail?.pricePerItem ?? item.price;
+                  const isFlashSaleApplied = detail
+                    ? detail.flashSale === true
+                    : item.originalPrice != null && item.originalPrice > item.price;
+                  const isFallbackOccurred = detail
+                    ? detail.flashSale === false && item.originalPrice != null && item.originalPrice > item.price
+                    : false;
+
+                  return (
+                    <div key={item.id} className="flex items-start gap-stack-md border-b border-outline-variant/40 pb-stack-sm last:border-none">
+                      <div className="w-16 h-16 rounded bg-surface-container overflow-hidden flex-shrink-0 border border-outline-variant">
+                        <img className="w-full h-full object-cover" src={item.image} alt={item.name} />
+                      </div>
+                      <div className="flex-grow">
+                        <h4 className="font-label-md text-label-md text-on-surface line-clamp-1 font-semibold">{item.name}</h4>
+                        <p className="font-body-sm text-body-sm text-on-surface-variant font-mono-data">
+                          Rp {effectivePrice.toLocaleString("id-ID")} × {item.quantity}
+                        </p>
+                        {isFlashSaleApplied && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded mt-0.5">
+                            <span className="material-symbols-outlined text-[13px]">bolt</span>
+                            Flash Sale Price
+                          </span>
+                        )}
+                        {isFallbackOccurred && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded mt-0.5">
+                            <span className="material-symbols-outlined text-[13px]">warning</span>
+                            Standard Price (Quota Exhausted)
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <span className="font-mono-data text-mono-data text-on-surface font-semibold block">
+                          Rp {(effectivePrice * item.quantity).toLocaleString("id-ID")}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex-grow">
-                      <h4 className="font-label-md text-label-md text-on-surface line-clamp-1 font-semibold">{item.name}</h4>
-                      <p className="font-body-sm text-body-sm text-on-surface-variant">Qty: {item.quantity}</p>
-                    </div>
-                    <span className="font-mono-data text-mono-data text-on-surface font-semibold">
-                      Rp {(item.price * item.quantity).toLocaleString("id-ID")}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Calculations Total */}

@@ -58,6 +58,7 @@ public class ProductService {
         BigDecimal originalPrice = null;
         Boolean isFlashSale = false;
         Instant flashSaleEndTime = null;
+        Integer remainingQuota = null;
 
         if (!flashInfoList.isEmpty() && flashInfoList.get(0) != null) {
             Object[] row = flashInfoList.get(0);
@@ -65,6 +66,7 @@ public class ProductService {
             originalPrice = (BigDecimal) row[1];
             isFlashSale = row[2] != null && (Boolean) row[2];
             flashSaleEndTime = (Instant) row[3];
+            remainingQuota = (Integer) row[4];
         }
 
         return ProductListItemResponse.builder()
@@ -75,6 +77,7 @@ public class ProductService {
                 .price(finalPrice)
                 .originalPrice(originalPrice)
                 .stock(product.getStock())
+                .remainingQuota(remainingQuota)
                 .isFlashSale(isFlashSale)
                 .flashSaleEndTime(flashSaleEndTime)
                 .image(product.getImage())
@@ -91,10 +94,11 @@ public class ProductService {
                 .price((BigDecimal) row[4])
                 .originalPrice((BigDecimal) row[5])
                 .stock((Integer) row[6])
-                .isFlashSale((Boolean) row[7])
-                .flashSaleEndTime((Instant) row[8])
-                .image((String) row[9])
-                .categoryId(row[10] != null ? UUID.fromString((String) row[10]) : null)
+                .remainingQuota((Integer) row[7])
+                .isFlashSale((Boolean) row[8])
+                .flashSaleEndTime((Instant) row[9])
+                .image((String) row[10])
+                .categoryId(row[11] != null ? UUID.fromString((String) row[11]) : null)
                 .build();
     }
 }

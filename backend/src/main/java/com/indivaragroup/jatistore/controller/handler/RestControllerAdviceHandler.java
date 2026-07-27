@@ -14,6 +14,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -148,6 +149,19 @@ public class RestControllerAdviceHandler {
         apiResponse.setRestApiResponseRequestId(MDC.get("requestId"));
 
         return ResponseEntity.status(status).body(apiResponse);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<RestApiResponse<Void>> handleResponseStatusException(ResponseStatusException ex) {
+        RestApiResponse<Void> apiResponse = new RestApiResponse<>();
+        apiResponse.setRestApiResponseHttpCode(ex.getStatusCode().value());
+        apiResponse.setRestApiResponseHttpStatus(ex.getStatusCode().toString());
+        apiResponse.setRestApiResponseMessage(ex.getReason() != null ? ex.getReason() : ex.getMessage());
+        apiResponse.setRestApiResponseError(null);
+        apiResponse.setRestApiResponseTimestamp(Instant.now());
+        apiResponse.setRestApiResponseRequestId(MDC.get("requestId"));
+
+        return ResponseEntity.status(ex.getStatusCode()).body(apiResponse);
     }
 
     @ExceptionHandler(ServletException.class)
