@@ -4,10 +4,11 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   datasource:
-    # Default fallback (overridden by application-dev.yaml)
-    url: jdbc:postgresql://localhost:5432/jatistore?stringtype=unspecified
-    username: developer
-    password: rahasia
+    # Environment-variable driven so Spring doesn't validate a hardcoded
+    # localhost connection before the active profile can override it.
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/jatistore?stringtype=unspecified}
+    username: ${DB_USERNAME:developer}
+    password: ${DB_PASSWORD:rahasia}
   jpa:
     hibernate:
       # Tell Hibernate to only validate the schema, leaving structural changes strictly to Flyway
