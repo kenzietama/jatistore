@@ -1,5 +1,5 @@
 import React from "react";
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useOutletContext } from "react-router-dom";
 import { useAuthStore } from "../../store/auth/useAuthStore";
 
 interface ProtectedRouteProps {
@@ -8,6 +8,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
 	const { isAuthenticated, user } = useAuthStore();
+	const context = useOutletContext(); // Get context from parent
 
 	if (!isAuthenticated) {
 		// Not logged in, redirect to login page
@@ -23,8 +24,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
 		return <Navigate to="/auth/login" replace />; // Fallback
 	}
 
-	// Authorized, render children routes
-	return <Outlet />;
+	// Authorized, render children routes with forwarded context
+	return <Outlet context={context} />;
 };
 
 export default ProtectedRoute;
