@@ -61,8 +61,7 @@ const App = () => {
     if (!isLoggedIn) {
       navigate("/auth/login", { state: { returnToPage: "cart" } });
     } else {
-      navigate("/");
-      setCurrentPage("cart");
+      navigate("/cart");
     }
   };
 
@@ -218,94 +217,21 @@ const App = () => {
             </div>
           </div>
         </nav>
-
-      {/* RENDER KONTEN HALAMAN */}
-      {location.pathname.startsWith("/user") ? (
-        <Outlet />
-      ) : (
-        <>
-          {currentPage === "catalog" && (
-            <CatalogPage 
-              onProductClick={(productId, isFlashSale = false) => {
-            setSelectedProduct(productId);
-            setIsCurrentProductFlashSale(isFlashSale);
-            setCurrentPage("detail");
-          }}
-          onCartClick={handleNavigateToCart}
-          onAddToCart={handleAddToCart} 
-          searchQuery={catalogSearchQuery}
-          onCheckout={async (products) => {
-            handleAddToCart(products[0].id, 1);
-            try {
-              const response = await api.get("/api/v1/cart");
-              if (response.data && (response.data.restApiResponseHttpCode === 200 || response.data.code === 200)) {
-                const responseData = response.data.restApiResponseData || response.data.data;
-                const items = responseData?.items || [];
-                const item = items.find((i: any) => i.productId === products[0].id);
-                if (item) {
-                  setSelectedCheckoutItems([{
-                    id: products[0].id,
-                    cartItemId: item.id,
-                    name: products[0].name,
-                    price: products[0].price,
-                    image: products[0].image,
-                    quantity: 1
-                  }]);
-                  setCurrentPage("checkout");
-                }
-              }
-            } catch (error) {
-              console.error("Gagal mengambil jumlah keranjang:", error);
-            }
-          }}
-        />
-      )}
-
-      {currentPage === "detail" && selectedProduct && (
-        <ProductDetailPage 
-          productId={selectedProduct} 
-          onBackToCatalog={() => setCurrentPage("catalog")} 
-          onAddToCart={handleAddToCart}
-          onCartClick={handleNavigateToCart}
-          isFromFlashSale={isCurrentProductFlashSale}
-        />
-      )}
-
-      {currentPage === "cart" && (
-        <CartPage
-          onBackToCatalog={() => setCurrentPage("catalog")}
-          onCheckout={(itemsToCheckout, pendingOrderData) => {
-            setSelectedCheckoutItems(itemsToCheckout);
-            setPendingOrder(pendingOrderData);
-            setCurrentPage("checkout");
-          }}
-          onRefreshCartCount={fetchCartCount}
-          onProductClick={(productId, isFlashSale = false) => {
-            setSelectedProduct(productId);
-            setIsCurrentProductFlashSale(isFlashSale);
-            setCurrentPage("detail");
-          }}
-        />
-      )}
-
-      {currentPage === "checkout" && (
-        <CheckoutPage 
-          cartItems={selectedCheckoutItems}
-          pendingOrder={pendingOrder}
-          onBackToCart={() => {
-            setPendingOrder(null);
-            setCurrentPage("cart");
-          }}
-          onPaymentSuccess={() => {
-            setSelectedCheckoutItems([]);
-            setPendingOrder(null);
-            fetchCartCount();
-            navigate("/user/orders");
-          }}
-        />
-      )}
-        </>
-      )}
+      {/* RENDER KONTEN HALAMAN VIA REACT ROUTER OUTLET */}
+      <Outlet context={{
+        catalogSearchQuery,
+        handleAddToCart,
+        handleNavigateToCart,
+        fetchCartCount,
+        selectedCheckoutItems,
+        setSelectedCheckoutItems,
+        pendingOrder,
+        setPendingOrder,
+        selectedProduct,
+        setSelectedProduct,
+        isCurrentProductFlashSale,
+        setIsCurrentProductFlashSale
+      }} />
     </div>
   );
 };
@@ -314,12 +240,115 @@ import { AdminLayout } from "./components/layout/admin/AdminLayout.tsx";
 import { Dashboard as AdminDashboard } from "./container/admin/Dashboard.tsx";
 import { AuditTrails } from "./container/admin/AuditTrails.tsx";
 import { FlashSaleManager } from "./container/admin/FlashSaleManager";
+import { useOutletContext } from "react-router-dom";
+
+// Wrapper Components to bridge Outlet context to pages
+const CatalogRouteWrapper = () => {
+  const navigate = useNavigate();
+  const ctx: any = useOutletContext();
+  return (
+    <CatalogPage 
+      onProductClick={(productId, isFlashSale = false) => {
+        ctx.setSelectedProduct(productId);
+        ctx.setIsCurrentProductFlashSale(isFlashSale);
+        navigate(`/products/${productId}`);
+      }}
+      onCartClick={ctx.handleNavigateToCart}
+      onAddToCart={ctx.handleAddToCart} 
+      searchQuery={ctx.catalogSearchQuery}
+      onCheckout={async (products) => {
+        ctx.handleAddToCart(products[0].id, 1);
+        try {
+          const response = await api.get("/api/v1/cart");
+          if (response.data && (response.data.restApiResponseHttpCode === 200 || response.data.code === 200)) {
+            const responseData = response.data.restApiResponseData || response.data.data;
+            const items = responseData?.items || [];
+            const item = items.find((i: any) => i.productId === products[0].id);
+            if (item) {
+              ctx.setSelectedCheckoutItems([{
+                id: products[0].id,
+                cartItemId: item.id,
+                name: products[0].name,
+                price: products[0].price,
+                image: products[0].image,
+                quantity: 1
+              }]);
+              navigate("/checkout");
+            }
+          }
+        } catch (error) {
+          console.error("Gagal mengambil jumlah keranjang:", error);
+        }
+      }}
+    />
+  );
+};
+
+const ProductDetailRouteWrapper = () => {
+  const navigate = useNavigate();
+  const ctx: any = useOutletContext();
+  return (
+    <ProductDetailPage 
+      productId={ctx.selectedProduct || undefined} 
+      onBackToCatalog={() => navigate("/")} 
+      onAddToCart={ctx.handleAddToCart}
+      onCartClick={ctx.handleNavigateToCart}
+      isFromFlashSale={ctx.isCurrentProductFlashSale}
+    />
+  );
+};
+
+const CartRouteWrapper = () => {
+  const navigate = useNavigate();
+  const ctx: any = useOutletContext();
+  return (
+    <CartPage
+      onBackToCatalog={() => navigate("/")}
+      onCheckout={(itemsToCheckout, pendingOrderData) => {
+        ctx.setSelectedCheckoutItems(itemsToCheckout);
+        ctx.setPendingOrder(pendingOrderData);
+        navigate("/checkout");
+      }}
+      onRefreshCartCount={ctx.fetchCartCount}
+      onProductClick={(productId, isFlashSale = false) => {
+        ctx.setSelectedProduct(productId);
+        ctx.setIsCurrentProductFlashSale(isFlashSale);
+        navigate(`/products/${productId}`);
+      }}
+    />
+  );
+};
+
+const CheckoutRouteWrapper = () => {
+  const navigate = useNavigate();
+  const ctx: any = useOutletContext();
+  return (
+    <CheckoutPage 
+      cartItems={ctx.selectedCheckoutItems}
+      pendingOrder={ctx.pendingOrder}
+      onBackToCart={() => {
+        ctx.setPendingOrder(null);
+        navigate("/cart");
+      }}
+      onPaymentSuccess={() => {
+        ctx.setSelectedCheckoutItems([]);
+        ctx.setPendingOrder(null);
+        ctx.fetchCartCount();
+        navigate("/user/orders");
+      }}
+    />
+  );
+};
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<App />}>
+          <Route index element={<CatalogRouteWrapper />} />
+          <Route path="products/:id" element={<ProductDetailRouteWrapper />} />
+          <Route path="cart" element={<CartRouteWrapper />} />
+          
           <Route path="user" element={<ProtectedRoute allowedRoles={["USER"]} />}>
             <Route element={<UserLayout />}>
               <Route path="profile" element={<UserProfilePage />} />
@@ -327,6 +356,11 @@ createRoot(document.getElementById("root")!).render(
               <Route path="orders" element={<OrderHistoryPage />} />
             </Route>
           </Route>
+          
+          <Route element={<ProtectedRoute allowedRoles={["USER"]} />}>
+            <Route path="checkout" element={<CheckoutRouteWrapper />} />
+          </Route>
+
           <Route path="*" element={<></>} />
         </Route>
         

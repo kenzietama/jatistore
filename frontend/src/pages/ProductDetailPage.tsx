@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import api from "../lib/api";
 
 interface Product {
@@ -23,14 +24,14 @@ interface Product {
 }
 
 interface ProductDetailPageProps {
-	productId: string;
-	onBackToCatalog: () => void;
-	onAddToCart: (
+	productId?: string;
+	onBackToCatalog?: () => void;
+	onAddToCart?: (
 		productId: string,
 		quantity: number,
 		priceToUse: number,
 	) => void;
-	onCartClick: () => void;
+	onCartClick?: () => void;
 	isFromFlashSale?: boolean;
 }
 
@@ -41,6 +42,17 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 	onCartClick,
 	isFromFlashSale = false,
 }) => {
+	const params = useParams<{ id: string }>();
+	const navigate = useNavigate();
+	const activeProductId = params.id || productId;
+
+	const handleBack = () => {
+		if (onBackToCatalog) {
+			onBackToCatalog();
+		} else {
+			navigate("/");
+		}
+	};
 	const [product, setProduct] = useState<Product | null>(null);
 	const [quantity, setQuantity] = useState<number>(1);
 	const [mainImage, setMainImage] = useState<string>("");
@@ -64,8 +76,9 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 
 	// 1. Fetch Product Details
 	useEffect(() => {
+		if (!activeProductId) return;
 		setIsLoading(true);
-		api.get(`/api/v1/products/${productId}`)
+		api.get(`/api/v1/products/${activeProductId}`)
 			.then((response) => {
 				const result = response.data;
 				const fetchedProduct =
@@ -87,7 +100,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 				console.error("Failed to load product details:", error);
 				setIsLoading(false);
 			});
-	}, [productId]);
+	}, [activeProductId]);
 
 	// 2. Fetch Active and Upcoming Flash Sale from Backend
 	const checkFlashSaleStatus = async () => {
@@ -230,7 +243,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 					Product not found or has been deleted.
 				</p>
 				<button
-					onClick={onBackToCatalog}
+					onClick={handleBack}
 					className="text-primary font-semibold hover:underline"
 				>
 					Back to Catalog
@@ -273,7 +286,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 			<main className="flex-grow w-full max-w-container-max mx-auto px-margin-desktop py-stack-lg flex flex-col gap-stack-lg">
 				{/* Breadcrumb / Back Button */}
 				<button
-					onClick={onBackToCatalog}
+					onClick={handleBack}
 					className="flex items-center gap-1 text-primary text-body-sm font-semibold hover:underline self-start"
 				>
 					<span className="material-symbols-outlined text-[18px]">
@@ -548,12 +561,16 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 							<button
 								onClick={async () => {
 									// Ensure cart price is synchronized with the currently displayed active price
-									await onAddToCart(
-										product.id,
-										quantity,
-										displayCurrentPrice,
-									);
-									onCartClick();
+									if (onAddToCart) {
+										await onAddToCart(
+											product.id,
+											quantity,
+											displayCurrentPrice,
+										);
+									}
+									if (onCartClick) {
+										onCartClick();
+									}
 								}}
 								className={`flex-1 font-label-md text-label-md py-3 px-6 rounded-full transition-colors flex items-center justify-center gap-2 shadow-sm ${
 									isFlashSaleActive
