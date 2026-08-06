@@ -9,6 +9,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -17,6 +19,9 @@ public class PayOrderRequest {
 
     @NotNull(message = "Payment method is required")
     private PaymentMethod paymentMethod;
+
+    // Optional: Card ID for saved cards
+    private UUID cardId;
 
     @Size(min = 16, max = 16, message = "Card number must be exactly 16 digits")
     @Pattern(regexp = "\\d{16}", message = "Card number must contain only digits")

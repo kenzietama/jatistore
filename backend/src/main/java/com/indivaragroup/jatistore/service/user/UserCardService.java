@@ -11,6 +11,7 @@ import com.indivaragroup.jatistore.repository.PaymentCardRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.Principal;
@@ -64,5 +65,10 @@ public class UserCardService {
         paymentCardRepository.save(card);
 
         return RestApiResponse.success(null);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public PaymentCard saveCardInNewTransaction(PaymentCard card) {
+        return paymentCardRepository.saveAndFlush(card);
     }
 }

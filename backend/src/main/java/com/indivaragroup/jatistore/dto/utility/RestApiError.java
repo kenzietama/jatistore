@@ -51,6 +51,7 @@ public enum RestApiError {
     USR_0023(HttpStatus.CONFLICT.value(), "Order total has changed"),
     USR_0024(HttpStatus.CONFLICT.value(), "Flash sale ended before order completion"),
     USR_0025(HttpStatus.CONFLICT.value(), "Flash sale quota exhausted"),
+    USR_0026(HttpStatus.NOT_FOUND.value(), "Saved payment card not found"),
     USR_0015(HttpStatus.NOT_FOUND.value(), "Order not found"),
     USR_0016(HttpStatus.BAD_REQUEST.value(), "Order receipt confirmation not allowed"),
 
