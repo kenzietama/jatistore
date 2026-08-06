@@ -257,7 +257,7 @@ const CatalogRouteWrapper = () => {
       onAddToCart={ctx.handleAddToCart} 
       searchQuery={ctx.catalogSearchQuery}
       onCheckout={async (products) => {
-        ctx.handleAddToCart(products[0].id, 1);
+        await ctx.handleAddToCart(products[0].id, 1);
         try {
           const response = await api.get("/api/v1/cart");
           if (response.data && (response.data.restApiResponseHttpCode === 200 || response.data.code === 200)) {
@@ -271,7 +271,7 @@ const CatalogRouteWrapper = () => {
                 name: products[0].name,
                 price: products[0].price,
                 image: products[0].image,
-                quantity: 1
+                quantity: item.quantity
               }]);
               navigate("/checkout");
             }

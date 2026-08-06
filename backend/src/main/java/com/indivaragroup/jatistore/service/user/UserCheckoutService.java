@@ -16,6 +16,7 @@ import com.indivaragroup.jatistore.repository.*;
 import com.indivaragroup.jatistore.repository.projection.CheckoutPriceProjection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
@@ -46,6 +47,7 @@ public class UserCheckoutService {
     private final CheckoutFinalizer checkoutFinalizer;
     private final FlashSaleItemRepository flashSaleItemRepository;
     private final ProductRepository productRepository;
+    private final UserCardService userCardService;
 
     @Audit(action = "ORDER_CREATE", affectedModule = "ORDERS", description = "User creates pending order")
     @Transactional
@@ -269,13 +271,41 @@ public class UserCheckoutService {
         User user = authRepository.findByEmail(email)
                 .orElseThrow(() -> new CoreThrowHandler(RestApiError.GEN_0005));
 
-        return paymentCardRepository.findByUserIdAndCardNumberAndDeletedAtIsNull(user.getId(), request.getCardNumber())
-                .orElseGet(() -> paymentCardRepository.save(PaymentCard.builder()
-                        .user(user)
-                        .cardNumber(request.getCardNumber())
-                        .cardHolderName(request.getCardHolderName())
-                        .expiryDate(request.getExpiryDate())
-                        .build()));
+        // PATH 1: Card ID provided (saved card selected)
+        if (request.getCardId() != null) {
+            return paymentCardRepository.findByIdAndUserIdAndDeletedAtIsNull(
+                    request.getCardId(), 
+                    user.getId()
+                )
+                .orElseThrow(() -> new CoreThrowHandler(RestApiError.USR_0026));
+        }
+
+        // PATH 2: New card details (with race condition safety net)
+        return paymentCardRepository.findByUserIdAndCardNumberAndDeletedAtIsNull(
+                user.getId(), 
+                request.getCardNumber()
+            )
+            .orElseGet(() -> {
+                PaymentCard newCard = PaymentCard.builder()
+                    .user(user)
+                    .cardNumber(request.getCardNumber())
+                    .cardHolderName(request.getCardHolderName())
+                    .expiryDate(request.getExpiryDate())
+                    .build();
+                
+                try {
+                    return userCardService.saveCardInNewTransaction(newCard);
+                } catch (DataIntegrityViolationException e) {
+                    // Race condition: another thread won the insert race
+                    // Fetch the card that was inserted by the winner
+                    log.warn("Duplicate card number detected during checkout, re-fetching existing card");
+                    return paymentCardRepository.findByUserIdAndCardNumberAndDeletedAtIsNull(
+                            user.getId(), 
+                            request.getCardNumber()
+                        )
+                        .orElseThrow(() -> new CoreThrowHandler(RestApiError.USR_0013));
+                }
+            });
     }
 
     @Transactional(noRollbackFor = CoreThrowHandler.class)
@@ -286,7 +316,7 @@ public class UserCheckoutService {
             PayOrderRequest request
     ) throws CoreThrowHandler {
         try {
-            String gatewayRef = callPaymentGateway(request, order.getTotalAmount());
+            String gatewayRef = callPaymentGateway(request, transaction, order.getTotalAmount());
             return handlePaymentSuccess(order, transaction, cartItems, gatewayRef);
         } catch (HttpClientErrorException ex) {
             return handlePaymentError(order, transaction, ex);
@@ -297,14 +327,19 @@ public class UserCheckoutService {
         }
     }
 
-    private String callPaymentGateway(PayOrderRequest request, BigDecimal amount) {
+    private String callPaymentGateway(PayOrderRequest request, Transaction transaction, BigDecimal amount) {
         if (request.getPaymentMethod() == PaymentMethod.CARD) {
+            PaymentCard paymentCard = transaction != null ? transaction.getPaymentCard() : null;
+            String cardNumber = request.getCardNumber() != null ? request.getCardNumber() : (paymentCard != null ? paymentCard.getCardNumber() : null);
+            String expiryDate = request.getExpiryDate() != null ? request.getExpiryDate() : (paymentCard != null ? paymentCard.getExpiryDate() : null);
+            String cardHolderName = request.getCardHolderName() != null ? request.getCardHolderName() : (paymentCard != null ? paymentCard.getCardHolderName() : null);
+
             CardChargeRequest chargeRequest = new CardChargeRequest(
-                    request.getCardNumber(),
-                    request.getExpiryDate(),
+                    cardNumber,
+                    expiryDate,
                     request.getCvc(),
                     amount,
-                    request.getCardHolderName()
+                    cardHolderName
             );
             return paymentGatewayClient.chargeCard(chargeRequest).transactionId();
         } else {

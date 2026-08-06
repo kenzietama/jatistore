@@ -193,17 +193,19 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, pendingOrder, on
           cvc?: string;
         } = {};
 
-        const cleanCardNum = cardNumber.replace(/\s/g, "");
-        if (!/^\d{16}$/.test(cleanCardNum)) {
-          errors.cardNumber = "Card number must be 16 digits";
-        }
+        if (selectedCardId === "new") {
+          const cleanCardNum = cardNumber.replace(/\s/g, "");
+          if (!/^\d{16}$/.test(cleanCardNum)) {
+            errors.cardNumber = "Card number must be 16 digits";
+          }
 
-        if (!cardHolderName || cardHolderName.trim().length < 2) {
-          errors.cardHolderName = "Cardholder name is required";
-        }
+          if (!cardHolderName || cardHolderName.trim().length < 2) {
+            errors.cardHolderName = "Cardholder name is required";
+          }
 
-        if (!/^(0[1-9]|1[0-2])\/[0-9]{2}$/.test(expiryDate)) {
-          errors.expiryDate = "Invalid expiry format (MM/YY)";
+          if (!/^(0[1-9]|1[0-2])\/[0-9]{2}$/.test(expiryDate)) {
+            errors.expiryDate = "Invalid expiry format (MM/YY)";
+          }
         }
 
         if (!/^\d{3,4}$/.test(cvc)) {
@@ -248,6 +250,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, pendingOrder, on
 
       const paymentPayload: {
         paymentMethod: "CARD" | "WALLET";
+        cardId?: string;
         cardNumber?: string;
         cardHolderName?: string;
         expiryDate?: string;
@@ -257,10 +260,17 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ cartItems, pendingOrder, on
       };
 
       if (paymentMethod === "card") {
-        paymentPayload.cardNumber = cardNumber.replace(/\s/g, "");
-        paymentPayload.cardHolderName = cardHolderName;
-        paymentPayload.expiryDate = expiryDate;
-        paymentPayload.cvc = cvc;
+        if (selectedCardId !== "new") {
+          // User selected saved card: send ID only
+          paymentPayload.cardId = selectedCardId as string;
+          paymentPayload.cvc = cvc;
+        } else {
+          // User is adding new card: send full details
+          paymentPayload.cardNumber = cardNumber.replace(/\s/g, "");
+          paymentPayload.cardHolderName = cardHolderName;
+          paymentPayload.expiryDate = expiryDate;
+          paymentPayload.cvc = cvc;
+        }
       }
 
       paymentStarted = true;
